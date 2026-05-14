@@ -1,0 +1,25 @@
+# Internal documentation (proprietary)
+docs/
+
+# Environment
+.env
+*.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+
+# Models (large files)
+models/*.pkl
+
+# Database
+data/db.sqlite3
+
+# OS
+.DS_Store
+Thumbs.db
