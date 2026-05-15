@@ -1,0 +1,1300 @@
+{
+  "skills": [
+    {
+      "skill_id": "lang-py",
+      "canonical_name": "Python",
+      "aliases": ["py", "python3", "python2"],
+      "domain": "Software Engineering",
+      "category": "Programming Languages",
+      "weight": 1.4,
+      "differentiation_tags": ["backend", "data", "ml", "ai", "scripting"]
+    },
+    {
+      "skill_id": "lang-js",
+      "canonical_name": "JavaScript",
+      "aliases": ["js", "javascript", "ecmascript", "es6", "es2020"],
+      "domain": "Software Engineering",
+      "category": "Programming Languages",
+      "weight": 1.3,
+      "differentiation_tags": ["frontend", "fullstack", "backend"]
+    },
+    {
+      "skill_id": "lang-ts",
+      "canonical_name": "TypeScript",
+      "aliases": ["ts", "typescript"],
+      "domain": "Software Engineering",
+      "category": "Programming Languages",
+      "weight": 1.2,
+      "differentiation_tags": ["frontend", "fullstack", "backend"]
+    },
+    {
+      "skill_id": "lang-java",
+      "canonical_name": "Java",
+      "aliases": ["java8", "java11", "java17", "jdk"],
+      "domain": "Software Engineering",
+      "category": "Programming Languages",
+      "weight": 1.2,
+      "differentiation_tags": ["backend", "android", "enterprise"]
+    },
+    {
+      "skill_id": "lang-cs",
+      "canonical_name": "C#",
+      "aliases": ["csharp", "c-sharp", "dotnet-lang"],
+      "domain": "Software Engineering",
+      "category": "Programming Languages",
+      "weight": 1.1,
+      "differentiation_tags": ["backend", "game-dev", "desktop"]
+    },
+    {
+      "skill_id": "lang-cpp",
+      "canonical_name": "C++",
+      "aliases": ["cpp", "c plus plus", "cplusplus"],
+      "domain": "Software Engineering",
+      "category": "Programming Languages",
+      "weight": 1.2,
+      "differentiation_tags": ["systems", "embedded", "game-dev"]
+    },
+    {
+      "skill_id": "lang-c",
+      "canonical_name": "C",
+      "aliases": ["c-lang", "ansi-c"],
+      "domain": "Software Engineering",
+      "category": "Programming Languages",
+      "weight": 1.1,
+      "differentiation_tags": ["systems", "embedded"]
+    },
+    {
+      "skill_id": "lang-go",
+      "canonical_name": "Go",
+      "aliases": ["golang", "go-lang"],
+      "domain": "Software Engineering",
+      "category": "Programming Languages",
+      "weight": 1.2,
+      "differentiation_tags": ["backend", "devops", "systems"]
+    },
+    {
+      "skill_id": "lang-rust",
+      "canonical_name": "Rust",
+      "aliases": ["rust-lang"],
+      "domain": "Software Engineering",
+      "category": "Programming Languages",
+      "weight": 1.2,
+      "differentiation_tags": ["systems", "embedded", "backend"]
+    },
+    {
+      "skill_id": "lang-kotlin",
+      "canonical_name": "Kotlin",
+      "aliases": ["kt", "kotlin-lang"],
+      "domain": "Software Engineering",
+      "category": "Programming Languages",
+      "weight": 1.1,
+      "differentiation_tags": ["android", "backend"]
+    },
+    {
+      "skill_id": "lang-swift",
+      "canonical_name": "Swift",
+      "aliases": ["swift-lang", "swiftui-lang"],
+      "domain": "Software Engineering",
+      "category": "Programming Languages",
+      "weight": 1.1,
+      "differentiation_tags": ["ios", "mobile"]
+    },
+    {
+      "skill_id": "lang-php",
+      "canonical_name": "PHP",
+      "aliases": ["php7", "php8"],
+      "domain": "Software Engineering",
+      "category": "Programming Languages",
+      "weight": 1.0,
+      "differentiation_tags": ["backend", "web"]
+    },
+    {
+      "skill_id": "lang-ruby",
+      "canonical_name": "Ruby",
+      "aliases": ["rb", "ruby-lang"],
+      "domain": "Software Engineering",
+      "category": "Programming Languages",
+      "weight": 1.0,
+      "differentiation_tags": ["backend", "web"]
+    },
+    {
+      "skill_id": "lang-r",
+      "canonical_name": "R",
+      "aliases": ["r-lang", "r-stats"],
+      "domain": "Software Engineering",
+      "category": "Programming Languages",
+      "weight": 1.2,
+      "differentiation_tags": ["data-science", "statistics"]
+    },
+    {
+      "skill_id": "lang-scala",
+      "canonical_name": "Scala",
+      "aliases": ["scala-lang"],
+      "domain": "Software Engineering",
+      "category": "Programming Languages",
+      "weight": 1.1,
+      "differentiation_tags": ["data-engineering", "backend"]
+    },
+    {
+      "skill_id": "lang-sql",
+      "canonical_name": "SQL",
+      "aliases": ["mysql-query", "postgres-query", "structured-query"],
+      "domain": "Software Engineering",
+      "category": "Programming Languages",
+      "weight": 1.4,
+      "differentiation_tags": ["data", "backend", "analytics"]
+    },
+    {
+      "skill_id": "lang-nosql",
+      "canonical_name": "NoSQL",
+      "aliases": ["nosql-queries"],
+      "domain": "Software Engineering",
+      "category": "Programming Languages",
+      "weight": 0.9,
+      "differentiation_tags": ["backend", "data"]
+    },
+    {
+      "skill_id": "fe-react",
+      "canonical_name": "React.js",
+      "aliases": ["react", "reactjs", "react-hooks", "react18"],
+      "domain": "Software Engineering",
+      "category": "Frontend Development",
+      "weight": 1.5,
+      "differentiation_tags": ["frontend"]
+    },
+    {
+      "skill_id": "fe-vue",
+      "canonical_name": "Vue.js",
+      "aliases": ["vue", "vuejs", "vue3", "nuxt"],
+      "domain": "Software Engineering",
+      "category": "Frontend Development",
+      "weight": 1.3,
+      "differentiation_tags": ["frontend"]
+    },
+    {
+      "skill_id": "fe-angular",
+      "canonical_name": "Angular",
+      "aliases": ["angularjs", "ng", "angular2+"],
+      "domain": "Software Engineering",
+      "category": "Frontend Development",
+      "weight": 1.3,
+      "differentiation_tags": ["frontend"]
+    },
+    {
+      "skill_id": "fe-next",
+      "canonical_name": "Next.js",
+      "aliases": ["nextjs", "next"],
+      "domain": "Software Engineering",
+      "category": "Frontend Development",
+      "weight": 1.3,
+      "differentiation_tags": ["frontend", "fullstack"]
+    },
+    {
+      "skill_id": "fe-svelte",
+      "canonical_name": "Svelte",
+      "aliases": ["sveltejs", "sveltekit"],
+      "domain": "Software Engineering",
+      "category": "Frontend Development",
+      "weight": 1.1,
+      "differentiation_tags": ["frontend"]
+    },
+    {
+      "skill_id": "fe-html",
+      "canonical_name": "HTML5",
+      "aliases": ["html", "html5", "markup"],
+      "domain": "Software Engineering",
+      "category": "Frontend Development",
+      "weight": 1.0,
+      "differentiation_tags": ["frontend"]
+    },
+    {
+      "skill_id": "fe-css",
+      "canonical_name": "CSS3",
+      "aliases": ["css", "css3", "stylesheets"],
+      "domain": "Software Engineering",
+      "category": "Frontend Development",
+      "weight": 1.0,
+      "differentiation_tags": ["frontend"]
+    },
+    {
+      "skill_id": "fe-tailwind",
+      "canonical_name": "Tailwind CSS",
+      "aliases": ["tailwind", "tailwindcss"],
+      "domain": "Software Engineering",
+      "category": "Frontend Development",
+      "weight": 1.1,
+      "differentiation_tags": ["frontend"]
+    },
+    {
+      "skill_id": "fe-sass",
+      "canonical_name": "SASS/SCSS",
+      "aliases": ["sass", "scss", "less"],
+      "domain": "Software Engineering",
+      "category": "Frontend Development",
+      "weight": 0.9,
+      "differentiation_tags": ["frontend"]
+    },
+    {
+      "skill_id": "fe-figma",
+      "canonical_name": "Figma",
+      "aliases": ["figma-design"],
+      "domain": "Software Engineering",
+      "category": "Frontend Development",
+      "weight": 1.2,
+      "differentiation_tags": ["frontend", "ui-ux"]
+    },
+    {
+      "skill_id": "fe-adobexd",
+      "canonical_name": "Adobe XD",
+      "aliases": ["xd", "adobe-xd"],
+      "domain": "Software Engineering",
+      "category": "Frontend Development",
+      "weight": 1.0,
+      "differentiation_tags": ["ui-ux"]
+    },
+    {
+      "skill_id": "fe-responsive",
+      "canonical_name": "Responsive Design",
+      "aliases": ["mobile-first", "responsive-web", "rwd"],
+      "domain": "Software Engineering",
+      "category": "Frontend Development",
+      "weight": 1.1,
+      "differentiation_tags": ["frontend"]
+    },
+    {
+      "skill_id": "fe-a11y",
+      "canonical_name": "Web Accessibility",
+      "aliases": ["a11y", "wcag", "aria"],
+      "domain": "Software Engineering",
+      "category": "Frontend Development",
+      "weight": 1.0,
+      "differentiation_tags": ["frontend"]
+    },
+    {
+      "skill_id": "fe-webpack",
+      "canonical_name": "Webpack / Vite",
+      "aliases": ["webpack", "vite", "bundler", "parcel"],
+      "domain": "Software Engineering",
+      "category": "Frontend Development",
+      "weight": 1.0,
+      "differentiation_tags": ["frontend"]
+    },
+    {
+      "skill_id": "be-node",
+      "canonical_name": "Node.js",
+      "aliases": ["nodejs", "node"],
+      "domain": "Software Engineering",
+      "category": "Backend Development",
+      "weight": 1.4,
+      "differentiation_tags": ["backend", "fullstack"]
+    },
+    {
+      "skill_id": "be-express",
+      "canonical_name": "Express.js",
+      "aliases": ["express", "expressjs"],
+      "domain": "Software Engineering",
+      "category": "Backend Development",
+      "weight": 1.2,
+      "differentiation_tags": ["backend"]
+    },
+    {
+      "skill_id": "be-django",
+      "canonical_name": "Django",
+      "aliases": ["django-rest", "drf"],
+      "domain": "Software Engineering",
+      "category": "Backend Development",
+      "weight": 1.3,
+      "differentiation_tags": ["backend"]
+    },
+    {
+      "skill_id": "be-flask",
+      "canonical_name": "Flask",
+      "aliases": ["flask-api", "flask-rest"],
+      "domain": "Software Engineering",
+      "category": "Backend Development",
+      "weight": 1.2,
+      "differentiation_tags": ["backend", "ml-serving"]
+    },
+    {
+      "skill_id": "be-fastapi",
+      "canonical_name": "FastAPI",
+      "aliases": ["fast-api"],
+      "domain": "Software Engineering",
+      "category": "Backend Development",
+      "weight": 1.3,
+      "differentiation_tags": ["backend", "ml-serving"]
+    },
+    {
+      "skill_id": "be-spring",
+      "canonical_name": "Spring Boot",
+      "aliases": ["spring", "springboot", "spring-mvc"],
+      "domain": "Software Engineering",
+      "category": "Backend Development",
+      "weight": 1.3,
+      "differentiation_tags": ["backend", "enterprise"]
+    },
+    {
+      "skill_id": "be-rails",
+      "canonical_name": "Ruby on Rails",
+      "aliases": ["rails", "ror"],
+      "domain": "Software Engineering",
+      "category": "Backend Development",
+      "weight": 1.1,
+      "differentiation_tags": ["backend"]
+    },
+    {
+      "skill_id": "be-laravel",
+      "canonical_name": "Laravel",
+      "aliases": ["laravel-php"],
+      "domain": "Software Engineering",
+      "category": "Backend Development",
+      "weight": 1.1,
+      "differentiation_tags": ["backend"]
+    },
+    {
+      "skill_id": "be-graphql",
+      "canonical_name": "GraphQL",
+      "aliases": ["graphql-api", "gql"],
+      "domain": "Software Engineering",
+      "category": "Backend Development",
+      "weight": 1.2,
+      "differentiation_tags": ["backend", "fullstack"]
+    },
+    {
+      "skill_id": "be-rest",
+      "canonical_name": "REST API",
+      "aliases": ["restful", "rest-api", "restful-api"],
+      "domain": "Software Engineering",
+      "category": "Backend Development",
+      "weight": 1.3,
+      "differentiation_tags": ["backend", "fullstack"]
+    },
+    {
+      "skill_id": "be-grpc",
+      "canonical_name": "gRPC",
+      "aliases": ["grpc-proto"],
+      "domain": "Software Engineering",
+      "category": "Backend Development",
+      "weight": 1.1,
+      "differentiation_tags": ["backend", "systems"]
+    },
+    {
+      "skill_id": "be-microservices",
+      "canonical_name": "Microservices",
+      "aliases": ["micro-services", "service-mesh"],
+      "domain": "Software Engineering",
+      "category": "Backend Development",
+      "weight": 1.3,
+      "differentiation_tags": ["backend", "devops"]
+    },
+    {
+      "skill_id": "db-postgres",
+      "canonical_name": "PostgreSQL",
+      "aliases": ["postgres", "pg", "psql"],
+      "domain": "Software Engineering",
+      "category": "Database & Storage",
+      "weight": 1.3,
+      "differentiation_tags": ["backend", "data"]
+    },
+    {
+      "skill_id": "db-mysql",
+      "canonical_name": "MySQL",
+      "aliases": ["my-sql", "mariadb"],
+      "domain": "Software Engineering",
+      "category": "Database & Storage",
+      "weight": 1.2,
+      "differentiation_tags": ["backend", "web"]
+    },
+    {
+      "skill_id": "db-sqlite",
+      "canonical_name": "SQLite",
+      "aliases": ["sqlite3"],
+      "domain": "Software Engineering",
+      "category": "Database & Storage",
+      "weight": 0.9,
+      "differentiation_tags": ["backend", "mobile"]
+    },
+    {
+      "skill_id": "db-mongodb",
+      "canonical_name": "MongoDB",
+      "aliases": ["mongo", "mongodb-atlas"],
+      "domain": "Software Engineering",
+      "category": "Database & Storage",
+      "weight": 1.2,
+      "differentiation_tags": ["backend", "fullstack"]
+    },
+    {
+      "skill_id": "db-redis",
+      "canonical_name": "Redis",
+      "aliases": ["redis-cache", "redisdb"],
+      "domain": "Software Engineering",
+      "category": "Database & Storage",
+      "weight": 1.2,
+      "differentiation_tags": ["backend", "devops"]
+    },
+    {
+      "skill_id": "db-firebase",
+      "canonical_name": "Firebase",
+      "aliases": ["firestore", "firebase-db", "rtdb"],
+      "domain": "Software Engineering",
+      "category": "Database & Storage",
+      "weight": 1.1,
+      "differentiation_tags": ["fullstack", "mobile"]
+    },
+    {
+      "skill_id": "db-elastic",
+      "canonical_name": "Elasticsearch",
+      "aliases": ["elastic", "elk", "opensearch"],
+      "domain": "Software Engineering",
+      "category": "Database & Storage",
+      "weight": 1.2,
+      "differentiation_tags": ["backend", "data"]
+    },
+    {
+      "skill_id": "db-cassandra",
+      "canonical_name": "Cassandra",
+      "aliases": ["apache-cassandra"],
+      "domain": "Software Engineering",
+      "category": "Database & Storage",
+      "weight": 1.1,
+      "differentiation_tags": ["data-engineering"]
+    },
+    {
+      "skill_id": "db-orm",
+      "canonical_name": "ORM",
+      "aliases": ["sqlalchemy", "sequelize", "prisma", "hibernate"],
+      "domain": "Software Engineering",
+      "category": "Database & Storage",
+      "weight": 1.1,
+      "differentiation_tags": ["backend"]
+    },
+    {
+      "skill_id": "db-schema",
+      "canonical_name": "Database Schema Design",
+      "aliases": ["erd", "db-design", "normalization"],
+      "domain": "Software Engineering",
+      "category": "Database & Storage",
+      "weight": 1.2,
+      "differentiation_tags": ["backend", "data"]
+    },
+    {
+      "skill_id": "ops-docker",
+      "canonical_name": "Docker",
+      "aliases": ["dockerfile", "docker-compose", "containerization"],
+      "domain": "Software Engineering",
+      "category": "DevOps & Cloud",
+      "weight": 1.4,
+      "differentiation_tags": ["devops", "backend"]
+    },
+    {
+      "skill_id": "ops-k8s",
+      "canonical_name": "Kubernetes",
+      "aliases": ["k8s", "kubectl", "helm"],
+      "domain": "Software Engineering",
+      "category": "DevOps & Cloud",
+      "weight": 1.4,
+      "differentiation_tags": ["devops"]
+    },
+    {
+      "skill_id": "ops-git",
+      "canonical_name": "Git",
+      "aliases": ["github", "gitlab", "bitbucket", "version-control"],
+      "domain": "Software Engineering",
+      "category": "DevOps & Cloud",
+      "weight": 1.2,
+      "differentiation_tags": ["all"]
+    },
+    {
+      "skill_id": "ops-cicd",
+      "canonical_name": "CI/CD",
+      "aliases": ["continuous-integration", "github-actions", "jenkins", "circleci"],
+      "domain": "Software Engineering",
+      "category": "DevOps & Cloud",
+      "weight": 1.3,
+      "differentiation_tags": ["devops"]
+    },
+    {
+      "skill_id": "ops-aws",
+      "canonical_name": "AWS",
+      "aliases": ["amazon-web-services", "ec2", "s3", "lambda"],
+      "domain": "Software Engineering",
+      "category": "DevOps & Cloud",
+      "weight": 1.4,
+      "differentiation_tags": ["devops", "backend"]
+    },
+    {
+      "skill_id": "ops-gcp",
+      "canonical_name": "Google Cloud",
+      "aliases": ["gcp", "google-cloud-platform", "gke"],
+      "domain": "Software Engineering",
+      "category": "DevOps & Cloud",
+      "weight": 1.3,
+      "differentiation_tags": ["devops", "backend"]
+    },
+    {
+      "skill_id": "ops-azure",
+      "canonical_name": "Azure",
+      "aliases": ["microsoft-azure", "azure-devops"],
+      "domain": "Software Engineering",
+      "category": "DevOps & Cloud",
+      "weight": 1.3,
+      "differentiation_tags": ["devops", "backend"]
+    },
+    {
+      "skill_id": "ops-terraform",
+      "canonical_name": "Terraform",
+      "aliases": ["iac", "infrastructure-as-code"],
+      "domain": "Software Engineering",
+      "category": "DevOps & Cloud",
+      "weight": 1.3,
+      "differentiation_tags": ["devops"]
+    },
+    {
+      "skill_id": "ops-linux",
+      "canonical_name": "Linux",
+      "aliases": ["ubuntu", "bash", "shell", "unix"],
+      "domain": "Software Engineering",
+      "category": "DevOps & Cloud",
+      "weight": 1.2,
+      "differentiation_tags": ["devops", "backend", "systems"]
+    },
+    {
+      "skill_id": "ops-nginx",
+      "canonical_name": "Nginx / Apache",
+      "aliases": ["nginx", "apache-server", "web-server"],
+      "domain": "Software Engineering",
+      "category": "DevOps & Cloud",
+      "weight": 1.1,
+      "differentiation_tags": ["devops", "backend"]
+    },
+    {
+      "skill_id": "ops-monitoring",
+      "canonical_name": "Monitoring",
+      "aliases": ["prometheus", "grafana", "datadog", "logging"],
+      "domain": "Software Engineering",
+      "category": "DevOps & Cloud",
+      "weight": 1.2,
+      "differentiation_tags": ["devops"]
+    },
+    {
+      "skill_id": "da-pandas",
+      "canonical_name": "Pandas",
+      "aliases": ["pandas-df", "dataframes"],
+      "domain": "Data & Analytics",
+      "category": "Data Analysis",
+      "weight": 1.4,
+      "differentiation_tags": ["data-analysis"]
+    },
+    {
+      "skill_id": "da-numpy",
+      "canonical_name": "NumPy",
+      "aliases": ["numpy", "np"],
+      "domain": "Data & Analytics",
+      "category": "Data Analysis",
+      "weight": 1.3,
+      "differentiation_tags": ["data-analysis", "ml"]
+    },
+    {
+      "skill_id": "da-excel",
+      "canonical_name": "Excel",
+      "aliases": ["ms-excel", "spreadsheet", "pivot-table"],
+      "domain": "Data & Analytics",
+      "category": "Data Analysis",
+      "weight": 1.2,
+      "differentiation_tags": ["data-analysis", "finance"]
+    },
+    {
+      "skill_id": "da-sql-analytics",
+      "canonical_name": "SQL Analytics",
+      "aliases": ["sql-aggregation", "window-functions", "cte"],
+      "domain": "Data & Analytics",
+      "category": "Data Analysis",
+      "weight": 1.4,
+      "differentiation_tags": ["data-analysis"]
+    },
+    {
+      "skill_id": "da-tableau",
+      "canonical_name": "Tableau",
+      "aliases": ["tableau-desktop", "tableau-server"],
+      "domain": "Data & Analytics",
+      "category": "Data Analysis",
+      "weight": 1.3,
+      "differentiation_tags": ["data-analysis", "bi"]
+    },
+    {
+      "skill_id": "da-powerbi",
+      "canonical_name": "Power BI",
+      "aliases": ["powerbi", "power-bi", "dax"],
+      "domain": "Data & Analytics",
+      "category": "Data Analysis",
+      "weight": 1.3,
+      "differentiation_tags": ["data-analysis", "bi"]
+    },
+    {
+      "skill_id": "da-matplotlib",
+      "canonical_name": "Matplotlib / Seaborn",
+      "aliases": ["matplotlib", "seaborn", "plt"],
+      "domain": "Data & Analytics",
+      "category": "Data Analysis",
+      "weight": 1.1,
+      "differentiation_tags": ["data-analysis"]
+    },
+    {
+      "skill_id": "da-plotly",
+      "canonical_name": "Plotly / Dash",
+      "aliases": ["plotly", "dash-framework"],
+      "domain": "Data & Analytics",
+      "category": "Data Analysis",
+      "weight": 1.1,
+      "differentiation_tags": ["data-analysis"]
+    },
+    {
+      "skill_id": "da-stats",
+      "canonical_name": "Statistics",
+      "aliases": ["descriptive-stats", "inferential-stats", "hypothesis-testing"],
+      "domain": "Data & Analytics",
+      "category": "Data Analysis",
+      "weight": 1.3,
+      "differentiation_tags": ["data-analysis", "data-science"]
+    },
+    {
+      "skill_id": "da-etl",
+      "canonical_name": "ETL",
+      "aliases": ["extract-transform-load", "data-pipeline", "airflow"],
+      "domain": "Data & Analytics",
+      "category": "Data Analysis",
+      "weight": 1.3,
+      "differentiation_tags": ["data-engineering"]
+    },
+    {
+      "skill_id": "de-spark",
+      "canonical_name": "Apache Spark",
+      "aliases": ["pyspark", "spark-streaming"],
+      "domain": "Data & Analytics",
+      "category": "Data Engineering",
+      "weight": 1.4,
+      "differentiation_tags": ["data-engineering"]
+    },
+    {
+      "skill_id": "de-kafka",
+      "canonical_name": "Apache Kafka",
+      "aliases": ["kafka-streams", "event-streaming"],
+      "domain": "Data & Analytics",
+      "category": "Data Engineering",
+      "weight": 1.3,
+      "differentiation_tags": ["data-engineering"]
+    },
+    {
+      "skill_id": "de-hadoop",
+      "canonical_name": "Hadoop",
+      "aliases": ["hdfs", "mapreduce", "hive"],
+      "domain": "Data & Analytics",
+      "category": "Data Engineering",
+      "weight": 1.2,
+      "differentiation_tags": ["data-engineering"]
+    },
+    {
+      "skill_id": "de-dbt",
+      "canonical_name": "dbt",
+      "aliases": ["dbt-core", "data-build-tool"],
+      "domain": "Data & Analytics",
+      "category": "Data Engineering",
+      "weight": 1.3,
+      "differentiation_tags": ["data-engineering"]
+    },
+    {
+      "skill_id": "de-warehouse",
+      "canonical_name": "Data Warehousing",
+      "aliases": ["snowflake", "bigquery", "redshift", "dw-design"],
+      "domain": "Data & Analytics",
+      "category": "Data Engineering",
+      "weight": 1.4,
+      "differentiation_tags": ["data-engineering"]
+    },
+    {
+      "skill_id": "de-airflow",
+      "canonical_name": "Apache Airflow",
+      "aliases": ["airflow", "workflow-orchestration"],
+      "domain": "Data & Analytics",
+      "category": "Data Engineering",
+      "weight": 1.3,
+      "differentiation_tags": ["data-engineering"]
+    },
+    {
+      "skill_id": "ds-sklearn",
+      "canonical_name": "Scikit-learn",
+      "aliases": ["sklearn", "scikit"],
+      "domain": "Data & Analytics",
+      "category": "Data Science",
+      "weight": 1.4,
+      "differentiation_tags": ["data-science"]
+    },
+    {
+      "skill_id": "ds-scipy",
+      "canonical_name": "SciPy",
+      "aliases": ["scipy-stats"],
+      "domain": "Data & Analytics",
+      "category": "Data Science",
+      "weight": 1.2,
+      "differentiation_tags": ["data-science"]
+    },
+    {
+      "skill_id": "ds-feature-eng",
+      "canonical_name": "Feature Engineering",
+      "aliases": ["feature-selection", "dimensionality-reduction", "pca"],
+      "domain": "Data & Analytics",
+      "category": "Data Science",
+      "weight": 1.4,
+      "differentiation_tags": ["data-science"]
+    },
+    {
+      "skill_id": "ds-model-eval",
+      "canonical_name": "Model Evaluation",
+      "aliases": ["cross-validation", "roc-auc", "f1-score", "confusion-matrix"],
+      "domain": "Data & Analytics",
+      "category": "Data Science",
+      "weight": 1.4,
+      "differentiation_tags": ["data-science"]
+    },
+    {
+      "skill_id": "ds-regression",
+      "canonical_name": "Regression Analysis",
+      "aliases": ["linear-regression", "logistic-regression", "ridge", "lasso"],
+      "domain": "Data & Analytics",
+      "category": "Data Science",
+      "weight": 1.3,
+      "differentiation_tags": ["data-science"]
+    },
+    {
+      "skill_id": "ds-classification",
+      "canonical_name": "Classification",
+      "aliases": ["decision-tree", "random-forest", "svm", "knn"],
+      "domain": "Data & Analytics",
+      "category": "Data Science",
+      "weight": 1.3,
+      "differentiation_tags": ["data-science"]
+    },
+    {
+      "skill_id": "ds-clustering",
+      "canonical_name": "Clustering",
+      "aliases": ["k-means", "dbscan", "hierarchical"],
+      "domain": "Data & Analytics",
+      "category": "Data Science",
+      "weight": 1.2,
+      "differentiation_tags": ["data-science"]
+    },
+    {
+      "skill_id": "ds-time-series",
+      "canonical_name": "Time Series Analysis",
+      "aliases": ["arima", "prophet", "lstm-time-series", "forecasting"],
+      "domain": "Data & Analytics",
+      "category": "Data Science",
+      "weight": 1.3,
+      "differentiation_tags": ["data-science"]
+    },
+    {
+      "skill_id": "ds-experiment",
+      "canonical_name": "A/B Testing",
+      "aliases": ["hypothesis-testing", "experimental-design"],
+      "domain": "Data & Analytics",
+      "category": "Data Science",
+      "weight": 1.2,
+      "differentiation_tags": ["data-science", "analytics"]
+    },
+    {
+      "skill_id": "ml-tensorflow",
+      "canonical_name": "TensorFlow",
+      "aliases": ["tf", "tensorflow2", "keras"],
+      "domain": "Machine Learning & AI",
+      "category": "Core ML",
+      "weight": 1.5,
+      "differentiation_tags": ["ml", "dl"]
+    },
+    {
+      "skill_id": "ml-pytorch",
+      "canonical_name": "PyTorch",
+      "aliases": ["torch", "pytorch-lightning"],
+      "domain": "Machine Learning & AI",
+      "category": "Core ML",
+      "weight": 1.5,
+      "differentiation_tags": ["ml", "dl", "research"]
+    },
+    {
+      "skill_id": "ml-keras",
+      "canonical_name": "Keras",
+      "aliases": ["keras-api"],
+      "domain": "Machine Learning & AI",
+      "category": "Core ML",
+      "weight": 1.3,
+      "differentiation_tags": ["ml", "dl"]
+    },
+    {
+      "skill_id": "ml-xgboost",
+      "canonical_name": "XGBoost / LightGBM",
+      "aliases": ["xgb", "lgbm", "gradient-boosting"],
+      "domain": "Machine Learning & AI",
+      "category": "Core ML",
+      "weight": 1.3,
+      "differentiation_tags": ["ml", "data-science"]
+    },
+    {
+      "skill_id": "ml-pipelines",
+      "canonical_name": "ML Pipelines",
+      "aliases": ["mlflow", "kubeflow", "model-registry", "pipeline"],
+      "domain": "Machine Learning & AI",
+      "category": "Core ML",
+      "weight": 1.4,
+      "differentiation_tags": ["ml-engineer"]
+    },
+    {
+      "skill_id": "ml-deployment",
+      "canonical_name": "Model Deployment",
+      "aliases": ["model-serving", "torchserve", "bentoml", "triton"],
+      "domain": "Machine Learning & AI",
+      "category": "Core ML",
+      "weight": 1.4,
+      "differentiation_tags": ["ml-engineer"]
+    },
+    {
+      "skill_id": "ml-monitoring",
+      "canonical_name": "ML Monitoring",
+      "aliases": ["data-drift", "model-drift", "evidently"],
+      "domain": "Machine Learning & AI",
+      "category": "Core ML",
+      "weight": 1.3,
+      "differentiation_tags": ["ml-engineer"]
+    },
+    {
+      "skill_id": "dl-cnn",
+      "canonical_name": "CNN",
+      "aliases": ["convolutional-neural-network", "image-classification", "resnet"],
+      "domain": "Machine Learning & AI",
+      "category": "Deep Learning",
+      "weight": 1.4,
+      "differentiation_tags": ["dl", "computer-vision"]
+    },
+    {
+      "skill_id": "dl-rnn",
+      "canonical_name": "RNN / LSTM",
+      "aliases": ["recurrent-neural-network", "lstm", "gru", "sequence-models"],
+      "domain": "Machine Learning & AI",
+      "category": "Deep Learning",
+      "weight": 1.3,
+      "differentiation_tags": ["dl", "nlp"]
+    },
+    {
+      "skill_id": "dl-transformer",
+      "canonical_name": "Transformers",
+      "aliases": ["attention", "bert", "gpt", "t5", "huggingface"],
+      "domain": "Machine Learning & AI",
+      "category": "Deep Learning",
+      "weight": 1.5,
+      "differentiation_tags": ["dl", "nlp", "llm"]
+    },
+    {
+      "skill_id": "dl-gan",
+      "canonical_name": "GANs",
+      "aliases": ["generative-adversarial-network", "diffusion-models", "stable-diffusion"],
+      "domain": "Machine Learning & AI",
+      "category": "Deep Learning",
+      "weight": 1.3,
+      "differentiation_tags": ["dl", "generative-ai"]
+    },
+    {
+      "skill_id": "dl-rl",
+      "canonical_name": "Reinforcement Learning",
+      "aliases": ["rl", "q-learning", "ppo", "gym"],
+      "domain": "Machine Learning & AI",
+      "category": "Deep Learning",
+      "weight": 1.3,
+      "differentiation_tags": ["dl", "ai-research"]
+    },
+    {
+      "skill_id": "nlp-nltk",
+      "canonical_name": "NLTK",
+      "aliases": ["natural-language-toolkit"],
+      "domain": "Machine Learning & AI",
+      "category": "NLP",
+      "weight": 1.2,
+      "differentiation_tags": ["nlp"]
+    },
+    {
+      "skill_id": "nlp-spacy",
+      "canonical_name": "SpaCy",
+      "aliases": ["spacy-nlp"],
+      "domain": "Machine Learning & AI",
+      "category": "NLP",
+      "weight": 1.3,
+      "differentiation_tags": ["nlp"]
+    },
+    {
+      "skill_id": "nlp-hf",
+      "canonical_name": "HuggingFace",
+      "aliases": ["transformers-lib", "hugging-face", "hf-hub"],
+      "domain": "Machine Learning & AI",
+      "category": "NLP",
+      "weight": 1.5,
+      "differentiation_tags": ["nlp", "llm"]
+    },
+    {
+      "skill_id": "nlp-tfidf",
+      "canonical_name": "TF-IDF",
+      "aliases": ["tf-idf", "tfidf-vectorizer"],
+      "domain": "Machine Learning & AI",
+      "category": "NLP",
+      "weight": 1.2,
+      "differentiation_tags": ["nlp", "information-retrieval"]
+    },
+    {
+      "skill_id": "nlp-embeddings",
+      "canonical_name": "Word Embeddings",
+      "aliases": ["word2vec", "glove", "fasttext", "sentence-embeddings"],
+      "domain": "Machine Learning & AI",
+      "category": "NLP",
+      "weight": 1.3,
+      "differentiation_tags": ["nlp"]
+    },
+    {
+      "skill_id": "nlp-ner",
+      "canonical_name": "Named Entity Recognition",
+      "aliases": ["ner", "entity-extraction"],
+      "domain": "Machine Learning & AI",
+      "category": "NLP",
+      "weight": 1.2,
+      "differentiation_tags": ["nlp"]
+    },
+    {
+      "skill_id": "nlp-sentiment",
+      "canonical_name": "Sentiment Analysis",
+      "aliases": ["opinion-mining", "text-classification"],
+      "domain": "Machine Learning & AI",
+      "category": "NLP",
+      "weight": 1.2,
+      "differentiation_tags": ["nlp"]
+    },
+    {
+      "skill_id": "cv-opencv",
+      "canonical_name": "OpenCV",
+      "aliases": ["cv2", "open-cv"],
+      "domain": "Machine Learning & AI",
+      "category": "Computer Vision",
+      "weight": 1.3,
+      "differentiation_tags": ["computer-vision"]
+    },
+    {
+      "skill_id": "cv-yolo",
+      "canonical_name": "YOLO",
+      "aliases": ["object-detection", "yolov5", "yolov8"],
+      "domain": "Machine Learning & AI",
+      "category": "Computer Vision",
+      "weight": 1.3,
+      "differentiation_tags": ["computer-vision"]
+    },
+    {
+      "skill_id": "cv-segmentation",
+      "canonical_name": "Image Segmentation",
+      "aliases": ["semantic-segmentation", "instance-segmentation"],
+      "domain": "Machine Learning & AI",
+      "category": "Computer Vision",
+      "weight": 1.3,
+      "differentiation_tags": ["computer-vision"]
+    },
+    {
+      "skill_id": "des-ps",
+      "canonical_name": "Adobe Photoshop",
+      "aliases": ["photoshop", "ps"],
+      "domain": "Creative & Design",
+      "category": "Creative & Design",
+      "weight": 1.3,
+      "differentiation_tags": ["graphic-design"]
+    },
+    {
+      "skill_id": "des-ai",
+      "canonical_name": "Adobe Illustrator",
+      "aliases": ["illustrator", "ai-adobe"],
+      "domain": "Creative & Design",
+      "category": "Creative & Design",
+      "weight": 1.3,
+      "differentiation_tags": ["graphic-design"]
+    },
+    {
+      "skill_id": "des-id",
+      "canonical_name": "Adobe InDesign",
+      "aliases": ["indesign"],
+      "domain": "Creative & Design",
+      "category": "Creative & Design",
+      "weight": 1.1,
+      "differentiation_tags": ["graphic-design", "publishing"]
+    },
+    {
+      "skill_id": "des-coreldraw",
+      "canonical_name": "CorelDRAW",
+      "aliases": ["corel", "coreldraw"],
+      "domain": "Creative & Design",
+      "category": "Creative & Design",
+      "weight": 1.1,
+      "differentiation_tags": ["graphic-design"]
+    },
+    {
+      "skill_id": "des-after-effects",
+      "canonical_name": "After Effects",
+      "aliases": ["ae", "adobe-after-effects"],
+      "domain": "Creative & Design",
+      "category": "Creative & Design",
+      "weight": 1.2,
+      "differentiation_tags": ["motion-design"]
+    },
+    {
+      "skill_id": "des-premiere",
+      "canonical_name": "Premiere Pro",
+      "aliases": ["premiere", "video-editing"],
+      "domain": "Creative & Design",
+      "category": "Creative & Design",
+      "weight": 1.2,
+      "differentiation_tags": ["video-production"]
+    },
+    {
+      "skill_id": "des-blender",
+      "canonical_name": "Blender",
+      "aliases": ["blender-3d"],
+      "domain": "Creative & Design",
+      "category": "Creative & Design",
+      "weight": 1.3,
+      "differentiation_tags": ["3d-design"]
+    },
+    {
+      "skill_id": "des-rhino",
+      "canonical_name": "Rhino 3D",
+      "aliases": ["rhino", "rhinoceros"],
+      "domain": "Creative & Design",
+      "category": "Creative & Design",
+      "weight": 1.2,
+      "differentiation_tags": ["3d-design"]
+    },
+    {
+      "skill_id": "des-branding",
+      "canonical_name": "Branding",
+      "aliases": ["brand-identity", "visual-identity"],
+      "domain": "Creative & Design",
+      "category": "Creative & Design",
+      "weight": 1.2,
+      "differentiation_tags": ["graphic-design"]
+    },
+    {
+      "skill_id": "des-typography",
+      "canonical_name": "Typography",
+      "aliases": ["type-design", "font-pairing"],
+      "domain": "Creative & Design",
+      "category": "Creative & Design",
+      "weight": 1.1,
+      "differentiation_tags": ["graphic-design"]
+    },
+    {
+      "skill_id": "des-ux-research",
+      "canonical_name": "UX Research",
+      "aliases": ["user-research", "usability-testing", "ux"],
+      "domain": "Creative & Design",
+      "category": "Creative & Design",
+      "weight": 1.3,
+      "differentiation_tags": ["ui-ux"]
+    },
+    {
+      "skill_id": "des-wireframe",
+      "canonical_name": "Wireframing",
+      "aliases": ["wireframes", "mockup", "low-fidelity"],
+      "domain": "Creative & Design",
+      "category": "Creative & Design",
+      "weight": 1.2,
+      "differentiation_tags": ["ui-ux"]
+    },
+    {
+      "skill_id": "des-prototype",
+      "canonical_name": "Prototyping",
+      "aliases": ["interactive-prototype", "high-fidelity"],
+      "domain": "Creative & Design",
+      "category": "Creative & Design",
+      "weight": 1.3,
+      "differentiation_tags": ["ui-ux"]
+    },
+    {
+      "skill_id": "mkt-seo",
+      "canonical_name": "SEO",
+      "aliases": ["search-engine-optimization", "on-page-seo", "off-page-seo"],
+      "domain": "Marketing & Business",
+      "category": "Marketing & Business",
+      "weight": 1.3,
+      "differentiation_tags": ["digital-marketing"]
+    },
+    {
+      "skill_id": "mkt-sem",
+      "canonical_name": "SEM / Google Ads",
+      "aliases": ["google-ads", "ppc", "sem"],
+      "domain": "Marketing & Business",
+      "category": "Marketing & Business",
+      "weight": 1.2,
+      "differentiation_tags": ["digital-marketing"]
+    },
+    {
+      "skill_id": "mkt-social",
+      "canonical_name": "Social Media Marketing",
+      "aliases": ["smm", "instagram-marketing", "facebook-ads"],
+      "domain": "Marketing & Business",
+      "category": "Marketing & Business",
+      "weight": 1.2,
+      "differentiation_tags": ["digital-marketing"]
+    },
+    {
+      "skill_id": "mkt-email",
+      "canonical_name": "Email Marketing",
+      "aliases": ["mailchimp", "email-campaigns"],
+      "domain": "Marketing & Business",
+      "category": "Marketing & Business",
+      "weight": 1.1,
+      "differentiation_tags": ["digital-marketing"]
+    },
+    {
+      "skill_id": "mkt-analytics",
+      "canonical_name": "Marketing Analytics",
+      "aliases": ["google-analytics", "ga4", "utm"],
+      "domain": "Marketing & Business",
+      "category": "Marketing & Business",
+      "weight": 1.2,
+      "differentiation_tags": ["digital-marketing"]
+    },
+    {
+      "skill_id": "mkt-content",
+      "canonical_name": "Content Marketing",
+      "aliases": ["content-strategy", "copywriting", "blogging"],
+      "domain": "Marketing & Business",
+      "category": "Marketing & Business",
+      "weight": 1.1,
+      "differentiation_tags": ["digital-marketing"]
+    },
+    {
+      "skill_id": "biz-sales",
+      "canonical_name": "Sales",
+      "aliases": ["sales-strategy", "lead-gen", "closing", "crm"],
+      "domain": "Marketing & Business",
+      "category": "Marketing & Business",
+      "weight": 1.2,
+      "differentiation_tags": ["sales", "business-dev"]
+    },
+    {
+      "skill_id": "biz-market-analysis",
+      "canonical_name": "Market Analysis",
+      "aliases": ["competitive-analysis", "market-research"],
+      "domain": "Marketing & Business",
+      "category": "Marketing & Business",
+      "weight": 1.2,
+      "differentiation_tags": ["business-dev"]
+    },
+    {
+      "skill_id": "biz-forecasting",
+      "canonical_name": "Forecasting",
+      "aliases": ["sales-forecasting", "financial-modeling"],
+      "domain": "Marketing & Business",
+      "category": "Marketing & Business",
+      "weight": 1.2,
+      "differentiation_tags": ["business-dev", "finance"]
+    },
+    {
+      "skill_id": "fin-accounting",
+      "canonical_name": "Accounting",
+      "aliases": ["bookkeeping", "gaap", "financial-accounting"],
+      "domain": "Marketing & Business",
+      "category": "Marketing & Business",
+      "weight": 1.2,
+      "differentiation_tags": ["finance"]
+    },
+    {
+      "skill_id": "fin-excel",
+      "canonical_name": "Financial Excel",
+      "aliases": ["excel-finance", "pivot-tables", "vlookup"],
+      "domain": "Marketing & Business",
+      "category": "Marketing & Business",
+      "weight": 1.2,
+      "differentiation_tags": ["finance"]
+    },
+    {
+      "skill_id": "fin-peachtree",
+      "canonical_name": "Peachtree / Sage",
+      "aliases": ["peachtree-accounting", "sage-accounting"],
+      "domain": "Marketing & Business",
+      "category": "Marketing & Business",
+      "weight": 1.1,
+      "differentiation_tags": ["finance"]
+    },
+    {
+      "skill_id": "soft-comm",
+      "canonical_name": "Communication",
+      "aliases": ["verbal-communication", "written-communication"],
+      "domain": "Soft Skills",
+      "category": "Soft Skills",
+      "weight": 1.0,
+      "differentiation_tags": ["all"]
+    },
+    {
+      "skill_id": "soft-problem",
+      "canonical_name": "Problem Solving",
+      "aliases": ["analytical-thinking", "troubleshooting"],
+      "domain": "Soft Skills",
+      "category": "Soft Skills",
+      "weight": 1.1,
+      "differentiation_tags": ["all-technical"]
+    },
+    {
+      "skill_id": "soft-collab",
+      "canonical_name": "Collaboration",
+      "aliases": ["teamwork", "cross-functional", "team-player"],
+      "domain": "Soft Skills",
+      "category": "Soft Skills",
+      "weight": 1.0,
+      "differentiation_tags": ["all"]
+    },
+    {
+      "skill_id": "soft-leadership",
+      "canonical_name": "Leadership",
+      "aliases": ["team-lead", "people-management"],
+      "domain": "Soft Skills",
+      "category": "Soft Skills",
+      "weight": 1.1,
+      "differentiation_tags": ["senior-roles"]
+    },
+    {
+      "skill_id": "soft-time",
+      "canonical_name": "Time Management",
+      "aliases": ["deadline-management", "prioritization"],
+      "domain": "Soft Skills",
+      "category": "Soft Skills",
+      "weight": 1.0,
+      "differentiation_tags": ["all"]
+    },
+    {
+      "skill_id": "soft-agile",
+      "canonical_name": "Agile / Scrum",
+      "aliases": ["scrum", "kanban", "sprint-planning", "jira"],
+      "domain": "Soft Skills",
+      "category": "Soft Skills",
+      "weight": 1.2,
+      "differentiation_tags": ["all-technical"]
+    },
+    {
+      "skill_id": "soft-docs",
+      "canonical_name": "Technical Writing",
+      "aliases": ["documentation", "readme", "api-docs"],
+      "domain": "Soft Skills",
+      "category": "Soft Skills",
+      "weight": 1.1,
+      "differentiation_tags": ["all-technical"]
+    },
+    {
+      "skill_id": "soft-presentation",
+      "canonical_name": "Presentation",
+      "aliases": ["public-speaking", "stakeholder-communication"],
+      "domain": "Soft Skills",
+      "category": "Soft Skills",
+      "weight": 1.0,
+      "differentiation_tags": ["business"]
+    }
+  ]
+}
