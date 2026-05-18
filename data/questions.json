@@ -1,0 +1,1144 @@
+{
+    "questions": [
+        {
+            "id": "Q0_1",
+            "gate": 0,
+            "domain_scope": "ALL",
+            "stem": "What best describes your primary background or interest?",
+            "options": {
+                "A": {
+                    "text": "Building websites, apps, or software",
+                    "signals": {
+                        "SOFTWARE": 30
+                    },
+                    "skills": []
+                },
+                "B": {
+                    "text": "Working with data, statistics, or prediction models",
+                    "signals": {
+                        "DATA_AI": 30
+                    },
+                    "skills": []
+                },
+                "C": {
+                    "text": "Design — visuals, interfaces, or creative work",
+                    "signals": {
+                        "CREATIVE": 30
+                    },
+                    "skills": []
+                },
+                "D": {
+                    "text": "Business, marketing, sales, or finance",
+                    "signals": {
+                        "BUSINESS": 30
+                    },
+                    "skills": []
+                },
+                "E": {
+                    "text": "A mix — I do a bit of everything",
+                    "signals": {
+                        "SOFTWARE": 10,
+                        "DATA_AI": 10,
+                        "CREATIVE": 10,
+                        "BUSINESS": 10
+                    },
+                    "skills": []
+                }
+            },
+            "routing": {
+                "A": "Q0_2_SW",
+                "B": "Q0_2_DA",
+                "C": "Q1_CREATIVE_A",
+                "D": "Q1_BUSINESS_A",
+                "E": "Q0_2_SW"
+            }
+        },
+        {
+            "id": "Q0_2_SW",
+            "gate": 0,
+            "domain_scope": "SOFTWARE",
+            "stem": "When you build software, what's your strongest focus?",
+            "options": {
+                "A": {
+                    "text": "What users see — buttons, pages, animations",
+                    "signals": {
+                        "frontend-dev": 25,
+                        "ui-ux-designer": 10
+                    },
+                    "skills": []
+                },
+                "B": {
+                    "text": "What happens on the server — APIs, databases, logic",
+                    "signals": {
+                        "backend-dev": 25,
+                        "software-engineer": 10
+                    },
+                    "skills": []
+                },
+                "C": {
+                    "text": "Both sides equally",
+                    "signals": {
+                        "fullstack-dev": 30
+                    },
+                    "skills": []
+                },
+                "D": {
+                    "text": "Low-level: performance, systems, embedded, compilers",
+                    "signals": {
+                        "systems": 30,
+                        "software-engineer": 15
+                    },
+                    "skills": []
+                },
+                "E": {
+                    "text": "Not sure yet, I'm still learning",
+                    "signals": {
+                        "SOFTWARE": 5
+                    },
+                    "skills": []
+                }
+            },
+            "routing": {
+                "A": "Q1_SW_A",
+                "B": "Q1_SW_B",
+                "C": "Q1_SW_FS",
+                "D": "Q1_SW_B",
+                "E": "Q_EXP"
+            }
+        },
+        {
+            "id": "Q0_2_DA",
+            "gate": 0,
+            "domain_scope": "DATA_AI",
+            "stem": "What draws you most to data/AI work?",
+            "options": {
+                "A": {
+                    "text": "Finding patterns and making charts/reports from data",
+                    "signals": {
+                        "data-analyst": 30
+                    },
+                    "skills": []
+                },
+                "B": {
+                    "text": "Building predictive models and running experiments",
+                    "signals": {
+                        "data-scientist": 30
+                    },
+                    "skills": []
+                },
+                "C": {
+                    "text": "Pipelines, infrastructure, making data flow reliably",
+                    "signals": {
+                        "data-engineer": 30
+                    },
+                    "skills": []
+                },
+                "D": {
+                    "text": "Training neural networks, deep learning",
+                    "signals": {
+                        "ml-engineer": 25,
+                        "ai-researcher": 15
+                    },
+                    "skills": []
+                },
+                "E": {
+                    "text": "Making language models understand and generate text",
+                    "signals": {
+                        "nlp-engineer": 35
+                    },
+                    "skills": []
+                }
+            },
+            "routing": {
+                "A": "Q1_DA_A",
+                "B": "Q1_DA_A",
+                "C": "Q1_DE_A",
+                "D": "Q1_ML_A",
+                "E": "Q1_NLP_A"
+            }
+        },
+        {
+            "id": "Q1_SW_A",
+            "gate": 1,
+            "domain_scope": "SOFTWARE",
+            "stem": "You're building a React component that fetches data and shows a loading state. The API call fails intermittently. What do you do?",
+            "options": {
+                "A": {
+                    "text": "Wrap the fetch in try/catch inside useEffect, set error state, show error UI",
+                    "signals": {
+                        "frontend-dev": 20
+                    },
+                    "skills": [
+                        "fe-react"
+                    ]
+                },
+                "B": {
+                    "text": "Use a global state manager (Redux/Zustand) to handle error states",
+                    "signals": {
+                        "frontend-dev": 25,
+                        "fullstack-dev": 10
+                    },
+                    "skills": [
+                        "fe-react",
+                        "fe-webpack"
+                    ]
+                },
+                "C": {
+                    "text": "I'd use React Query / SWR for built-in loading/error/retry handling",
+                    "signals": {
+                        "frontend-dev": 30
+                    },
+                    "skills": [
+                        "fe-react"
+                    ]
+                },
+                "D": {
+                    "text": "I don't know React — I use vanilla JS or jQuery",
+                    "signals": {
+                        "frontend-dev": 5,
+                        "ui-ux-designer": 5
+                    },
+                    "skills": []
+                }
+            },
+            "routing": {
+                "A": "Q1_SW_A2",
+                "B": "Q1_SW_A2",
+                "C": "Q1_SW_A2",
+                "D": "Q1_SW_A2"
+            }
+        },
+        {
+            "id": "Q1_SW_A2",
+            "gate": 1,
+            "domain_scope": "SOFTWARE",
+            "stem": "You need a responsive 3-column grid that collapses to 1 column on mobile. What's your approach?",
+            "options": {
+                "A": {
+                    "text": "CSS Grid with grid-template-columns: repeat(auto-fit, minmax(250px, 1fr))",
+                    "signals": {
+                        "frontend-dev": 20
+                    },
+                    "skills": [
+                        "fe-css",
+                        "fe-responsive"
+                    ]
+                },
+                "B": {
+                    "text": "Flexbox with flex-wrap: wrap and percentage widths",
+                    "signals": {
+                        "frontend-dev": 15
+                    },
+                    "skills": [
+                        "fe-css"
+                    ]
+                },
+                "C": {
+                    "text": "Tailwind CSS responsive prefixes (md:grid-cols-3)",
+                    "signals": {
+                        "frontend-dev": 18
+                    },
+                    "skills": [
+                        "fe-tailwind"
+                    ]
+                },
+                "D": {
+                    "text": "I'd use a Bootstrap grid",
+                    "signals": {
+                        "frontend-dev": 10
+                    },
+                    "skills": []
+                }
+            },
+            "routing": {
+                "A": null,
+                "B": null,
+                "C": null,
+                "D": null
+            }
+        },
+        {
+            "id": "Q1_SW_B",
+            "gate": 1,
+            "domain_scope": "SOFTWARE",
+            "stem": "You need to build an endpoint that accepts a file upload and saves it to cloud storage. Which approach do you take?",
+            "options": {
+                "A": {
+                    "text": "Multipart form data via Flask/FastAPI, stream to S3 using boto3",
+                    "signals": {
+                        "backend-dev": 25
+                    },
+                    "skills": [
+                        "be-flask",
+                        "ops-aws"
+                    ]
+                },
+                "B": {
+                    "text": "Base64-encode in JSON body, decode on server, store via cloud SDK",
+                    "signals": {
+                        "backend-dev": 15
+                    },
+                    "skills": []
+                },
+                "C": {
+                    "text": "Use a pre-signed URL from S3 so the client uploads directly",
+                    "signals": {
+                        "backend-dev": 30,
+                        "devops-engineer": 10
+                    },
+                    "skills": [
+                        "ops-aws"
+                    ]
+                },
+                "D": {
+                    "text": "I haven't worked with file uploads or cloud storage",
+                    "signals": {
+                        "backend-dev": 5
+                    },
+                    "skills": []
+                }
+            },
+            "routing": {
+                "A": "Q1_SW_B2",
+                "B": "Q1_SW_B2",
+                "C": "Q1_SW_B2",
+                "D": "Q1_SW_B2"
+            }
+        },
+        {
+            "id": "Q1_SW_B2",
+            "gate": 1,
+            "domain_scope": "SOFTWARE",
+            "stem": "Your app has Users, Posts, and Likes. A User can like many Posts. How do you model this?",
+            "options": {
+                "A": {
+                    "text": "Three tables: users, posts, likes(user_id FK, post_id FK) junction table",
+                    "signals": {
+                        "backend-dev": 25
+                    },
+                    "skills": [
+                        "db-schema"
+                    ]
+                },
+                "B": {
+                    "text": "Add a liked_post_ids array column on the users table",
+                    "signals": {
+                        "backend-dev": 8
+                    },
+                    "skills": []
+                },
+                "C": {
+                    "text": "Embed likes as a nested array in a MongoDB posts document",
+                    "signals": {
+                        "backend-dev": 15
+                    },
+                    "skills": [
+                        "db-mongodb"
+                    ]
+                },
+                "D": {
+                    "text": "I'm not comfortable with database design",
+                    "signals": {
+                        "backend-dev": 0
+                    },
+                    "skills": []
+                }
+            },
+            "routing": {
+                "A": null,
+                "B": null,
+                "C": null,
+                "D": null
+            }
+        },
+        {
+            "id": "Q1_SW_FS",
+            "gate": 1,
+            "domain_scope": "SOFTWARE",
+            "stem": "You're building a full-stack app. A user submits a form and the page should update without a full reload. Walk me through what happens.",
+            "options": {
+                "A": {
+                    "text": "React/Vue captures submit event → fetch/axios POST → update state → re-render",
+                    "signals": {
+                        "fullstack-dev": 30
+                    },
+                    "skills": [
+                        "fe-react",
+                        "be-rest"
+                    ]
+                },
+                "B": {
+                    "text": "HTMX / Alpine.js sends AJAX, server returns HTML fragment, DOM updates",
+                    "signals": {
+                        "fullstack-dev": 25
+                    },
+                    "skills": [
+                        "be-rest"
+                    ]
+                },
+                "C": {
+                    "text": "Next.js server action — form POST hits API route, revalidatePath updates UI",
+                    "signals": {
+                        "fullstack-dev": 35
+                    },
+                    "skills": [
+                        "fe-next",
+                        "be-rest"
+                    ]
+                },
+                "D": {
+                    "text": "I'd use a page reload — I haven't worked with async form handling",
+                    "signals": {
+                        "fullstack-dev": 5
+                    },
+                    "skills": []
+                }
+            },
+            "routing": {
+                "A": null,
+                "B": null,
+                "C": null,
+                "D": null
+            }
+        },
+        {
+            "id": "Q1_DA_A",
+            "gate": 1,
+            "domain_scope": "DATA_AI",
+            "stem": "You have a dataset of 50,000 sales records with 15% missing values in the revenue column. What do you do?",
+            "options": {
+                "A": {
+                    "text": "Drop rows with missing revenue — they're not usable",
+                    "signals": {
+                        "data-analyst": 10
+                    },
+                    "skills": []
+                },
+                "B": {
+                    "text": "Impute with column median — robust to outliers",
+                    "signals": {
+                        "data-analyst": 20,
+                        "data-scientist": 15
+                    },
+                    "skills": [
+                        "ds-sklearn"
+                    ]
+                },
+                "C": {
+                    "text": "Use a model (KNN imputer, iterative imputer) to predict missing values",
+                    "signals": {
+                        "data-scientist": 30
+                    },
+                    "skills": [
+                        "ds-sklearn",
+                        "ds-feature-eng"
+                    ]
+                },
+                "D": {
+                    "text": "Investigate why values are missing before deciding (MCAR/MAR/MNAR)",
+                    "signals": {
+                        "data-scientist": 35,
+                        "ai-researcher": 10
+                    },
+                    "skills": [
+                        "ds-feature-eng"
+                    ]
+                }
+            },
+            "routing": {
+                "A": "Q1_DA_B",
+                "B": "Q1_DA_B",
+                "C": "Q1_DS_A",
+                "D": "Q1_DS_A"
+            }
+        },
+        {
+            "id": "Q1_DA_B",
+            "gate": 1,
+            "domain_scope": "DATA_AI",
+            "stem": "Write the SQL to find the top 3 products by total sales per region. Which query is correct?",
+            "options": {
+                "A": {
+                    "text": "SELECT region, product, SUM(sales) AS total, RANK() OVER (PARTITION BY region ORDER BY SUM(sales) DESC) AS rnk FROM orders GROUP BY region, product HAVING rnk <= 3",
+                    "signals": {
+                        "data-analyst": 35
+                    },
+                    "skills": [
+                        "da-sql-analytics"
+                    ]
+                },
+                "B": {
+                    "text": "SELECT region, product, SUM(sales) FROM orders GROUP BY region, product ORDER BY total DESC LIMIT 3",
+                    "signals": {
+                        "data-analyst": 15
+                    },
+                    "skills": []
+                },
+                "C": {
+                    "text": "I'd use pandas groupby instead of SQL",
+                    "signals": {
+                        "data-analyst": 15,
+                        "data-scientist": 10
+                    },
+                    "skills": [
+                        "da-pandas"
+                    ]
+                },
+                "D": {
+                    "text": "I'm not comfortable with window functions",
+                    "signals": {
+                        "data-analyst": 5
+                    },
+                    "skills": []
+                }
+            },
+            "routing": {
+                "A": null,
+                "B": null,
+                "C": null,
+                "D": null
+            }
+        },
+        {
+            "id": "Q1_DS_A",
+            "gate": 1,
+            "domain_scope": "DATA_AI",
+            "stem": "You train a Random Forest classifier and get 95% training accuracy but 62% test accuracy. What's wrong and what do you do?",
+            "options": {
+                "A": {
+                    "text": "Overfitting. Reduce max_depth, increase min_samples_leaf, or reduce n_estimators",
+                    "signals": {
+                        "data-scientist": 20
+                    },
+                    "skills": [
+                        "ds-model-eval"
+                    ]
+                },
+                "B": {
+                    "text": "Overfitting. Apply cross-validation, tune hyperparameters with GridSearchCV",
+                    "signals": {
+                        "data-scientist": 30
+                    },
+                    "skills": [
+                        "ds-model-eval",
+                        "ds-sklearn"
+                    ]
+                },
+                "C": {
+                    "text": "Overfitting. Try L1/L2 regularization or switch to a simpler model",
+                    "signals": {
+                        "data-scientist": 25
+                    },
+                    "skills": [
+                        "ds-regression"
+                    ]
+                },
+                "D": {
+                    "text": "The data is imbalanced — check class distribution and apply SMOTE",
+                    "signals": {
+                        "data-scientist": 20,
+                        "ml-engineer": 10
+                    },
+                    "skills": [
+                        "ds-feature-eng"
+                    ]
+                }
+            },
+            "routing": {
+                "A": null,
+                "B": null,
+                "C": null,
+                "D": null
+            }
+        },
+        {
+            "id": "Q1_ML_A",
+            "gate": 1,
+            "domain_scope": "DATA_AI",
+            "stem": "You've trained a model that works well in your notebook. Your task is to make it serve predictions in production for 1000 requests/second. What do you build?",
+            "options": {
+                "A": {
+                    "text": "Export with joblib, build a Flask endpoint, deploy to a server",
+                    "signals": {
+                        "ml-engineer": 15,
+                        "backend-dev": 10
+                    },
+                    "skills": [
+                        "ml-deployment",
+                        "be-flask"
+                    ]
+                },
+                "B": {
+                    "text": "Package as a Docker container with a FastAPI endpoint, deploy on K8s with auto-scaling",
+                    "signals": {
+                        "ml-engineer": 35
+                    },
+                    "skills": [
+                        "ml-deployment",
+                        "ops-docker",
+                        "ops-k8s"
+                    ]
+                },
+                "C": {
+                    "text": "Use TorchServe/BentoML/Triton for model serving with a load balancer",
+                    "signals": {
+                        "ml-engineer": 40
+                    },
+                    "skills": [
+                        "ml-deployment"
+                    ]
+                },
+                "D": {
+                    "text": "I focus on model building — deployment isn't my area",
+                    "signals": {
+                        "data-scientist": 10
+                    },
+                    "skills": []
+                }
+            },
+            "routing": {
+                "A": "Q1_ML_B",
+                "B": "Q1_ML_B",
+                "C": "Q1_ML_B",
+                "D": "Q1_ML_B"
+            }
+        },
+        {
+            "id": "Q1_ML_B",
+            "gate": 1,
+            "domain_scope": "DATA_AI",
+            "stem": "You're training a transformer-based text classifier and the validation loss stops improving after epoch 3 while training loss keeps falling. What do you do?",
+            "options": {
+                "A": {
+                    "text": "Early stopping, reduce learning rate",
+                    "signals": {
+                        "ml-engineer": 20,
+                        "ai-researcher": 15
+                    },
+                    "skills": [
+                        "dl-transformer"
+                    ]
+                },
+                "B": {
+                    "text": "Add dropout layers, use weight decay regularization",
+                    "signals": {
+                        "ml-engineer": 25,
+                        "ai-researcher": 20
+                    },
+                    "skills": [
+                        "ml-pytorch"
+                    ]
+                },
+                "C": {
+                    "text": "Check for data leakage, try a smaller model / reduce layers",
+                    "signals": {
+                        "ai-researcher": 30
+                    },
+                    "skills": [
+                        "ml-pytorch"
+                    ]
+                },
+                "D": {
+                    "text": "Use a pre-trained model from HuggingFace and fine-tune with fewer epochs",
+                    "signals": {
+                        "ml-engineer": 30,
+                        "nlp-engineer": 20
+                    },
+                    "skills": [
+                        "nlp-hf",
+                        "dl-transformer"
+                    ]
+                }
+            },
+            "routing": {
+                "A": null,
+                "B": null,
+                "C": null,
+                "D": null
+            }
+        },
+        {
+            "id": "Q1_NLP_A",
+            "gate": 1,
+            "domain_scope": "DATA_AI",
+            "stem": "You need to match job descriptions to candidate CVs semantically — not just keyword matching. What's your approach?",
+            "options": {
+                "A": {
+                    "text": "TF-IDF vectorization + cosine similarity",
+                    "signals": {
+                        "nlp-engineer": 15
+                    },
+                    "skills": [
+                        "nlp-tfidf"
+                    ]
+                },
+                "B": {
+                    "text": "Sentence-BERT embeddings + cosine similarity",
+                    "signals": {
+                        "nlp-engineer": 30
+                    },
+                    "skills": [
+                        "nlp-embeddings",
+                        "nlp-hf"
+                    ]
+                },
+                "C": {
+                    "text": "Fine-tune a BERT/RoBERTa model on a labeled similarity dataset",
+                    "signals": {
+                        "nlp-engineer": 40,
+                        "ai-researcher": 20
+                    },
+                    "skills": [
+                        "dl-transformer",
+                        "nlp-hf"
+                    ]
+                },
+                "D": {
+                    "text": "Use a RAG pipeline with vector database (Pinecone/Qdrant)",
+                    "signals": {
+                        "nlp-engineer": 35
+                    },
+                    "skills": [
+                        "nlp-hf",
+                        "nlp-embeddings"
+                    ]
+                }
+            },
+            "routing": {
+                "A": null,
+                "B": null,
+                "C": null,
+                "D": null
+            }
+        },
+        {
+            "id": "Q1_DE_A",
+            "gate": 1,
+            "domain_scope": "DATA_AI",
+            "stem": "A Spark job processing 500GB/day is running slowly. Your first debugging step?",
+            "options": {
+                "A": {
+                    "text": "Check the Spark UI for skewed partitions — repartition or salting if needed",
+                    "signals": {
+                        "data-engineer": 35
+                    },
+                    "skills": [
+                        "de-spark"
+                    ]
+                },
+                "B": {
+                    "text": "Increase executor memory and cores",
+                    "signals": {
+                        "data-engineer": 15
+                    },
+                    "skills": [
+                        "de-spark"
+                    ]
+                },
+                "C": {
+                    "text": "Cache intermediate DataFrames that are reused",
+                    "signals": {
+                        "data-engineer": 25
+                    },
+                    "skills": [
+                        "de-spark"
+                    ]
+                },
+                "D": {
+                    "text": "I don't have Spark experience — I work with smaller datasets in pandas",
+                    "signals": {
+                        "data-scientist": 5
+                    },
+                    "skills": []
+                }
+            },
+            "routing": {
+                "A": null,
+                "B": null,
+                "C": null,
+                "D": null
+            }
+        },
+        {
+            "id": "Q1_CREATIVE_A",
+            "gate": 1,
+            "domain_scope": "CREATIVE",
+            "stem": "A user testing session shows participants are confused by your app's checkout flow. What do you do next?",
+            "options": {
+                "A": {
+                    "text": "Map the user journey, identify the friction point, redesign the flow in Figma",
+                    "signals": {
+                        "ui-ux-designer": 35
+                    },
+                    "skills": [
+                        "des-ux-research",
+                        "des-wireframe"
+                    ]
+                },
+                "B": {
+                    "text": "Make the buttons bigger and use a more attractive color scheme",
+                    "signals": {
+                        "graphic-designer": 10
+                    },
+                    "skills": []
+                },
+                "C": {
+                    "text": "Conduct a card sorting exercise to understand user mental models",
+                    "signals": {
+                        "ui-ux-designer": 40
+                    },
+                    "skills": [
+                        "des-ux-research"
+                    ]
+                },
+                "D": {
+                    "text": "Redesign the visual hierarchy so the CTA is more prominent",
+                    "signals": {
+                        "ui-ux-designer": 20,
+                        "graphic-designer": 15
+                    },
+                    "skills": []
+                }
+            },
+            "routing": {
+                "A": "Q1_GRAPHIC_A",
+                "B": "Q1_GRAPHIC_A",
+                "C": "Q1_GRAPHIC_A",
+                "D": "Q1_GRAPHIC_A"
+            }
+        },
+        {
+            "id": "Q1_GRAPHIC_A",
+            "gate": 1,
+            "domain_scope": "CREATIVE",
+            "stem": "A client wants a brand identity package. What do you deliver?",
+            "options": {
+                "A": {
+                    "text": "Logo (primary, secondary, icon), color palette, typography system, usage guidelines",
+                    "signals": {
+                        "graphic-designer": 35
+                    },
+                    "skills": [
+                        "des-branding",
+                        "des-typography"
+                    ]
+                },
+                "B": {
+                    "text": "Just the logo in multiple formats (PNG, SVG, PDF)",
+                    "signals": {
+                        "graphic-designer": 15
+                    },
+                    "skills": []
+                },
+                "C": {
+                    "text": "Moodboard + logo concepts + brand style guide",
+                    "signals": {
+                        "graphic-designer": 30
+                    },
+                    "skills": [
+                        "des-branding"
+                    ]
+                },
+                "D": {
+                    "text": "I focus on digital assets — social media graphics, not brand systems",
+                    "signals": {
+                        "graphic-designer": 20
+                    },
+                    "skills": []
+                }
+            },
+            "routing": {
+                "A": null,
+                "B": null,
+                "C": null,
+                "D": null
+            }
+        },
+        {
+            "id": "Q1_BUSINESS_A",
+            "gate": 1,
+            "domain_scope": "BUSINESS",
+            "stem": "Your company wants to increase online sales by 20% next quarter. What's your first step?",
+            "options": {
+                "A": {
+                    "text": "Analyze current conversion funnel data to identify the biggest drop-off point",
+                    "signals": {
+                        "marketing": 30,
+                        "data-analyst": 10
+                    },
+                    "skills": []
+                },
+                "B": {
+                    "text": "Increase ad spend on highest-performing channels",
+                    "signals": {
+                        "marketing": 20
+                    },
+                    "skills": []
+                },
+                "C": {
+                    "text": "Build a financial model to project ROI for different strategies",
+                    "signals": {
+                        "finance": 30
+                    },
+                    "skills": []
+                },
+                "D": {
+                    "text": "Restructure the sales team's pipeline and commission structure",
+                    "signals": {
+                        "sales": 30
+                    },
+                    "skills": []
+                }
+            },
+            "routing": {
+                "A": null,
+                "B": null,
+                "C": null,
+                "D": null
+            }
+        },
+        {
+            "id": "Q_DIFF_DS_vs_DA",
+            "gate": 2,
+            "domain_scope": "DATA_AI",
+            "stem": "Which describes your typical work output?",
+            "options": {
+                "A": {
+                    "text": "Dashboards, reports, SQL queries, communicating insights to stakeholders",
+                    "signals": {
+                        "data-analyst": 30
+                    },
+                    "skills": []
+                },
+                "B": {
+                    "text": "Predictive models, statistical tests, experiment design",
+                    "signals": {
+                        "data-scientist": 30
+                    },
+                    "skills": []
+                },
+                "C": {
+                    "text": "Both — I analyze data AND build models",
+                    "signals": {
+                        "data-scientist": 15,
+                        "data-analyst": 15
+                    },
+                    "skills": []
+                }
+            },
+            "routing": {
+                "A": null,
+                "B": null,
+                "C": null
+            }
+        },
+        {
+            "id": "Q_DIFF_ML_vs_DS",
+            "gate": 2,
+            "domain_scope": "DATA_AI",
+            "stem": "Which problem excites you more?",
+            "options": {
+                "A": {
+                    "text": "Finding the best algorithm and features to improve model accuracy by 3%",
+                    "signals": {
+                        "data-scientist": 30
+                    },
+                    "skills": []
+                },
+                "B": {
+                    "text": "Reducing inference latency from 200ms to 20ms in a production API",
+                    "signals": {
+                        "ml-engineer": 30
+                    },
+                    "skills": []
+                },
+                "C": {
+                    "text": "Designing a pipeline that retrains models automatically when data drifts",
+                    "signals": {
+                        "ml-engineer": 35
+                    },
+                    "skills": []
+                }
+            },
+            "routing": {
+                "A": null,
+                "B": null,
+                "C": null
+            }
+        },
+        {
+            "id": "Q_DIFF_BE_vs_FS",
+            "gate": 2,
+            "domain_scope": "SOFTWARE",
+            "stem": "You need to add a new feature. Do you:",
+            "options": {
+                "A": {
+                    "text": "Build the API endpoint and hand off to a frontend dev",
+                    "signals": {
+                        "backend-dev": 25
+                    },
+                    "skills": []
+                },
+                "B": {
+                    "text": "Build the API AND implement the UI component yourself",
+                    "signals": {
+                        "fullstack-dev": 30
+                    },
+                    "skills": []
+                },
+                "C": {
+                    "text": "Depends on the team — I'm comfortable either way",
+                    "signals": {
+                        "fullstack-dev": 20
+                    },
+                    "skills": []
+                }
+            },
+            "routing": {
+                "A": null,
+                "B": null,
+                "C": null
+            }
+        },
+        {
+            "id": "Q_DIFF_NLP_vs_ML",
+            "gate": 2,
+            "domain_scope": "DATA_AI",
+            "stem": "Pick the project you'd rather work on:",
+            "options": {
+                "A": {
+                    "text": "Building a question-answering system using RAG with LLMs",
+                    "signals": {
+                        "nlp-engineer": 35
+                    },
+                    "skills": []
+                },
+                "B": {
+                    "text": "Optimizing a recommendation engine's latency for 10M users",
+                    "signals": {
+                        "ml-engineer": 35
+                    },
+                    "skills": []
+                },
+                "C": {
+                    "text": "Training a multi-modal model on vision + text data",
+                    "signals": {
+                        "ai-researcher": 30
+                    },
+                    "skills": []
+                }
+            },
+            "routing": {
+                "A": null,
+                "B": null,
+                "C": null
+            }
+        },
+        {
+            "id": "Q_EXP",
+            "gate": 3,
+            "domain_scope": "ALL",
+            "stem": "Which best describes where you are right now?",
+            "options": {
+                "A": {
+                    "text": "Still in university / less than 6 months of hands-on experience",
+                    "signals": {},
+                    "skills": [],
+                    "experience_level": "intern"
+                },
+                "B": {
+                    "text": "6 months – 1.5 years, mostly personal projects or internship",
+                    "signals": {},
+                    "skills": [],
+                    "experience_level": "junior"
+                },
+                "C": {
+                    "text": "2–4 years of professional or serious project experience",
+                    "signals": {},
+                    "skills": [],
+                    "experience_level": "mid"
+                },
+                "D": {
+                    "text": "5+ years, have led projects or teams",
+                    "signals": {},
+                    "skills": [],
+                    "experience_level": "senior"
+                },
+                "E": {
+                    "text": "Researcher / PhD / publishing papers",
+                    "signals": {},
+                    "skills": [],
+                    "experience_level": "research"
+                }
+            },
+            "routing": {
+                "A": "Q_PROJECT",
+                "B": "Q_PROJECT",
+                "C": "Q_PROJECT",
+                "D": "Q_PROJECT",
+                "E": "Q_PROJECT"
+            }
+        },
+        {
+            "id": "Q_PROJECT",
+            "gate": 3,
+            "domain_scope": "ALL",
+            "stem": "What's the most technically complex thing you've built or contributed to?",
+            "options": {
+                "A": {
+                    "text": "A multi-page web app with authentication and a database",
+                    "signals": {
+                        "backend-dev": 10,
+                        "fullstack-dev": 10
+                    },
+                    "skills": []
+                },
+                "B": {
+                    "text": "An end-to-end ML model trained on real data and deployed online",
+                    "signals": {
+                        "ml-engineer": 15,
+                        "data-scientist": 10
+                    },
+                    "skills": []
+                },
+                "C": {
+                    "text": "A data pipeline processing millions of records automatically",
+                    "signals": {
+                        "data-engineer": 20
+                    },
+                    "skills": []
+                },
+                "D": {
+                    "text": "A production system used by 100+ real users",
+                    "signals": {
+                        "ml-engineer": 10,
+                        "backend-dev": 10
+                    },
+                    "skills": []
+                },
+                "E": {
+                    "text": "Personal/course projects only",
+                    "signals": {},
+                    "skills": []
+                }
+            },
+            "routing": {
+                "A": null,
+                "B": null,
+                "C": null,
+                "D": null,
+                "E": null
+            }
+        }
+    ],
+    "tiebreaker_map": {
+        "data-scientist|data-analyst": "Q_DIFF_DS_vs_DA",
+        "data-analyst|data-scientist": "Q_DIFF_DS_vs_DA",
+        "ml-engineer|data-scientist": "Q_DIFF_ML_vs_DS",
+        "data-scientist|ml-engineer": "Q_DIFF_ML_vs_DS",
+        "backend-dev|fullstack-dev": "Q_DIFF_BE_vs_FS",
+        "fullstack-dev|backend-dev": "Q_DIFF_BE_vs_FS",
+        "nlp-engineer|ml-engineer": "Q_DIFF_NLP_vs_ML",
+        "ml-engineer|nlp-engineer": "Q_DIFF_NLP_vs_ML"
+    }
+}
