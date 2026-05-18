@@ -59,7 +59,7 @@ def generate_questions_for_job(title, category, index):
                 "category": category,
                 "job_titles": [title],
                 "evidence_skills": "Communication, Self-Assessment",
-                "dataset_frequency_note": "Dataset Job (Rank 801-1000)",
+                "dataset_frequency_note": "Dataset Job (Rank 1501-2000)",
                 "source_url": None,
                 "source_note": "Dataset-derived (Online Interview Style)"
             }
@@ -102,7 +102,7 @@ def generate_questions_for_job(title, category, index):
                 "category": category,
                 "job_titles": [title],
                 "evidence_skills": "Accountability, Resilience",
-                "dataset_frequency_note": "Dataset Job (Rank 501-800)",
+                "dataset_frequency_note": "Dataset Job (Rank 1501-2000)",
                 "source_url": None,
                 "source_note": "Dataset-derived (Online Interview Style)"
             }
@@ -117,8 +117,8 @@ def generate_questions_for_job(title, category, index):
 def main():
     try:
         df = pd.read_csv('jobtittle.csv')
-        # Slice for rank 801 to 1000 (index 800 to 1000 in 0-indexed pandas)
-        batch = df.iloc[800:1000]['job_title'].tolist()
+        # Slice for rank 1501 to 2000 (index 1500 to 2000 in 0-indexed pandas)
+        batch = df.iloc[1500:2000]['job_title'].tolist()
         
         with open('data/questions.json', 'r', encoding='utf-8') as f:
             data = json.load(f)
@@ -126,7 +126,7 @@ def main():
         existing_questions = data.get('questions', [])
         
         new_questions = []
-        for i, title in enumerate(batch, 801):
+        for i, title in enumerate(batch, 1501):
             cat = categorize_job(title)
             qs = generate_questions_for_job(title, cat, i)
             new_questions.extend(qs)
@@ -136,7 +136,7 @@ def main():
         with open('data/questions.json', 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4)
             
-        print(f"Generated and appended {len(new_questions)} online-interview questions for jobs 801-1000.")
+        print(f"Generated and appended {len(new_questions)} online-interview questions for jobs 1501-2000.")
         
     except Exception as e:
         print(f"Error: {e}")
