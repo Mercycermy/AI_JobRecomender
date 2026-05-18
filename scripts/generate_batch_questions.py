@@ -59,7 +59,7 @@ def generate_questions_for_job(title, category, index):
                 "category": category,
                 "job_titles": [title],
                 "evidence_skills": "Communication, Self-Assessment",
-                "dataset_frequency_note": "Dataset Job (Rank 30001-33754)",
+                "dataset_frequency_note": "Dataset Job (Rank 15001-20000)",
                 "source_url": None,
                 "source_note": "Dataset-derived (Online Interview Style)"
             }
@@ -102,7 +102,7 @@ def generate_questions_for_job(title, category, index):
                 "category": category,
                 "job_titles": [title],
                 "evidence_skills": "Accountability, Resilience",
-                "dataset_frequency_note": "Dataset Job (Rank 30001-33754)",
+                "dataset_frequency_note": "Dataset Job (Rank 15001-20000)",
                 "source_url": None,
                 "source_note": "Dataset-derived (Online Interview Style)"
             }
@@ -115,28 +115,42 @@ def generate_questions_for_job(title, category, index):
     return questions
 
 def main():
+    import glob
     try:
         df = pd.read_csv('jobtittle.csv')
-        # Slice for rank 30001 to 33754 (index 30000 to 33754 in 0-indexed pandas)
-        batch = df.iloc[30000:33754]['job_title'].tolist()
+        # Slice for rank 15001 to 20000 (index 15000 to 20000 in 0-indexed pandas)
+        batch = df.iloc[15000:20000]['job_title'].tolist()
         
-        with open('data/questions.json', 'r', encoding='utf-8') as f:
-            data = json.load(f)
+        existing_questions = []
+        # Support loading from parts or split files
+        parts = glob.glob('data/questions_part*.json')
+        if not parts and os.path.exists('data/questions.json'):
+            parts = ['data/questions.json']
+        
+        if parts:
+            print(f"Loading existing questions from {len(parts)} parts...")
+            for part in parts:
+                with open(part, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    existing_questions.extend(data.get('questions', []))
+            print(f"Loaded {len(existing_questions)} existing questions.")
+        else:
+            print("No existing questions found. Starting fresh.")
             
-        existing_questions = data.get('questions', [])
-        
         new_questions = []
-        for i, title in enumerate(batch, 30001):
+        for i, title in enumerate(batch, 15001):
             cat = categorize_job(title)
             qs = generate_questions_for_job(title, cat, i)
             new_questions.extend(qs)
             
-        data['questions'] = existing_questions + new_questions
+        combined_data = {"questions": existing_questions + new_questions}
         
+        # Save to data/questions.json so split_json.py can work on it
         with open('data/questions.json', 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=4)
+            json.dump(combined_data, f, indent=4)
             
-        print(f"Generated and appended {len(new_questions)} online-interview questions for jobs 30001-33754.")
+        print(f"Generated and appended {len(new_questions)} online-interview questions for jobs 15001-20000.")
+        print(f"Total questions in combined dataset: {len(combined_data['questions'])}")
         
     except Exception as e:
         print(f"Error: {e}")
