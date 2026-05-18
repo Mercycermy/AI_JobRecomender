@@ -413,7 +413,7 @@
         {
             "resource_id": "figma-fcc-1",
             "skill_id": "fe-figma",
-            "title": "UI / UX Design Tutorial – Wireframe, Mockup & Design in Figma",
+            "title": "UI / UX Design Tutorial \u2013 Wireframe, Mockup & Design in Figma",
             "platform": "freeCodeCamp",
             "url": "https://www.youtube.com/watch?v=c9Wg6Cb_YlU",
             "resource_type": "course",
@@ -508,6 +508,126 @@
             "url": "https://www.youtube.com/results?search_query=google+ads+full+course",
             "resource_type": "course",
             "difficulty": "intermediate",
+            "is_free": 1
+        },
+        {
+            "resource_id": "acc-great-1",
+            "skill_id": "fin-accounting",
+            "title": "Basic Accounting - Great Learning Full Course",
+            "platform": "Great Learning",
+            "url": "https://www.mygreatlearning.com/academy/learn-for-free/courses/accounting-fundamentals",
+            "resource_type": "course",
+            "difficulty": "beginner",
+            "is_free": 1
+        },
+        {
+            "resource_id": "acc-cfi-1",
+            "skill_id": "fin-accounting",
+            "title": "Accounting Fundamentals",
+            "platform": "Corporate Finance Institute (CFI)",
+            "url": "https://corporatefinanceinstitute.com/course/accounting-fundamentals/",
+            "resource_type": "course",
+            "difficulty": "beginner",
+            "is_free": 1
+        },
+        {
+            "resource_id": "cad-fcc-1",
+            "skill_id": "dm-cad",
+            "title": "AutoCAD for Beginners - Full University Course",
+            "platform": "freeCodeCamp",
+            "url": "https://www.youtube.com/watch?v=cm52aQIFgA0",
+            "resource_type": "course",
+            "difficulty": "beginner",
+            "is_free": 1
+        },
+        {
+            "resource_id": "cad-sourcecad-1",
+            "skill_id": "dm-cad",
+            "title": "Complete AutoCAD course for beginners",
+            "platform": "SourceCAD",
+            "url": "https://www.youtube.com/watch?v=kYvteM-6hbg",
+            "resource_type": "course",
+            "difficulty": "beginner",
+            "is_free": 1
+        },
+        {
+            "resource_id": "sales-hubspot-1",
+            "skill_id": "biz-sales",
+            "title": "Inbound Sales Training Certification",
+            "platform": "HubSpot Academy",
+            "url": "https://academy.hubspot.com/courses/inbound-sales",
+            "resource_type": "certification",
+            "difficulty": "beginner",
+            "is_free": 1
+        },
+        {
+            "resource_id": "sales-yt-1",
+            "skill_id": "biz-sales",
+            "title": "Sales Training - Master The Art Of Selling",
+            "platform": "YouTube",
+            "url": "https://www.youtube.com/watch?v=R9VvO1F24Sg",
+            "resource_type": "tutorial",
+            "difficulty": "beginner",
+            "is_free": 1
+        },
+        {
+            "resource_id": "excel-fcc-1",
+            "skill_id": "ba-excel",
+            "title": "Microsoft Excel Tutorial for Beginners - Full Course",
+            "platform": "freeCodeCamp",
+            "url": "https://www.youtube.com/watch?v=Vl0H-qTclOg",
+            "resource_type": "course",
+            "difficulty": "beginner",
+            "is_free": 1
+        },
+        {
+            "resource_id": "excel-coursera-1",
+            "skill_id": "fin-excel",
+            "title": "Excel Skills for Business Specialization",
+            "platform": "Coursera",
+            "url": "https://www.coursera.org/specializations/excel",
+            "resource_type": "course",
+            "difficulty": "intermediate",
+            "is_free": 1
+        },
+        {
+            "resource_id": "social-hubspot-1",
+            "skill_id": "sm-social",
+            "title": "Social Media Marketing Certification Course",
+            "platform": "HubSpot Academy",
+            "url": "https://academy.hubspot.com/courses/social-media",
+            "resource_type": "certification",
+            "difficulty": "beginner",
+            "is_free": 1
+        },
+        {
+            "resource_id": "social-meta-1",
+            "skill_id": "mkt-social",
+            "title": "Meta Social Media Marketing Professional Certificate",
+            "platform": "Coursera",
+            "url": "https://www.coursera.org/professional-certificates/meta-social-media-marketing",
+            "resource_type": "course",
+            "difficulty": "beginner",
+            "is_free": 1
+        },
+        {
+            "resource_id": "pr-yt-1",
+            "skill_id": "dm-pr",
+            "title": "Premiere Pro Tutorial for Beginners",
+            "platform": "YouTube",
+            "url": "https://www.youtube.com/watch?v=jWNWx0f2-yQ",
+            "resource_type": "tutorial",
+            "difficulty": "beginner",
+            "is_free": 1
+        },
+        {
+            "resource_id": "office-yt-1",
+            "skill_id": "ba-msoffice",
+            "title": "Microsoft Office 365 Crash Course",
+            "platform": "YouTube",
+            "url": "https://www.youtube.com/watch?v=e_wK5f4cMow",
+            "resource_type": "course",
+            "difficulty": "beginner",
             "is_free": 1
         }
     ]
