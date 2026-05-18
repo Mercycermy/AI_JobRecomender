@@ -4,19 +4,19 @@ import uuid
 
 def categorize_job(title):
     t = title.lower()
-    if any(x in t for x in ['developer', 'engineer', 'architect', 'tech', 'software', 'app']):
+    if any(x in t for x in ['developer', 'engineer', 'architect', 'tech', 'software', 'app', 'it', 'network', 'system']):
         return 'tech'
-    elif any(x in t for x in ['accountant', 'finance', 'cashier', 'purchaser']):
+    elif any(x in t for x in ['accountant', 'finance', 'cashier', 'purchaser', 'auditor', 'bank', 'teller']):
         return 'finance'
-    elif any(x in t for x in ['sales', 'marketer', 'marketing']):
+    elif any(x in t for x in ['sales', 'marketer', 'marketing', 'promotion', 'agent']):
         return 'sales_marketing'
-    elif any(x in t for x in ['admin', 'manager', 'secretary', 'assistant', 'reception', 'officer']):
+    elif any(x in t for x in ['admin', 'manager', 'secretary', 'assistant', 'reception', 'officer', 'clerk', 'hr', 'human resource']):
         return 'admin'
-    elif any(x in t for x in ['designer', 'editor', 'creator']):
+    elif any(x in t for x in ['designer', 'editor', 'creator', 'animator', 'video', 'photo', 'graphic', 'ui', 'ux']):
         return 'creative'
-    elif any(x in t for x in ['nurse', 'doctor', 'medical', 'pharmacist', 'clinic']):
+    elif any(x in t for x in ['nurse', 'doctor', 'medical', 'pharmacist', 'clinic', 'health']):
         return 'medical'
-    elif any(x in t for x in ['tutor', 'teacher', 'instructor']):
+    elif any(x in t for x in ['tutor', 'teacher', 'instructor', 'lecturer']):
         return 'education'
     else:
         return 'general'
@@ -60,7 +60,7 @@ def generate_questions_for_job(title, category, index):
                 "category": category,
                 "job_titles": [title],
                 "evidence_skills": "Problem Solving",
-                "dataset_frequency_note": "Dataset Job (Rank 101-200)",
+                "dataset_frequency_note": "Dataset Job (Rank 201-300)",
                 "source_url": None,
                 "source_note": "Dataset-derived"
             }
@@ -113,7 +113,7 @@ def generate_questions_for_job(title, category, index):
                 "category": category,
                 "job_titles": [title],
                 "evidence_skills": "Core Domain Process",
-                "dataset_frequency_note": "Dataset Job (Rank 101-200)",
+                "dataset_frequency_note": "Dataset Job (Rank 201-300)",
                 "source_url": None,
                 "source_note": "Dataset-derived"
             }
@@ -128,8 +128,8 @@ def generate_questions_for_job(title, category, index):
 def main():
     try:
         df = pd.read_csv('jobtittle.csv')
-        # Slice for rank 101 to 200 (index 100 to 200 in 0-indexed pandas)
-        batch = df.iloc[100:200]['job_title'].tolist()
+        # Slice for rank 201 to 300 (index 200 to 300 in 0-indexed pandas)
+        batch = df.iloc[200:300]['job_title'].tolist()
         
         with open('data/questions.json', 'r', encoding='utf-8') as f:
             data = json.load(f)
@@ -137,7 +137,7 @@ def main():
         existing_questions = data.get('questions', [])
         
         new_questions = []
-        for i, title in enumerate(batch, 101):
+        for i, title in enumerate(batch, 201):
             cat = categorize_job(title)
             qs = generate_questions_for_job(title, cat, i)
             new_questions.extend(qs)
@@ -147,7 +147,7 @@ def main():
         with open('data/questions.json', 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4)
             
-        print(f"Generated and appended {len(new_questions)} questions for jobs 101-200.")
+        print(f"Generated and appended {len(new_questions)} questions for jobs 201-300.")
         
     except Exception as e:
         print(f"Error: {e}")
