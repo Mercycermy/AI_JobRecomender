@@ -4,11 +4,11 @@ import uuid
 
 def categorize_job(title):
     t = title.lower()
-    if any(x in t for x in ['developer', 'engineer', 'architect', 'tech', 'software', 'app', 'it', 'network', 'system']):
+    if any(x in t for x in ['developer', 'engineer', 'architect', 'tech', 'software', 'app', 'it', 'network', 'system', 'data']):
         return 'tech'
-    elif any(x in t for x in ['accountant', 'finance', 'cashier', 'purchaser', 'auditor', 'bank', 'teller']):
+    elif any(x in t for x in ['accountant', 'finance', 'cashier', 'purchaser', 'auditor', 'bank', 'teller', 'economics']):
         return 'finance'
-    elif any(x in t for x in ['sales', 'marketer', 'marketing', 'promotion', 'agent']):
+    elif any(x in t for x in ['sales', 'marketer', 'marketing', 'promotion', 'agent', 'broker']):
         return 'sales_marketing'
     elif any(x in t for x in ['admin', 'manager', 'secretary', 'assistant', 'reception', 'officer', 'clerk', 'hr', 'human resource']):
         return 'admin'
@@ -22,22 +22,22 @@ def categorize_job(title):
         return 'general'
 
 def generate_questions_for_job(title, category, index):
-    q_id_1 = f"Q_AUTO_{index}_1_{uuid.uuid4().hex[:6].upper()}"
-    q_id_2 = f"Q_AUTO_{index}_2_{uuid.uuid4().hex[:6].upper()}"
+    q_id_1 = f"Q_AUTO_INT_{index}_1_{uuid.uuid4().hex[:6].upper()}"
+    q_id_2 = f"Q_AUTO_INT_{index}_2_{uuid.uuid4().hex[:6].upper()}"
     
     questions = []
     
-    # Question 1: Practical/Behavioral
+    # Online Interview Style Q1: Experience & Fit
     q1 = {
         "id": q_id_1,
         "gate": 2,
         "domain_scope": category.upper(),
         "question_type": "free_response",
         "role_targets": [category],
-        "difficulty": "intermediate",
-        "experience_level_target": "mid",
-        "stem": f"Based on your experience as a {title}, describe a situation where you had to solve a significant and unexpected challenge.",
-        "context": f"This question evaluates your practical problem-solving skills specific to the {title} role.",
+        "difficulty": "beginner",
+        "experience_level_target": "any",
+        "stem": f"Can you walk me through your previous experience and explain why you believe you're a strong fit for a {title} position?",
+        "context": "This is a classic opening interview question that asks you to connect your past experience directly to the role.",
         "answer_mode": "free_text",
         "options": None,
         "practical_task": None,
@@ -47,22 +47,21 @@ def generate_questions_for_job(title, category, index):
             "category_weights": {category: 50},
             "skill_weights": {},
             "rubric": [
-                {"criterion": "Relevance to role", "points": 30, "strong_evidence": f"Clearly describes a scenario typical for a {title}."},
-                {"criterion": "Problem Solving", "points": 40, "strong_evidence": "Logical, methodical approach to resolving the unexpected challenge."},
-                {"criterion": "Outcome Focus", "points": 30, "strong_evidence": "Demonstrates a positive or educational outcome."}
+                {"criterion": "Relevance", "points": 50, "strong_evidence": f"Applicant clearly connects past work, studies, or projects directly to the skills needed for a {title}."},
+                {"criterion": "Communication", "points": 50, "strong_evidence": "Answer is structured, confident, and focuses on value added to the employer."}
             ],
-            "red_flags": ["Vague answer without specific details", "Irrelevant scenario"],
+            "red_flags": ["Does not mention relevant experience", "Focuses only on what the company can do for them rather than what they bring"],
             "partial_credit_rules": []
         },
-        "ai_evaluation_prompt": f"Evaluate this response from a candidate for a {title} position. Look for clear problem-solving skills and domain relevance.",
+        "ai_evaluation_prompt": f"Evaluate this interview response for a {title} role. Assess how well they map their past experience to this specific position.",
         "job_evidence": [
             {
                 "category": category,
                 "job_titles": [title],
-                "evidence_skills": "Problem Solving",
-                "dataset_frequency_note": "Dataset Job (Rank 201-300)",
+                "evidence_skills": "Communication, Self-Assessment",
+                "dataset_frequency_note": "Dataset Job (Rank 801-1000)",
                 "source_url": None,
-                "source_note": "Dataset-derived"
+                "source_note": "Dataset-derived (Online Interview Style)"
             }
         ],
         "routing": {"strong": "PASS", "partial": "PASS", "weak": "FAIL"},
@@ -70,18 +69,7 @@ def generate_questions_for_job(title, category, index):
     }
     questions.append(q1)
 
-    # Question 2: Technical/Process (domain specific templates)
-    stem_map = {
-        'tech': f"As a {title}, how do you ensure the quality and maintainability of your core deliverables (e.g., code, architecture, systems)?",
-        'finance': f"As a {title}, describe your process for ensuring accuracy and dealing with discrepancies in financial records or transactions.",
-        'sales_marketing': f"As a {title}, how do you approach a situation where you are failing to meet your core targets or facing rejection?",
-        'admin': f"As a {title}, how do you prioritize competing requests from multiple stakeholders while maintaining efficiency?",
-        'creative': f"As a {title}, how do you handle critical feedback from a client or stakeholder who wants to change your core design/output?",
-        'medical': f"As a {title}, describe your approach to ensuring patient safety and strict adherence to protocols under pressure.",
-        'education': f"As a {title}, how do you adapt your methods for a student or group that is struggling to grasp the material?",
-        'general': f"As a {title}, describe the standard process you follow to ensure your daily work meets quality standards."
-    }
-    
+    # Online Interview Style Q2: Behavioral / Mistake
     q2 = {
         "id": q_id_2,
         "gate": 2,
@@ -90,8 +78,8 @@ def generate_questions_for_job(title, category, index):
         "role_targets": [category],
         "difficulty": "intermediate",
         "experience_level_target": "mid",
-        "stem": stem_map[category],
-        "context": f"This question looks at your standard operating procedures as a {title}.",
+        "stem": f"Tell me about a time you made a mistake or faced a major setback while working as a {title} (or in a similar role). How did you handle it, and what did you learn?",
+        "context": "Behavioral interview question focusing on accountability and resilience.",
         "answer_mode": "free_text",
         "options": None,
         "practical_task": None,
@@ -101,21 +89,22 @@ def generate_questions_for_job(title, category, index):
             "category_weights": {category: 50},
             "skill_weights": {},
             "rubric": [
-                {"criterion": "Domain Process", "points": 50, "strong_evidence": "Mentions specific tools, methodologies, or standard practices relevant to the domain."},
-                {"criterion": "Resilience/Adaptability", "points": 50, "strong_evidence": "Shows flexibility and professionalism in handling the situation."}
+                {"criterion": "Accountability", "points": 40, "strong_evidence": "Candidly admits to a mistake or setback without blaming others unreasonably."},
+                {"criterion": "Resolution", "points": 30, "strong_evidence": "Explains the actionable steps taken to fix the immediate issue."},
+                {"criterion": "Learning", "points": 30, "strong_evidence": "Highlights a systemic change or personal lesson learned to prevent future occurrences."}
             ],
-            "red_flags": ["Lack of specific methodologies", "Unprofessional approach"],
+            "red_flags": ["Claims they have never made a mistake", "Blames coworkers or management entirely"],
             "partial_credit_rules": []
         },
-        "ai_evaluation_prompt": f"Evaluate this response from a {title}. Assess their knowledge of standard processes and their professionalism.",
+        "ai_evaluation_prompt": f"Evaluate this behavioral response from a {title} candidate. Look for strong accountability, problem resolution, and lessons learned.",
         "job_evidence": [
             {
                 "category": category,
                 "job_titles": [title],
-                "evidence_skills": "Core Domain Process",
-                "dataset_frequency_note": "Dataset Job (Rank 201-300)",
+                "evidence_skills": "Accountability, Resilience",
+                "dataset_frequency_note": "Dataset Job (Rank 501-800)",
                 "source_url": None,
-                "source_note": "Dataset-derived"
+                "source_note": "Dataset-derived (Online Interview Style)"
             }
         ],
         "routing": {"strong": "PASS", "partial": "PASS", "weak": "FAIL"},
@@ -128,8 +117,8 @@ def generate_questions_for_job(title, category, index):
 def main():
     try:
         df = pd.read_csv('jobtittle.csv')
-        # Slice for rank 201 to 300 (index 200 to 300 in 0-indexed pandas)
-        batch = df.iloc[200:300]['job_title'].tolist()
+        # Slice for rank 801 to 1000 (index 800 to 1000 in 0-indexed pandas)
+        batch = df.iloc[800:1000]['job_title'].tolist()
         
         with open('data/questions.json', 'r', encoding='utf-8') as f:
             data = json.load(f)
@@ -137,7 +126,7 @@ def main():
         existing_questions = data.get('questions', [])
         
         new_questions = []
-        for i, title in enumerate(batch, 201):
+        for i, title in enumerate(batch, 801):
             cat = categorize_job(title)
             qs = generate_questions_for_job(title, cat, i)
             new_questions.extend(qs)
@@ -147,7 +136,7 @@ def main():
         with open('data/questions.json', 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4)
             
-        print(f"Generated and appended {len(new_questions)} questions for jobs 201-300.")
+        print(f"Generated and appended {len(new_questions)} online-interview questions for jobs 801-1000.")
         
     except Exception as e:
         print(f"Error: {e}")
