@@ -1,0 +1,179 @@
+{
+    "metadata": {
+        "generated_for": "AI_JobRecomender",
+        "dataset_used": "data/jobs.csv",
+        "taxonomy_used": "data/skills_taxonomy.json",
+        "generation_date": "2026-05-19",
+        "version": "learning-resources-v2",
+        "online_verification": true
+    },
+    "resources": [
+        {
+            "resource_id": "res-tech-it-google-1",
+            "skill_id": "it-support",
+            "title": "Google IT Support Professional Certificate",
+            "platform": "Coursera",
+            "url": "https://www.coursera.org/professional-certificates/google-it-support",
+            "resource_type": "certification",
+            "difficulty": "beginner",
+            "is_free": 0,
+            "estimated_hours": 100,
+            "language": "English",
+            "prerequisites": [],
+            "best_for": [
+                "tech",
+                "admin"
+            ],
+            "covers": [
+                "Troubleshooting",
+                "Customer Service",
+                "Networking",
+                "Operating Systems",
+                "Security"
+            ],
+            "job_gap_alignment": {
+                "target_categories": [
+                    "tech"
+                ],
+                "target_job_titles": [
+                    "IT Support",
+                    "System Administrator",
+                    "Help Desk"
+                ],
+                "gap_priority": "high",
+                "why_this_resource": "Recognized globally as the best entry-level baseline for hardware and software business support roles."
+            },
+            "verification_status": "verified",
+            "last_verified": "2026-05-19",
+            "source_quality": "vendor",
+            "notes": "Financial aid is available for those who need it to be free."
+        },
+        {
+            "resource_id": "res-tech-devops-docker-1",
+            "skill_id": "tech-docker",
+            "title": "Docker Official Documentation",
+            "platform": "official-docs",
+            "url": "https://docs.docker.com/get-started/",
+            "resource_type": "documentation",
+            "difficulty": "intermediate",
+            "is_free": 1,
+            "estimated_hours": 8,
+            "language": "English",
+            "prerequisites": [
+                "it-support"
+            ],
+            "best_for": [
+                "tech"
+            ],
+            "covers": [
+                "Containerization",
+                "Images",
+                "Docker Compose",
+                "Volumes"
+            ],
+            "job_gap_alignment": {
+                "target_categories": [
+                    "tech"
+                ],
+                "target_job_titles": [
+                    "DevOps Engineer",
+                    "Backend Developer",
+                    "System Administrator"
+                ],
+                "gap_priority": "high",
+                "why_this_resource": "Docker is an absolute prerequisite to modern scalable cloud deployments."
+            },
+            "verification_status": "verified",
+            "last_verified": "2026-05-19",
+            "source_quality": "official",
+            "notes": "Highly practical, requires running Docker Desktop locally."
+        },
+        {
+            "resource_id": "res-admin-hr-coursera-1",
+            "skill_id": "admin-hr",
+            "title": "Human Resource Management Specialist",
+            "platform": "Coursera",
+            "url": "https://www.coursera.org/specializations/human-resource-management",
+            "resource_type": "course",
+            "difficulty": "intermediate",
+            "is_free": 0,
+            "estimated_hours": 50,
+            "language": "English",
+            "prerequisites": [],
+            "best_for": [
+                "admin"
+            ],
+            "covers": [
+                "Recruiting",
+                "Onboarding",
+                "Performance evaluation",
+                "Compensation management"
+            ],
+            "job_gap_alignment": {
+                "target_categories": [
+                    "admin"
+                ],
+                "target_job_titles": [
+                    "HR Manager",
+                    "Human Resource Officer",
+                    "Recruiter"
+                ],
+                "gap_priority": "high",
+                "why_this_resource": "Provides structured academic backing to HR intuition, important for corporate environments."
+            },
+            "verification_status": "verified",
+            "last_verified": "2026-05-19",
+            "source_quality": "reputable-platform",
+            "notes": "Offered by the University of Minnesota."
+        }
+    ],
+    "learning_paths": [
+        {
+            "target_category": "tech",
+            "target_job_id": null,
+            "target_job_title": "IT Support Specialist",
+            "experience_level": "beginner",
+            "path_summary": "Go from zero background to capable help-desk technician by learning hardware troubleshooting, networking basics, and OS management directly from Google.",
+            "total_estimated_hours": 100,
+            "modules": [
+                {
+                    "order": 1,
+                    "module_title": "Technical Support Fundamentals",
+                    "skill_ids": [
+                        "it-support"
+                    ],
+                    "why_now": "Builds the immediate customer service and baseline computing skills companies hire for first.",
+                    "resources": [
+                        "res-tech-it-google-1"
+                    ],
+                    "practice_task": {
+                        "title": "Documenting a Trouble Ticket",
+                        "description": "Simulate taking a user request for a computer that won't turn on, documenting steps taken.",
+                        "success_criteria": [
+                            "Clear problem statement",
+                            "Listed troubleshooting hierarchy (power, screen, etc)"
+                        ]
+                    },
+                    "assessment_follow_up": {
+                        "question_type": "short_answer",
+                        "prompt": "What is the difference between RAM and a Hard Drive?",
+                        "rubric": [
+                            "RAM is volatile/short-term",
+                            "Hard Drive is persistent/long-term storage"
+                        ]
+                    }
+                }
+            ],
+            "capstone_project": {
+                "title": "Network Diagram & Security Policy",
+                "description": "Design a simple office LAN diagram and write a 1-page acceptable use policy for passwords.",
+                "skills_practiced": [
+                    "it-support",
+                    "admin-it-security"
+                ],
+                "portfolio_value": "Shows a proactive understanding of enterprise networking constraints beyond just fixing computers."
+            }
+        }
+    ],
+    "new_skill_candidates": []
+}

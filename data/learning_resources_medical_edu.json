@@ -1,0 +1,137 @@
+{
+    "metadata": {
+        "generated_for": "AI_JobRecomender",
+        "dataset_used": "data/jobs.csv",
+        "taxonomy_used": "data/skills_taxonomy.json",
+        "generation_date": "2026-05-19",
+        "version": "learning-resources-v2",
+        "online_verification": true
+    },
+    "resources": [
+        {
+            "resource_id": "res-med-khan-1",
+            "skill_id": "med-health-science",
+            "title": "Khan Academy: Health and Medicine",
+            "platform": "Khan Academy",
+            "url": "https://www.khanacademy.org/science/health-and-medicine",
+            "resource_type": "practice",
+            "difficulty": "intermediate",
+            "is_free": 1,
+            "estimated_hours": 50,
+            "language": "English",
+            "prerequisites": [],
+            "best_for": [
+                "medical"
+            ],
+            "covers": [
+                "Human anatomy",
+                "Physiology",
+                "Diseases",
+                "NCLEX-RN prep"
+            ],
+            "job_gap_alignment": {
+                "target_categories": [
+                    "medical"
+                ],
+                "target_job_titles": [
+                    "Nurse",
+                    "Pharmacist",
+                    "Clinic Assistant"
+                ],
+                "gap_priority": "high",
+                "why_this_resource": "Essential foundational knowledge for any clinical setting."
+            },
+            "verification_status": "verified",
+            "last_verified": "2026-05-19",
+            "source_quality": "reputable-platform",
+            "notes": "Highly visual and accessible platform for health sciences."
+        },
+        {
+            "resource_id": "res-edu-coursera-1",
+            "skill_id": "edu-instructional-design",
+            "title": "Coursera: Instructional Design Master Track",
+            "platform": "Coursera",
+            "url": "https://www.coursera.org/mastertrack/instructional-design-illinois",
+            "resource_type": "course",
+            "difficulty": "advanced",
+            "is_free": 0,
+            "estimated_hours": 120,
+            "language": "English",
+            "prerequisites": [],
+            "best_for": [
+                "education"
+            ],
+            "covers": [
+                "Learning theories",
+                "E-learning environments",
+                "Curriculum design",
+                "Evaluation"
+            ],
+            "job_gap_alignment": {
+                "target_categories": [
+                    "education"
+                ],
+                "target_job_titles": [
+                    "Tutor",
+                    "Teacher",
+                    "Instructor",
+                    "Lecturer"
+                ],
+                "gap_priority": "medium",
+                "why_this_resource": "Closes the gap between knowing a subject and effectively formally teaching it online or offline."
+            },
+            "verification_status": "needs_verification",
+            "last_verified": "2026-05-19",
+            "source_quality": "reputable-platform",
+            "notes": "Premium certificate from the University of Illinois."
+        }
+    ],
+    "learning_paths": [
+        {
+            "target_category": "medical",
+            "target_job_id": null,
+            "target_job_title": "Clinic Assistant / Junior Nurse",
+            "experience_level": "beginner",
+            "path_summary": "Gain the required foundational biology, anatomy, and procedural understanding necessary to enter an entry-level clinical floor role.",
+            "total_estimated_hours": 50,
+            "modules": [
+                {
+                    "order": 1,
+                    "module_title": "Anatomy and Physiology Basics",
+                    "skill_ids": [
+                        "med-health-science"
+                    ],
+                    "why_now": "Without understanding the human body systems, you cannot assist in diagnosis or treatment safely.",
+                    "resources": [
+                        "res-med-khan-1"
+                    ],
+                    "practice_task": {
+                        "title": "Systems Mapping",
+                        "description": "Accurately diagram the circulatory and respiratory systems.",
+                        "success_criteria": [
+                            "All major organs labeled",
+                            "Flow paths correctly indicated"
+                        ]
+                    },
+                    "assessment_follow_up": {
+                        "question_type": "short_answer",
+                        "prompt": "Identify the basic function of the cardiovascular system.",
+                        "rubric": [
+                            "Mention pumping blood",
+                            "Mention oxygen delivery"
+                        ]
+                    }
+                }
+            ],
+            "capstone_project": {
+                "title": "Clinical Setting Mock Observation",
+                "description": "Review a set of 5 mock patient triage profiles and match them with the correct physiological system failures.",
+                "skills_practiced": [
+                    "med-health-science"
+                ],
+                "portfolio_value": "Demonstrates practical critical thinking needed at any clinic front-desk or nursing station."
+            }
+        }
+    ],
+    "new_skill_candidates": []
+}
