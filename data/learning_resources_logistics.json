@@ -1,0 +1,133 @@
+{
+    "metadata": {
+        "generated_for": "AI_JobRecomender",
+        "dataset_used": "data/jobs.csv",
+        "taxonomy_used": "data/skills_taxonomy.json",
+        "generation_date": "2026-05-19",
+        "version": "learning-resources-v4",
+        "online_verification": true
+    },
+    "resources": [
+        {
+            "resource_id": "res-logistics-coursera-1",
+            "skill_id": "supply-chain-mgmt",
+            "title": "Coursera: Supply Chain Management Specialization",
+            "platform": "Coursera",
+            "url": "https://www.coursera.org/specializations/supply-chain-management",
+            "resource_type": "course",
+            "difficulty": "intermediate",
+            "is_free": 0,
+            "estimated_hours": 80,
+            "language": "English",
+            "prerequisites": [],
+            "best_for": [
+                "logistics",
+                "admin"
+            ],
+            "covers": [
+                "Logistics",
+                "Operations",
+                "Planning",
+                "Sourcing"
+            ],
+            "job_gap_alignment": {
+                "target_categories": [
+                    "logistics",
+                    "admin"
+                ],
+                "target_job_titles": [
+                    "Warehouse Manager",
+                    "Store Keeper",
+                    "Logistics Officer"
+                ],
+                "gap_priority": "high",
+                "why_this_resource": "Moves individuals from manual store-keeping to structured inventory flow and systems thinking."
+            },
+            "verification_status": "verified",
+            "last_verified": "2026-05-19",
+            "source_quality": "reputable-platform",
+            "notes": "Premium certificate from Rutgers University."
+        },
+        {
+            "resource_id": "res-logistics-safety-1",
+            "skill_id": "logistics-safety",
+            "title": "OSHA 10-Hour General Industry Training",
+            "platform": "official-docs",
+            "url": "https://www.osha.gov/training/outreach/general-industry",
+            "resource_type": "certification",
+            "difficulty": "beginner",
+            "is_free": 0,
+            "estimated_hours": 10,
+            "language": "English",
+            "prerequisites": [],
+            "best_for": [
+                "logistics",
+                "trade"
+            ],
+            "covers": [
+                "Workplace hazards",
+                "Personal Protective Equipment",
+                "Safety systems"
+            ],
+            "job_gap_alignment": {
+                "target_categories": [
+                    "logistics",
+                    "trade"
+                ],
+                "target_job_titles": [
+                    "Store Keeper",
+                    "Dispatcher",
+                    "Driver",
+                    "Warehouse Officer"
+                ],
+                "gap_priority": "high",
+                "why_this_resource": "Warehouse operators globally mandate baseline warehouse safety literacy to avoid liability."
+            },
+            "verification_status": "verified",
+            "last_verified": "2026-05-19",
+            "source_quality": "official",
+            "notes": "Paid official certification. Highly requested by bulk logistics employers."
+        }
+    ],
+    "learning_paths": [
+        {
+            "target_category": "logistics",
+            "target_job_id": null,
+            "target_job_title": "Warehouse Officer",
+            "experience_level": "beginner",
+            "path_summary": "Evolve from basic manual lifting to orchestrating entire inventory workflows adhering strictly to industrial safety protocols.",
+            "total_estimated_hours": 90,
+            "modules": [
+                {
+                    "order": 1,
+                    "module_title": "Industrial Safety & Prevention",
+                    "skill_ids": [
+                        "logistics-safety"
+                    ],
+                    "why_now": "Safety is the foremost prerequisite before touching supply chain machinery or layout routing.",
+                    "resources": [
+                        "res-logistics-safety-1"
+                    ],
+                    "practice_task": {
+                        "title": "Facility Hazard Map",
+                        "description": "Identify 3 core hazard zones in a standard warehouse mockup and draft the PPE required to access them.",
+                        "success_criteria": [
+                            "Correct PPE mapping",
+                            "Identifies forklift zones"
+                        ]
+                    },
+                    "assessment_follow_up": {
+                        "question_type": "short_answer",
+                        "prompt": "What is the primary purpose of a Lockout/Tagout (LOTO) procedure?",
+                        "rubric": [
+                            "Preventing accidental machine start up",
+                            "Securing energy sources"
+                        ]
+                    }
+                }
+            ],
+            "capstone_project": null
+        }
+    ],
+    "new_skill_candidates": []
+}
