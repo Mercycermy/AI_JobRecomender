@@ -1,0 +1,94 @@
+{
+    "metadata": {
+        "generated_for": "AI_JobRecomender",
+        "dataset_used": "data/jobs.csv",
+        "taxonomy_used": "data/skills_taxonomy.json",
+        "generation_date": "2026-05-19",
+        "version": "learning-resources-v6",
+        "online_verification": true
+    },
+    "resources": [
+        {
+            "resource_id": "res-wellness-nasm-1",
+            "skill_id": "wellness-fitness",
+            "title": "NASM Personal Trainer Certification Prep",
+            "platform": "official-docs",
+            "url": "https://www.nasm.org/become-a-personal-trainer",
+            "resource_type": "certification",
+            "difficulty": "intermediate",
+            "is_free": 0,
+            "estimated_hours": 120,
+            "language": "English",
+            "prerequisites": [],
+            "best_for": [
+                "general",
+                "medical"
+            ],
+            "covers": [
+                "Anatomy",
+                "Kinesiology",
+                "Client Assessments",
+                "Program Design",
+                "Nutrition"
+            ],
+            "job_gap_alignment": {
+                "target_categories": [
+                    "general",
+                    "medical"
+                ],
+                "target_job_titles": [
+                    "Fitness Instructor",
+                    "Personal Trainer",
+                    "Yoga Instructor"
+                ],
+                "gap_priority": "high",
+                "why_this_resource": "A foundational required certification for nearly all modern gym and personal coaching deployments."
+            },
+            "verification_status": "verified",
+            "last_verified": "2026-05-19",
+            "source_quality": "official",
+            "notes": "Highly recognized industry certification."
+        }
+    ],
+    "learning_paths": [
+        {
+            "target_category": "general",
+            "target_job_id": null,
+            "target_job_title": "Fitness Instructor",
+            "experience_level": "beginner",
+            "path_summary": "Bridge personal fitness enthusiasm into officially certified kinesiology and program structuring mechanics.",
+            "total_estimated_hours": 120,
+            "modules": [
+                {
+                    "order": 1,
+                    "module_title": "Human Movement Science",
+                    "skill_ids": [
+                        "wellness-fitness"
+                    ],
+                    "why_now": "Without understanding muscle constraints, you cannot safely program client routines.",
+                    "resources": [
+                        "res-wellness-nasm-1"
+                    ],
+                    "practice_task": {
+                        "title": "Overhead Squat Assessment",
+                        "description": "Log an overhead squat assessment of a partner and identify 2 postural deviations.",
+                        "success_criteria": [
+                            "Identifies active muscles",
+                            "Provides a corrective stretching technique"
+                        ]
+                    },
+                    "assessment_follow_up": {
+                        "question_type": "short_answer",
+                        "prompt": "What is the primary function of the Gluteus Maximus during a squat?",
+                        "rubric": [
+                            "Hip extension",
+                            "Pelvic stabilization"
+                        ]
+                    }
+                }
+            ],
+            "capstone_project": null
+        }
+    ],
+    "new_skill_candidates": []
+}

@@ -1,0 +1,93 @@
+{
+    "metadata": {
+        "generated_for": "AI_JobRecomender",
+        "dataset_used": "data/jobs.csv",
+        "taxonomy_used": "data/skills_taxonomy.json",
+        "generation_date": "2026-05-19",
+        "version": "learning-resources-v6",
+        "online_verification": true
+    },
+    "resources": [
+        {
+            "resource_id": "res-prod-sixsigma-1",
+            "skill_id": "prod-six-sigma",
+            "title": "Coursera: Six Sigma Yellow Belt",
+            "platform": "Coursera",
+            "url": "https://www.coursera.org/specializations/six-sigma-yellow-belt",
+            "resource_type": "certification",
+            "difficulty": "intermediate",
+            "is_free": 0,
+            "estimated_hours": 30,
+            "language": "English",
+            "prerequisites": [],
+            "best_for": [
+                "general",
+                "admin"
+            ],
+            "covers": [
+                "DMAIC framework",
+                "Waste reduction",
+                "Process mapping",
+                "Defect measurement"
+            ],
+            "job_gap_alignment": {
+                "target_categories": [
+                    "general",
+                    "admin"
+                ],
+                "target_job_titles": [
+                    "Production Manager",
+                    "Quality Control Inspector",
+                    "Manufacturing Engineer"
+                ],
+                "gap_priority": "high",
+                "why_this_resource": "Six Sigma is the defacto standard for minimizing defects and maximizing efficiency on production lines globally."
+            },
+            "verification_status": "verified",
+            "last_verified": "2026-05-19",
+            "source_quality": "reputable-platform",
+            "notes": "Offered by the University System of Georgia."
+        }
+    ],
+    "learning_paths": [
+        {
+            "target_category": "general",
+            "target_job_id": null,
+            "target_job_title": "Quality Control Inspector",
+            "experience_level": "intermediate",
+            "path_summary": "Evolve from manual part inspecting to architecting systemic defect elimination strategies via Six Sigma frameworks.",
+            "total_estimated_hours": 30,
+            "modules": [
+                {
+                    "order": 1,
+                    "module_title": "Defect Measurement Frameworks",
+                    "skill_ids": [
+                        "prod-six-sigma"
+                    ],
+                    "why_now": "Without standardizing how defects are counted across shifts, root cause analysis is impossible.",
+                    "resources": [
+                        "res-prod-sixsigma-1"
+                    ],
+                    "practice_task": {
+                        "title": "DMAIC Process Map",
+                        "description": "Construct a DMAIC (Define, Measure, Analyze, Improve, Control) proposal for reducing packaging errors on a line.",
+                        "success_criteria": [
+                            "A metric is defined in 'Measure'",
+                            "A procedural lock is defined in 'Control'"
+                        ]
+                    },
+                    "assessment_follow_up": {
+                        "question_type": "short_answer",
+                        "prompt": "What does a Fishbone diagram attempt to accomplish?",
+                        "rubric": [
+                            "Identify root causes",
+                            "Categorize potential problem sources"
+                        ]
+                    }
+                }
+            ],
+            "capstone_project": null
+        }
+    ],
+    "new_skill_candidates": []
+}
