@@ -1,0 +1,200 @@
+{
+  "metadata": {
+    "generated_for": "AI_JobRecomender",
+    "dataset_used": "data/jobs.csv",
+    "taxonomy_used": "data/skills_taxonomy.json",
+    "generation_date": "2026-05-19",
+    "version": "learning-resources-v1",
+    "online_verification": true
+  },
+  "resources": [
+    {
+      "resource_id": "res-tech-fe-react-1",
+      "skill_id": "fe-react",
+      "title": "React Official Documentation (Learn React)",
+      "platform": "official-docs",
+      "url": "https://react.dev/learn",
+      "resource_type": "documentation",
+      "difficulty": "beginner",
+      "is_free": 1,
+      "estimated_hours": 15,
+      "language": "English",
+      "prerequisites": ["fe-javascript", "fe-html"],
+      "best_for": ["frontend-dev", "fullstack-dev"],
+      "covers": ["React fundamentals", "Hooks", "Components", "State"],
+      "job_gap_alignment": {
+        "target_categories": ["frontend-dev", "tech"],
+        "target_job_titles": ["React Developer", "Frontend Developer"],
+        "gap_priority": "high",
+        "why_this_resource": "React is overwhelmingly required for frontend roles. Official documents are the most updated and comprehensive starting point."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "official",
+      "notes": "Excellent interactive examples included directly in the browser."
+    },
+    {
+      "resource_id": "res-tech-fe-js-1",
+      "skill_id": "fe-javascript",
+      "title": "freeCodeCamp - JavaScript Algorithms and Data Structures",
+      "platform": "freeCodeCamp",
+      "url": "https://www.freecodecamp.org/learn/javascript-algorithms-and-data-structures-v8/",
+      "resource_type": "certification",
+      "difficulty": "beginner",
+      "is_free": 1,
+      "estimated_hours": 300,
+      "language": "English",
+      "prerequisites": ["fe-html-css"],
+      "best_for": ["frontend-dev", "backend-dev"],
+      "covers": ["JavaScript basics", "ES6", "Regex", "Debugging", "Data Structures", "Algorithms"],
+      "job_gap_alignment": {
+        "target_categories": ["tech"],
+        "target_job_titles": ["Software Developer", "Front End Developer"],
+        "gap_priority": "high",
+        "why_this_resource": "JavaScript bridges the gap to nearly all web applications and UI systems."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "community-high-quality",
+      "notes": "Highly practical, project-based certification."
+    },
+    {
+      "resource_id": "res-tech-be-python-1",
+      "skill_id": "be-python",
+      "title": "Python Official Tutorial",
+      "platform": "official-docs",
+      "url": "https://docs.python.org/3/tutorial/index.html",
+      "resource_type": "documentation",
+      "difficulty": "intermediate",
+      "is_free": 1,
+      "estimated_hours": 20,
+      "language": "English",
+      "prerequisites": [],
+      "best_for": ["backend-dev", "data-science"],
+      "covers": ["Python syntax", "Data structures", "Modules", "Classes"],
+      "job_gap_alignment": {
+        "target_categories": ["tech"],
+        "target_job_titles": ["Python Developer", "Backend Developer", "Data Analyst"],
+        "gap_priority": "high",
+        "why_this_resource": "Provides the required foundational syntax for backend logic and data applications."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "official",
+      "notes": "Always refer back to the official docs for syntax and standard library details."
+    },
+    {
+      "resource_id": "res-tech-db-sql-1",
+      "skill_id": "db-sql",
+      "title": "PostgreSQL Official Tutorial",
+      "platform": "official-docs",
+      "url": "https://www.postgresql.org/docs/current/tutorial.html",
+      "resource_type": "tutorial",
+      "difficulty": "beginner",
+      "is_free": 1,
+      "estimated_hours": 5,
+      "language": "English",
+      "prerequisites": [],
+      "best_for": ["backend-dev", "data-science"],
+      "covers": ["SQL basics", "Table creation", "Queries", "Joins", "Aggregates"],
+      "job_gap_alignment": {
+        "target_categories": ["tech"],
+        "target_job_titles": ["Backend Developer", "Data Analyst", "Database Administrator"],
+        "gap_priority": "high",
+        "why_this_resource": "SQL remains a top non-negotiable skill for backend integration and data retrieval."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "official",
+      "notes": "A fast and highly reliable primer directly from PostgreSQL maintainers."
+    },
+    {
+      "resource_id": "res-tech-data-kaggle-1",
+      "skill_id": "data-pandas",
+      "title": "Kaggle Learn: Pandas",
+      "platform": "Kaggle",
+      "url": "https://www.kaggle.com/learn/pandas",
+      "resource_type": "practice",
+      "difficulty": "intermediate",
+      "is_free": 1,
+      "estimated_hours": 4,
+      "language": "English",
+      "prerequisites": ["be-python"],
+      "best_for": ["data-science"],
+      "covers": ["Creating DataFrames", "Indexing", "Selecting", "Assigning", "Grouping", "Sorting", "Data Types"],
+      "job_gap_alignment": {
+        "target_categories": ["tech"],
+        "target_job_titles": ["Data Analyst", "Data Scientist"],
+        "gap_priority": "high",
+        "why_this_resource": "Pandas is critical for parsing data quickly, tested thoroughly in Data Analyst job interviews."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "reputable-platform",
+      "notes": "Contains interactive coding exercises right in the browser."
+    }
+  ],
+  "learning_paths": [
+    {
+      "target_category": "frontend-dev",
+      "target_job_id": null,
+      "target_job_title": "Frontend Developer",
+      "experience_level": "junior",
+      "path_summary": "Master the essentials of web interactivity by progressing from basic JavaScript data structures to robust, interactive UI components using React.",
+      "total_estimated_hours": 315,
+      "modules": [
+        {
+          "order": 1,
+          "module_title": "JavaScript Fundamentals",
+          "skill_ids": ["fe-javascript"],
+          "why_now": "A strong grasp of JavaScript logic is necessary before dealing with frameworks and virtual DOMs.",
+          "resources": ["res-tech-fe-js-1"],
+          "practice_task": {
+            "title": "Build a CLI calculator",
+            "description": "Write a pure JavaScript script that takes user input to process basic mathematical functions.",
+            "success_criteria": ["Handles edge cases like divide by zero", "Uses ES6 arrow functions"]
+          },
+          "assessment_follow_up": {
+            "question_type": "code_task",
+            "prompt": "Filter an array of user objects to return only active users with age > 18.",
+            "rubric": ["Correct use of .filter()", "Checks active boolean and age property"]
+          }
+        },
+        {
+          "order": 2,
+          "module_title": "Modern React Framework",
+          "skill_ids": ["fe-react"],
+          "why_now": "Component-based architecture is the industry standard for scalable user interfaces.",
+          "resources": ["res-tech-fe-react-1"],
+          "practice_task": {
+            "title": "Build a React ToDo App",
+            "description": "Create an interactive list app with state hooks (`useState`, `useEffect`).",
+            "success_criteria": ["Components are compartmentalized", "Data persists locally", "State updates without mutating directly"]
+          },
+          "assessment_follow_up": {
+            "question_type": "short_answer",
+            "prompt": "Explain the difference between props and state in React.",
+            "rubric": ["State is local and mutable", "Props are passed down and read-only"]
+          }
+        }
+      ],
+      "capstone_project": {
+        "title": "Interactive E-Commerce Product Page",
+        "description": "Build an online storefront page that fetches mockup JSON data, places it into a React component, and handles cart state dynamically.",
+        "skills_practiced": ["fe-javascript", "fe-react", "fe-html-css"],
+        "portfolio_value": "Demonstrates real-world capability with state management, API data fetching, and CSS arrangement highly relevant to tech employers."
+      }
+    }
+  ],
+  "new_skill_candidates": [
+    {
+      "skill_id": "fe-typescript",
+      "canonical_name": "TypeScript",
+      "aliases": ["TS"],
+      "domain": "Frontend",
+      "category": "Languages",
+      "reason": "TypeScript has increasingly become a hard requirement for modern React/Frontend roles seen in jobtittle.csv.",
+      "recommended_resources": ["res-tech-fe-ts-1"]
+    }
+  ]
+}
