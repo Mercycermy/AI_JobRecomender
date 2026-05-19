@@ -1,0 +1,134 @@
+{
+    "metadata": {
+        "generated_for": "AI_JobRecomender",
+        "dataset_used": "data/jobs.csv",
+        "taxonomy_used": "data/skills_taxonomy.json",
+        "generation_date": "2026-05-19",
+        "version": "learning-resources-v7",
+        "online_verification": true
+    },
+    "resources": [
+        {
+            "resource_id": "res-gig-upwork-1",
+            "skill_id": "freelance-management",
+            "title": "Upwork Academy: Freelance Business Operations",
+            "platform": "official-docs",
+            "url": "https://community.upwork.com/t5/Academy/ct-p/Academy",
+            "resource_type": "course",
+            "difficulty": "beginner",
+            "is_free": 1,
+            "estimated_hours": 15,
+            "language": "English",
+            "prerequisites": [],
+            "best_for": [
+                "general",
+                "creative"
+            ],
+            "covers": [
+                "Client acquisition",
+                "Proposal writing",
+                "Rate setting",
+                "Gig platforms"
+            ],
+            "job_gap_alignment": {
+                "target_categories": [
+                    "general",
+                    "creative"
+                ],
+                "target_job_titles": [
+                    "Freelancer",
+                    "Voice Actor",
+                    "Independent Consultant"
+                ],
+                "gap_priority": "high",
+                "why_this_resource": "Gig workers usually possess the hard skill, but lack the pipeline formatting to secure independent employment. This fixes that."
+            },
+            "verification_status": "verified",
+            "last_verified": "2026-05-19",
+            "source_quality": "official",
+            "notes": "Indispensable strategy for any non-contract worker."
+        },
+        {
+            "resource_id": "res-event-logistics-1",
+            "skill_id": "admin-event-planning",
+            "title": "Coursera: Event Planning and Logistics",
+            "platform": "Coursera",
+            "url": "https://www.coursera.org/learn/event-planning",
+            "resource_type": "course",
+            "difficulty": "intermediate",
+            "is_free": 0,
+            "estimated_hours": 20,
+            "language": "English",
+            "prerequisites": [],
+            "best_for": [
+                "general",
+                "admin"
+            ],
+            "covers": [
+                "Vendor Management",
+                "Budgeting",
+                "Client expectations",
+                "Scheduling"
+            ],
+            "job_gap_alignment": {
+                "target_categories": [
+                    "general",
+                    "admin"
+                ],
+                "target_job_titles": [
+                    "Event Planner",
+                    "Coordinator",
+                    "Agent"
+                ],
+                "gap_priority": "high",
+                "why_this_resource": "Events require a highly specific blend of rigid logistics and malleable customer service."
+            },
+            "verification_status": "needs_verification",
+            "last_verified": "2026-05-19",
+            "source_quality": "reputable-platform",
+            "notes": "Excellent framework bridging logistics and hospitality."
+        }
+    ],
+    "learning_paths": [
+        {
+            "target_category": "general",
+            "target_job_id": null,
+            "target_job_title": "Independent Freelancer / Consultant",
+            "experience_level": "beginner",
+            "path_summary": "Package an existing specialized skill into a functional independent business offering.",
+            "total_estimated_hours": 15,
+            "modules": [
+                {
+                    "order": 1,
+                    "module_title": "Freelance Proposal Crafting",
+                    "skill_ids": [
+                        "freelance-management"
+                    ],
+                    "why_now": "Securing the first independently negotiated contract is the hardest blocker for gig workers.",
+                    "resources": [
+                        "res-gig-upwork-1"
+                    ],
+                    "practice_task": {
+                        "title": "Mock Bid Proposal",
+                        "description": "Draft a 150-word cover letter bidding against an open job posting for your core skill.",
+                        "success_criteria": [
+                            "Mentions client's name",
+                            "Includes portfolio link",
+                            "Names specific solution"
+                        ]
+                    },
+                    "assessment_follow_up": {
+                        "question_type": "short_answer",
+                        "prompt": "Why shouldn't you aggressively lower your rate just to win a bid?",
+                        "rubric": [
+                            "Devalues the service",
+                            "Attracts problematic clients"
+                        ]
+                    }
+                }
+            ],
+            "capstone_project": null
+        }
+    ],
+    "new_skill_candidates": []
+}

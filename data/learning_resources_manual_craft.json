@@ -1,0 +1,54 @@
+{
+    "metadata": {
+        "generated_for": "AI_JobRecomender",
+        "dataset_used": "data/jobs.csv",
+        "taxonomy_used": "data/skills_taxonomy.json",
+        "generation_date": "2026-05-19",
+        "version": "learning-resources-v7",
+        "online_verification": true
+    },
+    "resources": [
+        {
+            "resource_id": "res-craft-culinary-1",
+            "skill_id": "craft-culinary",
+            "title": "Escoffier: Basics of Culinary Arts",
+            "platform": "Escoffier",
+            "url": "https://www.escoffier.edu/programs/culinary-arts/",
+            "resource_type": "course",
+            "difficulty": "beginner",
+            "is_free": 0,
+            "estimated_hours": 100,
+            "language": "English",
+            "prerequisites": [
+                "hosp-food-safety"
+            ],
+            "best_for": [
+                "general"
+            ],
+            "covers": [
+                "Knife skills",
+                "Baking formulas",
+                "Mise en place",
+                "Sauces"
+            ],
+            "job_gap_alignment": {
+                "target_categories": [
+                    "general"
+                ],
+                "target_job_titles": [
+                    "Baker",
+                    "Pastry Chef",
+                    "Caterer"
+                ],
+                "gap_priority": "high",
+                "why_this_resource": "Moves candidates beyond raw food handling into professional kitchen execution standards."
+            },
+            "verification_status": "needs_verification",
+            "last_verified": "2026-05-19",
+            "source_quality": "reputable-platform",
+            "notes": "Requires physical kitchen access for practice."
+        }
+    ],
+    "learning_paths": [],
+    "new_skill_candidates": []
+}

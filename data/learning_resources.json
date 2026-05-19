@@ -1,0 +1,1940 @@
+{
+  "metadata": {
+    "generated_for": "AI_JobRecomender",
+    "dataset_used": "data/jobs.csv",
+    "taxonomy_used": "data/skills_taxonomy.json",
+    "generation_date": "2026-05-19",
+    "version": "learning-resources-master",
+    "online_verification": true,
+    "parts_combined": 15
+  },
+  "resources": [
+    {
+      "resource_id": "res-tech-it-google-1",
+      "skill_id": "it-support",
+      "title": "Google IT Support Professional Certificate",
+      "platform": "Coursera",
+      "url": "https://www.coursera.org/professional-certificates/google-it-support",
+      "resource_type": "certification",
+      "difficulty": "beginner",
+      "is_free": 0,
+      "estimated_hours": 100,
+      "language": "English",
+      "prerequisites": [],
+      "best_for": [
+        "tech",
+        "admin"
+      ],
+      "covers": [
+        "Troubleshooting",
+        "Customer Service",
+        "Networking",
+        "Operating Systems",
+        "Security"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "tech"
+        ],
+        "target_job_titles": [
+          "IT Support",
+          "System Administrator",
+          "Help Desk"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "Recognized globally as the best entry-level baseline for hardware and software business support roles."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "vendor",
+      "notes": "Financial aid is available for those who need it to be free."
+    },
+    {
+      "resource_id": "res-tech-devops-docker-1",
+      "skill_id": "tech-docker",
+      "title": "Docker Official Documentation",
+      "platform": "official-docs",
+      "url": "https://docs.docker.com/get-started/",
+      "resource_type": "documentation",
+      "difficulty": "intermediate",
+      "is_free": 1,
+      "estimated_hours": 8,
+      "language": "English",
+      "prerequisites": [
+        "it-support"
+      ],
+      "best_for": [
+        "tech"
+      ],
+      "covers": [
+        "Containerization",
+        "Images",
+        "Docker Compose",
+        "Volumes"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "tech"
+        ],
+        "target_job_titles": [
+          "DevOps Engineer",
+          "Backend Developer",
+          "System Administrator"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "Docker is an absolute prerequisite to modern scalable cloud deployments."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "official",
+      "notes": "Highly practical, requires running Docker Desktop locally."
+    },
+    {
+      "resource_id": "res-admin-hr-coursera-1",
+      "skill_id": "admin-hr",
+      "title": "Human Resource Management Specialist",
+      "platform": "Coursera",
+      "url": "https://www.coursera.org/specializations/human-resource-management",
+      "resource_type": "course",
+      "difficulty": "intermediate",
+      "is_free": 0,
+      "estimated_hours": 50,
+      "language": "English",
+      "prerequisites": [],
+      "best_for": [
+        "admin"
+      ],
+      "covers": [
+        "Recruiting",
+        "Onboarding",
+        "Performance evaluation",
+        "Compensation management"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "admin"
+        ],
+        "target_job_titles": [
+          "HR Manager",
+          "Human Resource Officer",
+          "Recruiter"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "Provides structured academic backing to HR intuition, important for corporate environments."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "reputable-platform",
+      "notes": "Offered by the University of Minnesota."
+    },
+    {
+      "resource_id": "res-wellness-nasm-1",
+      "skill_id": "wellness-fitness",
+      "title": "NASM Personal Trainer Certification Prep",
+      "platform": "official-docs",
+      "url": "https://www.nasm.org/become-a-personal-trainer",
+      "resource_type": "certification",
+      "difficulty": "intermediate",
+      "is_free": 0,
+      "estimated_hours": 120,
+      "language": "English",
+      "prerequisites": [],
+      "best_for": [
+        "general",
+        "medical"
+      ],
+      "covers": [
+        "Anatomy",
+        "Kinesiology",
+        "Client Assessments",
+        "Program Design",
+        "Nutrition"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "general",
+          "medical"
+        ],
+        "target_job_titles": [
+          "Fitness Instructor",
+          "Personal Trainer",
+          "Yoga Instructor"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "A foundational required certification for nearly all modern gym and personal coaching deployments."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "official",
+      "notes": "Highly recognized industry certification."
+    },
+    {
+      "resource_id": "res-bus-sales-hubspot-1",
+      "skill_id": "sales-inbound",
+      "title": "HubSpot Inbound Sales Certification",
+      "platform": "HubSpot Academy",
+      "url": "https://academy.hubspot.com/courses/inbound-sales",
+      "resource_type": "certification",
+      "difficulty": "beginner",
+      "is_free": 1,
+      "estimated_hours": 3,
+      "language": "English",
+      "prerequisites": [],
+      "best_for": [
+        "sales_marketing"
+      ],
+      "covers": [
+        "Identifying buyers",
+        "Lead connection",
+        "Sales calls",
+        "Closing strategies"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "sales_marketing"
+        ],
+        "target_job_titles": [
+          "Sales Representative",
+          "Sales Manager",
+          "Sales Executive"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "Inbound methodology is widely adopted by modern tech and B2B sales forces. Foundational element for any high-volume sales job."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "official",
+      "notes": "Highly recognized industry certification that boosts resumes quickly."
+    },
+    {
+      "resource_id": "res-bus-mark-google-1",
+      "skill_id": "marketing-digital",
+      "title": "Google Digital Garage: Fundamentals of Digital Marketing",
+      "platform": "Google Skillshop",
+      "url": "https://skillshop.exceedlms.com/student/collection/654330-digital-marketing",
+      "resource_type": "certification",
+      "difficulty": "beginner",
+      "is_free": 1,
+      "estimated_hours": 40,
+      "language": "English",
+      "prerequisites": [],
+      "best_for": [
+        "sales_marketing"
+      ],
+      "covers": [
+        "SEO",
+        "SEM",
+        "Social Media Marketing",
+        "Content Marketing",
+        "Analytics"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "sales_marketing"
+        ],
+        "target_job_titles": [
+          "Digital Marketer",
+          "Social Media Manager",
+          "Marketing Manager"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "Provides comprehensive, vendor-neutral basics of digital marketing directly from the biggest ad platform."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "vendor",
+      "notes": "Grants an official cert from Google upon completion."
+    },
+    {
+      "resource_id": "res-bus-fin-excel-1",
+      "skill_id": "finance-excel",
+      "title": "Coursera: Excel Skills for Business Specialization",
+      "platform": "Coursera",
+      "url": "https://www.coursera.org/specializations/excel",
+      "resource_type": "course",
+      "difficulty": "intermediate",
+      "is_free": 0,
+      "estimated_hours": 25,
+      "language": "English",
+      "prerequisites": [],
+      "best_for": [
+        "finance",
+        "admin"
+      ],
+      "covers": [
+        "Data formatting",
+        "VLOOKUP",
+        "Pivot Tables",
+        "Macros",
+        "Financial formulas"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "finance",
+          "admin"
+        ],
+        "target_job_titles": [
+          "Accountant",
+          "Finance Officer",
+          "Cashier",
+          "Auditor"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "Excel remains the absolute backbone of corporate finance and accounting tasks in the dataset."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "reputable-platform",
+      "notes": "Paid certificate, but the course contents can generally be audited securely for free. Macquarie University."
+    },
+    {
+      "resource_id": "res-crt-design-figma-1",
+      "skill_id": "design-uiux",
+      "title": "Figma Learn: Official Crash Course",
+      "platform": "official-docs",
+      "url": "https://help.figma.com/hc/en-us/categories/360002042553-Learn-design",
+      "resource_type": "tutorial",
+      "difficulty": "beginner",
+      "is_free": 1,
+      "estimated_hours": 3,
+      "language": "English",
+      "prerequisites": [],
+      "best_for": [
+        "creative"
+      ],
+      "covers": [
+        "Figma basics",
+        "Components",
+        "Auto Layout",
+        "Prototyping"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "creative"
+        ],
+        "target_job_titles": [
+          "Graphic Designer",
+          "UI/UX Designer"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "Figma represents the absolute industry standard for UI/UX and collaborative design right now."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "official",
+      "notes": "Excellent video shorts directly built by the Figma team."
+    },
+    {
+      "resource_id": "res-eng-autocad-1",
+      "skill_id": "eng-autocad",
+      "title": "Autodesk: Getting Started with AutoCAD",
+      "platform": "official-docs",
+      "url": "https://help.autodesk.com/view/ACD/2024/ENU/?guid=GUID-2AA12FC5-FBB2-4ABE-9024-90D41FEB1AC3",
+      "resource_type": "tutorial",
+      "difficulty": "beginner",
+      "is_free": 1,
+      "estimated_hours": 15,
+      "language": "English",
+      "prerequisites": [],
+      "best_for": [
+        "general"
+      ],
+      "covers": [
+        "2D Drafting",
+        "UI navigation",
+        "Layers",
+        "Properties",
+        "Annotations"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "general",
+          "tech"
+        ],
+        "target_job_titles": [
+          "Civil Engineer",
+          "Mechanical Engineer",
+          "Architect",
+          "Draftsman"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "AutoCAD is the foremost critical software requirement for modern civil, mechanical, and architectural roles."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "official",
+      "notes": "Direct from Autodesk, completely aligned with the newest software versions."
+    },
+    {
+      "resource_id": "res-eng-construction-mgmt-1",
+      "skill_id": "eng-construction-mgmt",
+      "title": "Coursera: Construction Management Specialization",
+      "platform": "Coursera",
+      "url": "https://www.coursera.org/specializations/construction-management",
+      "resource_type": "course",
+      "difficulty": "intermediate",
+      "is_free": 0,
+      "estimated_hours": 60,
+      "language": "English",
+      "prerequisites": [],
+      "best_for": [
+        "general",
+        "admin"
+      ],
+      "covers": [
+        "Project Planning",
+        "Scheduling",
+        "Estimating",
+        "Cost Control"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "general"
+        ],
+        "target_job_titles": [
+          "Site Engineer",
+          "Construction Manager",
+          "Resident Engineer"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "Focuses on the administrative and planning sides of civil engineering which are heavily requested."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "reputable-platform",
+      "notes": "Offered by Columbia University."
+    },
+    {
+      "resource_id": "res-admin-typing-1",
+      "skill_id": "admin-data-entry",
+      "title": "TypingClub: 100 WPM Advanced Mastery",
+      "platform": "TypingClub",
+      "url": "https://www.typingclub.com/",
+      "resource_type": "practice",
+      "difficulty": "beginner",
+      "is_free": 1,
+      "estimated_hours": 20,
+      "language": "English",
+      "prerequisites": [],
+      "best_for": [
+        "admin"
+      ],
+      "covers": [
+        "Touch typing",
+        "10-Key number pad",
+        "Accuracy tracking",
+        "Ergonomics"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "admin"
+        ],
+        "target_job_titles": [
+          "Data Entry Clerk",
+          "Administrative Assistant",
+          "Filing Clerk",
+          "Typist"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "In high-volume clerical entry, base words-per-minute (WPM) dictates output ceiling immediately."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "reputable-platform",
+      "notes": "Simple, highly repetitive physical drilling required for admin speed."
+    },
+    {
+      "resource_id": "res-gig-upwork-1",
+      "skill_id": "freelance-management",
+      "title": "Upwork Academy: Freelance Business Operations",
+      "platform": "official-docs",
+      "url": "https://community.upwork.com/t5/Academy/ct-p/Academy",
+      "resource_type": "course",
+      "difficulty": "beginner",
+      "is_free": 1,
+      "estimated_hours": 15,
+      "language": "English",
+      "prerequisites": [],
+      "best_for": [
+        "general",
+        "creative"
+      ],
+      "covers": [
+        "Client acquisition",
+        "Proposal writing",
+        "Rate setting",
+        "Gig platforms"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "general",
+          "creative"
+        ],
+        "target_job_titles": [
+          "Freelancer",
+          "Voice Actor",
+          "Independent Consultant"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "Gig workers usually possess the hard skill, but lack the pipeline formatting to secure independent employment. This fixes that."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "official",
+      "notes": "Indispensable strategy for any non-contract worker."
+    },
+    {
+      "resource_id": "res-event-logistics-1",
+      "skill_id": "admin-event-planning",
+      "title": "Coursera: Event Planning and Logistics",
+      "platform": "Coursera",
+      "url": "https://www.coursera.org/learn/event-planning",
+      "resource_type": "course",
+      "difficulty": "intermediate",
+      "is_free": 0,
+      "estimated_hours": 20,
+      "language": "English",
+      "prerequisites": [],
+      "best_for": [
+        "general",
+        "admin"
+      ],
+      "covers": [
+        "Vendor Management",
+        "Budgeting",
+        "Client expectations",
+        "Scheduling"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "general",
+          "admin"
+        ],
+        "target_job_titles": [
+          "Event Planner",
+          "Coordinator",
+          "Agent"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "Events require a highly specific blend of rigid logistics and malleable customer service."
+      },
+      "verification_status": "needs_verification",
+      "last_verified": "2026-05-19",
+      "source_quality": "reputable-platform",
+      "notes": "Excellent framework bridging logistics and hospitality."
+    },
+    {
+      "resource_id": "res-logistics-coursera-1",
+      "skill_id": "supply-chain-mgmt",
+      "title": "Coursera: Supply Chain Management Specialization",
+      "platform": "Coursera",
+      "url": "https://www.coursera.org/specializations/supply-chain-management",
+      "resource_type": "course",
+      "difficulty": "intermediate",
+      "is_free": 0,
+      "estimated_hours": 80,
+      "language": "English",
+      "prerequisites": [],
+      "best_for": [
+        "logistics",
+        "admin"
+      ],
+      "covers": [
+        "Logistics",
+        "Operations",
+        "Planning",
+        "Sourcing"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "logistics",
+          "admin"
+        ],
+        "target_job_titles": [
+          "Warehouse Manager",
+          "Store Keeper",
+          "Logistics Officer"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "Moves individuals from manual store-keeping to structured inventory flow and systems thinking."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "reputable-platform",
+      "notes": "Premium certificate from Rutgers University."
+    },
+    {
+      "resource_id": "res-logistics-safety-1",
+      "skill_id": "logistics-safety",
+      "title": "OSHA 10-Hour General Industry Training",
+      "platform": "official-docs",
+      "url": "https://www.osha.gov/training/outreach/general-industry",
+      "resource_type": "certification",
+      "difficulty": "beginner",
+      "is_free": 0,
+      "estimated_hours": 10,
+      "language": "English",
+      "prerequisites": [],
+      "best_for": [
+        "logistics",
+        "trade"
+      ],
+      "covers": [
+        "Workplace hazards",
+        "Personal Protective Equipment",
+        "Safety systems"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "logistics",
+          "trade"
+        ],
+        "target_job_titles": [
+          "Store Keeper",
+          "Dispatcher",
+          "Driver",
+          "Warehouse Officer"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "Warehouse operators globally mandate baseline warehouse safety literacy to avoid liability."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "official",
+      "notes": "Paid official certification. Highly requested by bulk logistics employers."
+    },
+    {
+      "resource_id": "res-craft-culinary-1",
+      "skill_id": "craft-culinary",
+      "title": "Escoffier: Basics of Culinary Arts",
+      "platform": "Escoffier",
+      "url": "https://www.escoffier.edu/programs/culinary-arts/",
+      "resource_type": "course",
+      "difficulty": "beginner",
+      "is_free": 0,
+      "estimated_hours": 100,
+      "language": "English",
+      "prerequisites": [
+        "hosp-food-safety"
+      ],
+      "best_for": [
+        "general"
+      ],
+      "covers": [
+        "Knife skills",
+        "Baking formulas",
+        "Mise en place",
+        "Sauces"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "general"
+        ],
+        "target_job_titles": [
+          "Baker",
+          "Pastry Chef",
+          "Caterer"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "Moves candidates beyond raw food handling into professional kitchen execution standards."
+      },
+      "verification_status": "needs_verification",
+      "last_verified": "2026-05-19",
+      "source_quality": "reputable-platform",
+      "notes": "Requires physical kitchen access for practice."
+    },
+    {
+      "resource_id": "res-med-khan-1",
+      "skill_id": "med-health-science",
+      "title": "Khan Academy: Health and Medicine",
+      "platform": "Khan Academy",
+      "url": "https://www.khanacademy.org/science/health-and-medicine",
+      "resource_type": "practice",
+      "difficulty": "intermediate",
+      "is_free": 1,
+      "estimated_hours": 50,
+      "language": "English",
+      "prerequisites": [],
+      "best_for": [
+        "medical"
+      ],
+      "covers": [
+        "Human anatomy",
+        "Physiology",
+        "Diseases",
+        "NCLEX-RN prep"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "medical"
+        ],
+        "target_job_titles": [
+          "Nurse",
+          "Pharmacist",
+          "Clinic Assistant"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "Essential foundational knowledge for any clinical setting."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "reputable-platform",
+      "notes": "Highly visual and accessible platform for health sciences."
+    },
+    {
+      "resource_id": "res-edu-coursera-1",
+      "skill_id": "edu-instructional-design",
+      "title": "Coursera: Instructional Design Master Track",
+      "platform": "Coursera",
+      "url": "https://www.coursera.org/mastertrack/instructional-design-illinois",
+      "resource_type": "course",
+      "difficulty": "advanced",
+      "is_free": 0,
+      "estimated_hours": 120,
+      "language": "English",
+      "prerequisites": [],
+      "best_for": [
+        "education"
+      ],
+      "covers": [
+        "Learning theories",
+        "E-learning environments",
+        "Curriculum design",
+        "Evaluation"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "education"
+        ],
+        "target_job_titles": [
+          "Tutor",
+          "Teacher",
+          "Instructor",
+          "Lecturer"
+        ],
+        "gap_priority": "medium",
+        "why_this_resource": "Closes the gap between knowing a subject and effectively formally teaching it online or offline."
+      },
+      "verification_status": "needs_verification",
+      "last_verified": "2026-05-19",
+      "source_quality": "reputable-platform",
+      "notes": "Premium certificate from the University of Illinois."
+    },
+    {
+      "resource_id": "res-prod-sixsigma-1",
+      "skill_id": "prod-six-sigma",
+      "title": "Coursera: Six Sigma Yellow Belt",
+      "platform": "Coursera",
+      "url": "https://www.coursera.org/specializations/six-sigma-yellow-belt",
+      "resource_type": "certification",
+      "difficulty": "intermediate",
+      "is_free": 0,
+      "estimated_hours": 30,
+      "language": "English",
+      "prerequisites": [],
+      "best_for": [
+        "general",
+        "admin"
+      ],
+      "covers": [
+        "DMAIC framework",
+        "Waste reduction",
+        "Process mapping",
+        "Defect measurement"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "general",
+          "admin"
+        ],
+        "target_job_titles": [
+          "Production Manager",
+          "Quality Control Inspector",
+          "Manufacturing Engineer"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "Six Sigma is the defacto standard for minimizing defects and maximizing efficiency on production lines globally."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "reputable-platform",
+      "notes": "Offered by the University System of Georgia."
+    },
+    {
+      "resource_id": "res-hosp-cornell-1",
+      "skill_id": "hosp-management",
+      "title": "eCornell: Hospitality Management Certificate",
+      "platform": "official-docs",
+      "url": "https://ecornell.cornell.edu/certificates/hospitality-and-foodservice-management/hospitality-management/",
+      "resource_type": "certification",
+      "difficulty": "advanced",
+      "is_free": 0,
+      "estimated_hours": 90,
+      "language": "English",
+      "prerequisites": [],
+      "best_for": [
+        "general",
+        "admin"
+      ],
+      "covers": [
+        "Revenue Management",
+        "Guest Experience",
+        "Service Operations"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "general",
+          "admin"
+        ],
+        "target_job_titles": [
+          "Hotel Manager",
+          "Receptionist",
+          "Front Desk Manager"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "Hospitality roles scale on revenue logic and guest metrics. eCornell provides Ivy League operational strategies."
+      },
+      "verification_status": "needs_verification",
+      "last_verified": "2026-05-19",
+      "source_quality": "reputable-platform",
+      "notes": "Premium cert, widely requested for executive hotel roles."
+    },
+    {
+      "resource_id": "res-hosp-servsafe-1",
+      "skill_id": "hosp-food-safety",
+      "title": "ServSafe Manager Certification",
+      "platform": "official-docs",
+      "url": "https://www.servsafe.com/ServSafe-Manager",
+      "resource_type": "certification",
+      "difficulty": "intermediate",
+      "is_free": 0,
+      "estimated_hours": 15,
+      "language": "English",
+      "prerequisites": [],
+      "best_for": [
+        "general"
+      ],
+      "covers": [
+        "Foodborne Illnesses",
+        "Safe Handling",
+        "Sanitation",
+        "Regulatory Compliance"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "general"
+        ],
+        "target_job_titles": [
+          "Chef",
+          "Cook",
+          "Restaurant Manager",
+          "Waiter"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "Absolute legal prerequisite for food service operations in most global regions."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "official",
+      "notes": "Food hygiene compliance is non-negotiable for kitchen roles."
+    },
+    {
+      "resource_id": "res-sec-ifma-1",
+      "skill_id": "fac-management",
+      "title": "IFMA Facility Management Professional (FMP)",
+      "platform": "official-docs",
+      "url": "https://www.ifma.org/credentials/facility-management-professional-fmp/",
+      "resource_type": "certification",
+      "difficulty": "intermediate",
+      "is_free": 0,
+      "estimated_hours": 60,
+      "language": "English",
+      "prerequisites": [],
+      "best_for": [
+        "admin",
+        "general"
+      ],
+      "covers": [
+        "Operations",
+        "Maintenance",
+        "Project Management",
+        "Finance and Business"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "admin",
+          "general"
+        ],
+        "target_job_titles": [
+          "Facility Manager",
+          "Maintenance Manager"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "Provides global standards for organizing physical building upkeep and janitorial staff."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "vendor",
+      "notes": "Highly sought after for large scale real estate operators."
+    },
+    {
+      "resource_id": "res-sec-physical-1",
+      "skill_id": "sec-physical",
+      "title": "ASIS Physical Security Professional (PSP)",
+      "platform": "official-docs",
+      "url": "https://www.asisonline.org/certification/psp/",
+      "resource_type": "certification",
+      "difficulty": "advanced",
+      "is_free": 0,
+      "estimated_hours": 50,
+      "language": "English",
+      "prerequisites": [],
+      "best_for": [
+        "general"
+      ],
+      "covers": [
+        "Threat assessment",
+        "Security system design",
+        "Integration"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "general"
+        ],
+        "target_job_titles": [
+          "Security Manager",
+          "Security Guard",
+          "Safety Officer"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "Bridges the gap between entry-level guarding and systemic physical security engineering."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "vendor",
+      "notes": "Internationally recognized standard for physical security operators."
+    },
+    {
+      "resource_id": "res-tech-fe-react-1",
+      "skill_id": "fe-react",
+      "title": "React Official Documentation (Learn React)",
+      "platform": "official-docs",
+      "url": "https://react.dev/learn",
+      "resource_type": "documentation",
+      "difficulty": "beginner",
+      "is_free": 1,
+      "estimated_hours": 15,
+      "language": "English",
+      "prerequisites": [
+        "fe-javascript",
+        "fe-html"
+      ],
+      "best_for": [
+        "frontend-dev",
+        "fullstack-dev"
+      ],
+      "covers": [
+        "React fundamentals",
+        "Hooks",
+        "Components",
+        "State"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "frontend-dev",
+          "tech"
+        ],
+        "target_job_titles": [
+          "React Developer",
+          "Frontend Developer"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "React is overwhelmingly required for frontend roles. Official documents are the most updated and comprehensive starting point."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "official",
+      "notes": "Excellent interactive examples included directly in the browser."
+    },
+    {
+      "resource_id": "res-tech-fe-js-1",
+      "skill_id": "fe-javascript",
+      "title": "freeCodeCamp - JavaScript Algorithms and Data Structures",
+      "platform": "freeCodeCamp",
+      "url": "https://www.freecodecamp.org/learn/javascript-algorithms-and-data-structures-v8/",
+      "resource_type": "certification",
+      "difficulty": "beginner",
+      "is_free": 1,
+      "estimated_hours": 300,
+      "language": "English",
+      "prerequisites": [
+        "fe-html-css"
+      ],
+      "best_for": [
+        "frontend-dev",
+        "backend-dev"
+      ],
+      "covers": [
+        "JavaScript basics",
+        "ES6",
+        "Regex",
+        "Debugging",
+        "Data Structures",
+        "Algorithms"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "tech"
+        ],
+        "target_job_titles": [
+          "Software Developer",
+          "Front End Developer"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "JavaScript bridges the gap to nearly all web applications and UI systems."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "community-high-quality",
+      "notes": "Highly practical, project-based certification."
+    },
+    {
+      "resource_id": "res-tech-be-python-1",
+      "skill_id": "be-python",
+      "title": "Python Official Tutorial",
+      "platform": "official-docs",
+      "url": "https://docs.python.org/3/tutorial/index.html",
+      "resource_type": "documentation",
+      "difficulty": "intermediate",
+      "is_free": 1,
+      "estimated_hours": 20,
+      "language": "English",
+      "prerequisites": [],
+      "best_for": [
+        "backend-dev",
+        "data-science"
+      ],
+      "covers": [
+        "Python syntax",
+        "Data structures",
+        "Modules",
+        "Classes"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "tech"
+        ],
+        "target_job_titles": [
+          "Python Developer",
+          "Backend Developer",
+          "Data Analyst"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "Provides the required foundational syntax for backend logic and data applications."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "official",
+      "notes": "Always refer back to the official docs for syntax and standard library details."
+    },
+    {
+      "resource_id": "res-tech-db-sql-1",
+      "skill_id": "db-sql",
+      "title": "PostgreSQL Official Tutorial",
+      "platform": "official-docs",
+      "url": "https://www.postgresql.org/docs/current/tutorial.html",
+      "resource_type": "tutorial",
+      "difficulty": "beginner",
+      "is_free": 1,
+      "estimated_hours": 5,
+      "language": "English",
+      "prerequisites": [],
+      "best_for": [
+        "backend-dev",
+        "data-science"
+      ],
+      "covers": [
+        "SQL basics",
+        "Table creation",
+        "Queries",
+        "Joins",
+        "Aggregates"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "tech"
+        ],
+        "target_job_titles": [
+          "Backend Developer",
+          "Data Analyst",
+          "Database Administrator"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "SQL remains a top non-negotiable skill for backend integration and data retrieval."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "official",
+      "notes": "A fast and highly reliable primer directly from PostgreSQL maintainers."
+    },
+    {
+      "resource_id": "res-tech-data-kaggle-1",
+      "skill_id": "data-pandas",
+      "title": "Kaggle Learn: Pandas",
+      "platform": "Kaggle",
+      "url": "https://www.kaggle.com/learn/pandas",
+      "resource_type": "practice",
+      "difficulty": "intermediate",
+      "is_free": 1,
+      "estimated_hours": 4,
+      "language": "English",
+      "prerequisites": [
+        "be-python"
+      ],
+      "best_for": [
+        "data-science"
+      ],
+      "covers": [
+        "Creating DataFrames",
+        "Indexing",
+        "Selecting",
+        "Assigning",
+        "Grouping",
+        "Sorting",
+        "Data Types"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "tech"
+        ],
+        "target_job_titles": [
+          "Data Analyst",
+          "Data Scientist"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "Pandas is critical for parsing data quickly, tested thoroughly in Data Analyst job interviews."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "reputable-platform",
+      "notes": "Contains interactive coding exercises right in the browser."
+    },
+    {
+      "resource_id": "res-trade-electrical-1",
+      "skill_id": "trade-electrical",
+      "title": "Khan Academy: Electrical Engineering Basics",
+      "platform": "Khan Academy",
+      "url": "https://www.khanacademy.org/science/electrical-engineering",
+      "resource_type": "practice",
+      "difficulty": "beginner",
+      "is_free": 1,
+      "estimated_hours": 15,
+      "language": "English",
+      "prerequisites": [],
+      "best_for": [
+        "trade",
+        "general"
+      ],
+      "covers": [
+        "Voltage",
+        "Current",
+        "Resistance",
+        "Circuits",
+        "Ohm's Law"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "trade",
+          "general"
+        ],
+        "target_job_titles": [
+          "Electrician",
+          "Technician",
+          "Maintenance"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "Absolute foundational physics prerequisite before ever picking up a wiring schematic."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "reputable-platform",
+      "notes": "Excellent animations and conceptual breakdowns."
+    },
+    {
+      "resource_id": "res-trade-mech-1",
+      "skill_id": "trade-mechanical",
+      "title": "Autodesk: Getting Started with Fusion 360",
+      "platform": "official-docs",
+      "url": "https://help.autodesk.com/view/fusion360/ENU/?guid=GUID-E8E423FD-511B-4A1C-8A66-990715DCA74B",
+      "resource_type": "tutorial",
+      "difficulty": "intermediate",
+      "is_free": 1,
+      "estimated_hours": 20,
+      "language": "English",
+      "prerequisites": [],
+      "best_for": [
+        "trade",
+        "general"
+      ],
+      "covers": [
+        "3D Modeling",
+        "Mechanical components",
+        "Assemblies",
+        "Simulation"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "trade",
+          "general"
+        ],
+        "target_job_titles": [
+          "Mechanic",
+          "Cnc Operator",
+          "Mechanical Technician"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "Modern mechanics leverage 3D CAD platforms to measure, blueprint, and mill hardware."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "official",
+      "notes": "Fusion 360 is extremely prevalent in consumer mechanical and CNC operations."
+    },
+    {
+      "resource_id": "res-write-hubspot-1",
+      "skill_id": "marketing-content",
+      "title": "HubSpot Content Marketing Certification",
+      "platform": "HubSpot Academy",
+      "url": "https://academy.hubspot.com/courses/content-marketing",
+      "resource_type": "certification",
+      "difficulty": "beginner",
+      "is_free": 1,
+      "estimated_hours": 6,
+      "language": "English",
+      "prerequisites": [],
+      "best_for": [
+        "sales_marketing",
+        "creative"
+      ],
+      "covers": [
+        "Content creation framework",
+        "Storytelling",
+        "Content repurposing",
+        "SEO integration"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "creative",
+          "sales_marketing"
+        ],
+        "target_job_titles": [
+          "Content Writer",
+          "Copywriter",
+          "Journalist",
+          "Content Creator"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "Writing roles now demand an understanding of SEO and content frameworks, not just raw text creation."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "official",
+      "notes": "Highly integrated with modern inbound marketing workflows."
+    },
+    {
+      "resource_id": "res-support-coursera-1",
+      "skill_id": "admin-customer-support",
+      "title": "Coursera: Customer Service Fundamentals",
+      "platform": "Coursera",
+      "url": "https://www.coursera.org/learn/customer-service-fundamentals",
+      "resource_type": "course",
+      "difficulty": "beginner",
+      "is_free": 0,
+      "estimated_hours": 15,
+      "language": "English",
+      "prerequisites": [],
+      "best_for": [
+        "admin",
+        "sales_marketing"
+      ],
+      "covers": [
+        "De-escalation",
+        "Communication standards",
+        "CRM basics",
+        "Client empathy"
+      ],
+      "job_gap_alignment": {
+        "target_categories": [
+          "admin"
+        ],
+        "target_job_titles": [
+          "Customer Service Representative",
+          "Call Center Agent",
+          "Virtual Assistant"
+        ],
+        "gap_priority": "high",
+        "why_this_resource": "Establishes a quantifiable benchmark for soft-skill customer service execution."
+      },
+      "verification_status": "verified",
+      "last_verified": "2026-05-19",
+      "source_quality": "reputable-platform",
+      "notes": "Great baseline for remote virtual assistant or call-center roles."
+    }
+  ],
+  "learning_paths": [
+    {
+      "target_category": "tech",
+      "target_job_id": null,
+      "target_job_title": "IT Support Specialist",
+      "experience_level": "beginner",
+      "path_summary": "Go from zero background to capable help-desk technician by learning hardware troubleshooting, networking basics, and OS management directly from Google.",
+      "total_estimated_hours": 100,
+      "modules": [
+        {
+          "order": 1,
+          "module_title": "Technical Support Fundamentals",
+          "skill_ids": [
+            "it-support"
+          ],
+          "why_now": "Builds the immediate customer service and baseline computing skills companies hire for first.",
+          "resources": [
+            "res-tech-it-google-1"
+          ],
+          "practice_task": {
+            "title": "Documenting a Trouble Ticket",
+            "description": "Simulate taking a user request for a computer that won't turn on, documenting steps taken.",
+            "success_criteria": [
+              "Clear problem statement",
+              "Listed troubleshooting hierarchy (power, screen, etc)"
+            ]
+          },
+          "assessment_follow_up": {
+            "question_type": "short_answer",
+            "prompt": "What is the difference between RAM and a Hard Drive?",
+            "rubric": [
+              "RAM is volatile/short-term",
+              "Hard Drive is persistent/long-term storage"
+            ]
+          }
+        }
+      ],
+      "capstone_project": {
+        "title": "Network Diagram & Security Policy",
+        "description": "Design a simple office LAN diagram and write a 1-page acceptable use policy for passwords.",
+        "skills_practiced": [
+          "it-support",
+          "admin-it-security"
+        ],
+        "portfolio_value": "Shows a proactive understanding of enterprise networking constraints beyond just fixing computers."
+      }
+    },
+    {
+      "target_category": "general",
+      "target_job_id": null,
+      "target_job_title": "Fitness Instructor",
+      "experience_level": "beginner",
+      "path_summary": "Bridge personal fitness enthusiasm into officially certified kinesiology and program structuring mechanics.",
+      "total_estimated_hours": 120,
+      "modules": [
+        {
+          "order": 1,
+          "module_title": "Human Movement Science",
+          "skill_ids": [
+            "wellness-fitness"
+          ],
+          "why_now": "Without understanding muscle constraints, you cannot safely program client routines.",
+          "resources": [
+            "res-wellness-nasm-1"
+          ],
+          "practice_task": {
+            "title": "Overhead Squat Assessment",
+            "description": "Log an overhead squat assessment of a partner and identify 2 postural deviations.",
+            "success_criteria": [
+              "Identifies active muscles",
+              "Provides a corrective stretching technique"
+            ]
+          },
+          "assessment_follow_up": {
+            "question_type": "short_answer",
+            "prompt": "What is the primary function of the Gluteus Maximus during a squat?",
+            "rubric": [
+              "Hip extension",
+              "Pelvic stabilization"
+            ]
+          }
+        }
+      ],
+      "capstone_project": null
+    },
+    {
+      "target_category": "sales_marketing",
+      "target_job_id": null,
+      "target_job_title": "Digital Marketer / Sales Manager",
+      "experience_level": "junior",
+      "path_summary": "Close the gap between pure sales concepts and digital distribution by learning inbound sales mechanics and digital advertising analytics.",
+      "total_estimated_hours": 45,
+      "modules": [
+        {
+          "order": 1,
+          "module_title": "Inbound Customer Acquisition",
+          "skill_ids": [
+            "sales-inbound"
+          ],
+          "why_now": "Knowing how to interact with marketing qualified leads effectively separates amateur from professional sales reps.",
+          "resources": [
+            "res-bus-sales-hubspot-1"
+          ],
+          "practice_task": {
+            "title": "Mock Sales Call Script",
+            "description": "Draft a conversation script handling 3 common inbound lead objections.",
+            "success_criteria": [
+              "Empathy displayed",
+              "Directly addresses the objection using Inbound method"
+            ]
+          },
+          "assessment_follow_up": {
+            "question_type": "project_review",
+            "prompt": "Evaluate this submitted sales script against the HubSpot inbound methodology checklist.",
+            "rubric": [
+              "Aligns with buyer journey",
+              "Consultative vs Pushy approach"
+            ]
+          }
+        },
+        {
+          "order": 2,
+          "module_title": "Digital Channels Strategy",
+          "skill_ids": [
+            "marketing-digital"
+          ],
+          "why_now": "A macro-understanding of SEO and PPC ensures you can generate the leads you just learned how to handle.",
+          "resources": [
+            "res-bus-mark-google-1"
+          ],
+          "practice_task": {
+            "title": "Competitor SEO Audit",
+            "description": "Examine a top website in your industry and list out 5 keywords they are targeting.",
+            "success_criteria": [
+              "Keywords accurately reflect content",
+              "Reasoning supplied using fundamentals"
+            ]
+          },
+          "assessment_follow_up": {
+            "question_type": "short_answer",
+            "prompt": "What is the difference between SEO and SEM?",
+            "rubric": [
+              "SEO is organic ranking",
+              "SEM involves paid search ad placements"
+            ]
+          }
+        }
+      ],
+      "capstone_project": {
+        "title": "Integrated B2B Marketing & Sales Strategy",
+        "description": "Design a hypothetical 3-month rollout where SEO drives leads and inbound sales methods close them.",
+        "skills_practiced": [
+          "sales-inbound",
+          "marketing-digital"
+        ],
+        "portfolio_value": "Shows cross-functional understanding between marketing generation and sales execution."
+      }
+    },
+    {
+      "target_category": "general",
+      "target_job_id": null,
+      "target_job_title": "Site Engineer / Draftsman",
+      "experience_level": "beginner",
+      "path_summary": "Bridge the gap between theoretical physical engineering and practical site/drafting work by learning CAD tools and construction administration.",
+      "total_estimated_hours": 75,
+      "modules": [
+        {
+          "order": 1,
+          "module_title": "Digital Drafting Standards",
+          "skill_ids": [
+            "eng-autocad"
+          ],
+          "why_now": "Every physical design must effectively pass through digital environments before being built.",
+          "resources": [
+            "res-eng-autocad-1"
+          ],
+          "practice_task": {
+            "title": "Blueprinting a 2D Floor Plan",
+            "description": "Utilize AutoCAD to draft a standardized 150 sq ft residential floor plan with annotations.",
+            "success_criteria": [
+              "Correct scaling",
+              "Proper layer usage for walls and doors"
+            ]
+          },
+          "assessment_follow_up": {
+            "question_type": "short_answer",
+            "prompt": "Why is separating objects into layers important in CAD design?",
+            "rubric": [
+              "Eases visibility toggling",
+              "Organizes project logically"
+            ]
+          }
+        }
+      ],
+      "capstone_project": {
+        "title": "Site Deployment Plan & Blueprint",
+        "description": "Design a small 2D structure blueprint and accompany it with a 3-week construction phased schedule.",
+        "skills_practiced": [
+          "eng-autocad",
+          "eng-construction-mgmt"
+        ],
+        "portfolio_value": "Shows cross-applicability between knowing what to build and how to manage the people building it."
+      }
+    },
+    {
+      "target_category": "admin",
+      "target_job_id": null,
+      "target_job_title": "Data Entry Clerk",
+      "experience_level": "beginner",
+      "path_summary": "Achieve the baseline industry speed (60+ Words Per Minute) with complete accuracy required for high-volume entry sorting.",
+      "total_estimated_hours": 20,
+      "modules": [
+        {
+          "order": 1,
+          "module_title": "Touch Typing Automation",
+          "skill_ids": [
+            "admin-data-entry"
+          ],
+          "why_now": "Looking at the keyboard during data transcription introduces massive efficiency bottlenecks.",
+          "resources": [
+            "res-admin-typing-1"
+          ],
+          "practice_task": {
+            "title": "Blind Paragraph Test",
+            "description": "Log a complete 5-minute typing test scoring above 65 WPM with zero backspaces allowed.",
+            "success_criteria": [
+              "100% accuracy constraint",
+              "Minimum threshold achieved"
+            ]
+          },
+          "assessment_follow_up": {
+            "question_type": "project_review",
+            "prompt": "Evaluate typing posture and hand placement against ergonomic standards.",
+            "rubric": [
+              "Wrists floating, not resting",
+              "Home row anchorage"
+            ]
+          }
+        }
+      ],
+      "capstone_project": null
+    },
+    {
+      "target_category": "general",
+      "target_job_id": null,
+      "target_job_title": "Independent Freelancer / Consultant",
+      "experience_level": "beginner",
+      "path_summary": "Package an existing specialized skill into a functional independent business offering.",
+      "total_estimated_hours": 15,
+      "modules": [
+        {
+          "order": 1,
+          "module_title": "Freelance Proposal Crafting",
+          "skill_ids": [
+            "freelance-management"
+          ],
+          "why_now": "Securing the first independently negotiated contract is the hardest blocker for gig workers.",
+          "resources": [
+            "res-gig-upwork-1"
+          ],
+          "practice_task": {
+            "title": "Mock Bid Proposal",
+            "description": "Draft a 150-word cover letter bidding against an open job posting for your core skill.",
+            "success_criteria": [
+              "Mentions client's name",
+              "Includes portfolio link",
+              "Names specific solution"
+            ]
+          },
+          "assessment_follow_up": {
+            "question_type": "short_answer",
+            "prompt": "Why shouldn't you aggressively lower your rate just to win a bid?",
+            "rubric": [
+              "Devalues the service",
+              "Attracts problematic clients"
+            ]
+          }
+        }
+      ],
+      "capstone_project": null
+    },
+    {
+      "target_category": "logistics",
+      "target_job_id": null,
+      "target_job_title": "Warehouse Officer",
+      "experience_level": "beginner",
+      "path_summary": "Evolve from basic manual lifting to orchestrating entire inventory workflows adhering strictly to industrial safety protocols.",
+      "total_estimated_hours": 90,
+      "modules": [
+        {
+          "order": 1,
+          "module_title": "Industrial Safety & Prevention",
+          "skill_ids": [
+            "logistics-safety"
+          ],
+          "why_now": "Safety is the foremost prerequisite before touching supply chain machinery or layout routing.",
+          "resources": [
+            "res-logistics-safety-1"
+          ],
+          "practice_task": {
+            "title": "Facility Hazard Map",
+            "description": "Identify 3 core hazard zones in a standard warehouse mockup and draft the PPE required to access them.",
+            "success_criteria": [
+              "Correct PPE mapping",
+              "Identifies forklift zones"
+            ]
+          },
+          "assessment_follow_up": {
+            "question_type": "short_answer",
+            "prompt": "What is the primary purpose of a Lockout/Tagout (LOTO) procedure?",
+            "rubric": [
+              "Preventing accidental machine start up",
+              "Securing energy sources"
+            ]
+          }
+        }
+      ],
+      "capstone_project": null
+    },
+    {
+      "target_category": "medical",
+      "target_job_id": null,
+      "target_job_title": "Clinic Assistant / Junior Nurse",
+      "experience_level": "beginner",
+      "path_summary": "Gain the required foundational biology, anatomy, and procedural understanding necessary to enter an entry-level clinical floor role.",
+      "total_estimated_hours": 50,
+      "modules": [
+        {
+          "order": 1,
+          "module_title": "Anatomy and Physiology Basics",
+          "skill_ids": [
+            "med-health-science"
+          ],
+          "why_now": "Without understanding the human body systems, you cannot assist in diagnosis or treatment safely.",
+          "resources": [
+            "res-med-khan-1"
+          ],
+          "practice_task": {
+            "title": "Systems Mapping",
+            "description": "Accurately diagram the circulatory and respiratory systems.",
+            "success_criteria": [
+              "All major organs labeled",
+              "Flow paths correctly indicated"
+            ]
+          },
+          "assessment_follow_up": {
+            "question_type": "short_answer",
+            "prompt": "Identify the basic function of the cardiovascular system.",
+            "rubric": [
+              "Mention pumping blood",
+              "Mention oxygen delivery"
+            ]
+          }
+        }
+      ],
+      "capstone_project": {
+        "title": "Clinical Setting Mock Observation",
+        "description": "Review a set of 5 mock patient triage profiles and match them with the correct physiological system failures.",
+        "skills_practiced": [
+          "med-health-science"
+        ],
+        "portfolio_value": "Demonstrates practical critical thinking needed at any clinic front-desk or nursing station."
+      }
+    },
+    {
+      "target_category": "general",
+      "target_job_id": null,
+      "target_job_title": "Quality Control Inspector",
+      "experience_level": "intermediate",
+      "path_summary": "Evolve from manual part inspecting to architecting systemic defect elimination strategies via Six Sigma frameworks.",
+      "total_estimated_hours": 30,
+      "modules": [
+        {
+          "order": 1,
+          "module_title": "Defect Measurement Frameworks",
+          "skill_ids": [
+            "prod-six-sigma"
+          ],
+          "why_now": "Without standardizing how defects are counted across shifts, root cause analysis is impossible.",
+          "resources": [
+            "res-prod-sixsigma-1"
+          ],
+          "practice_task": {
+            "title": "DMAIC Process Map",
+            "description": "Construct a DMAIC (Define, Measure, Analyze, Improve, Control) proposal for reducing packaging errors on a line.",
+            "success_criteria": [
+              "A metric is defined in 'Measure'",
+              "A procedural lock is defined in 'Control'"
+            ]
+          },
+          "assessment_follow_up": {
+            "question_type": "short_answer",
+            "prompt": "What does a Fishbone diagram attempt to accomplish?",
+            "rubric": [
+              "Identify root causes",
+              "Categorize potential problem sources"
+            ]
+          }
+        }
+      ],
+      "capstone_project": null
+    },
+    {
+      "target_category": "general",
+      "target_job_id": null,
+      "target_job_title": "Restaurant Manager / Chef",
+      "experience_level": "intermediate",
+      "path_summary": "Solidify both the compliance matrix of food handling and the fiscal metrics required to manage a restaurant floor effectively.",
+      "total_estimated_hours": 105,
+      "modules": [
+        {
+          "order": 1,
+          "module_title": "Sanitation and Compliance",
+          "skill_ids": [
+            "hosp-food-safety"
+          ],
+          "why_now": "Safety acts as the barrier to entry for any kitchen administration.",
+          "resources": [
+            "res-hosp-servsafe-1"
+          ],
+          "practice_task": {
+            "title": "Kitchen Temperature Log",
+            "description": "Design a spreadsheet tracking hourly safe-holding temps for raw meats versus cooked buffet items.",
+            "success_criteria": [
+              "Correct minimal temps isolated",
+              "Includes corrective action column"
+            ]
+          },
+          "assessment_follow_up": {
+            "question_type": "short_answer",
+            "prompt": "What is the primary danger zone temperature range for food holding?",
+            "rubric": [
+              "Between 41\u00b0F and 135\u00b0F"
+            ]
+          }
+        }
+      ],
+      "capstone_project": null
+    },
+    {
+      "target_category": "general",
+      "target_job_id": null,
+      "target_job_title": "Facility Manager / Security Guard",
+      "experience_level": "intermediate",
+      "path_summary": "Learn how to orchestrate building systems and physical security perimeters rather than just executing manual sweeps.",
+      "total_estimated_hours": 110,
+      "modules": [
+        {
+          "order": 1,
+          "module_title": "Facility Operations",
+          "skill_ids": [
+            "fac-management"
+          ],
+          "why_now": "Without grasping HVAC, electrical, and janitorial routing, a building cannot be secured safely.",
+          "resources": [
+            "res-sec-ifma-1"
+          ],
+          "practice_task": {
+            "title": "Preventative Maintenance Schedule",
+            "description": "Construct a 12-month preventative maintenance schedule for a 5-story office building.",
+            "success_criteria": [
+              "Includes HVAC filter replacement",
+              "Includes Fire extinguisher audits"
+            ]
+          },
+          "assessment_follow_up": {
+            "question_type": "project_review",
+            "prompt": "Evaluate the drafted PM schedule against IFMA frequency guidelines.",
+            "rubric": [
+              "Compliance with local fire codes included in schedule"
+            ]
+          }
+        }
+      ],
+      "capstone_project": null
+    },
+    {
+      "target_category": "frontend-dev",
+      "target_job_id": null,
+      "target_job_title": "Frontend Developer",
+      "experience_level": "junior",
+      "path_summary": "Master the essentials of web interactivity by progressing from basic JavaScript data structures to robust, interactive UI components using React.",
+      "total_estimated_hours": 315,
+      "modules": [
+        {
+          "order": 1,
+          "module_title": "JavaScript Fundamentals",
+          "skill_ids": [
+            "fe-javascript"
+          ],
+          "why_now": "A strong grasp of JavaScript logic is necessary before dealing with frameworks and virtual DOMs.",
+          "resources": [
+            "res-tech-fe-js-1"
+          ],
+          "practice_task": {
+            "title": "Build a CLI calculator",
+            "description": "Write a pure JavaScript script that takes user input to process basic mathematical functions.",
+            "success_criteria": [
+              "Handles edge cases like divide by zero",
+              "Uses ES6 arrow functions"
+            ]
+          },
+          "assessment_follow_up": {
+            "question_type": "code_task",
+            "prompt": "Filter an array of user objects to return only active users with age > 18.",
+            "rubric": [
+              "Correct use of .filter()",
+              "Checks active boolean and age property"
+            ]
+          }
+        },
+        {
+          "order": 2,
+          "module_title": "Modern React Framework",
+          "skill_ids": [
+            "fe-react"
+          ],
+          "why_now": "Component-based architecture is the industry standard for scalable user interfaces.",
+          "resources": [
+            "res-tech-fe-react-1"
+          ],
+          "practice_task": {
+            "title": "Build a React ToDo App",
+            "description": "Create an interactive list app with state hooks (`useState`, `useEffect`).",
+            "success_criteria": [
+              "Components are compartmentalized",
+              "Data persists locally",
+              "State updates without mutating directly"
+            ]
+          },
+          "assessment_follow_up": {
+            "question_type": "short_answer",
+            "prompt": "Explain the difference between props and state in React.",
+            "rubric": [
+              "State is local and mutable",
+              "Props are passed down and read-only"
+            ]
+          }
+        }
+      ],
+      "capstone_project": {
+        "title": "Interactive E-Commerce Product Page",
+        "description": "Build an online storefront page that fetches mockup JSON data, places it into a React component, and handles cart state dynamically.",
+        "skills_practiced": [
+          "fe-javascript",
+          "fe-react",
+          "fe-html-css"
+        ],
+        "portfolio_value": "Demonstrates real-world capability with state management, API data fetching, and CSS arrangement highly relevant to tech employers."
+      }
+    },
+    {
+      "target_category": "trade",
+      "target_job_id": null,
+      "target_job_title": "Electrical Technician",
+      "experience_level": "beginner",
+      "path_summary": "Go from zero fundamental physics to confidently interpreting circuit characteristics and mechanical models.",
+      "total_estimated_hours": 35,
+      "modules": [
+        {
+          "order": 1,
+          "module_title": "Core Circuit Math",
+          "skill_ids": [
+            "trade-electrical"
+          ],
+          "why_now": "You cannot work inside active panels without predicting electrical behavior accurately.",
+          "resources": [
+            "res-trade-electrical-1"
+          ],
+          "practice_task": {
+            "title": "Calculate Series/Parallel Load",
+            "description": "Calculate total resistance for a circuit containing both series and parallel resistors.",
+            "success_criteria": [
+              "Applies Ohm's law appropriately",
+              "Math executes cleanly"
+            ]
+          },
+          "assessment_follow_up": {
+            "question_type": "code_task",
+            "prompt": "Evaluate a schematic where 50A is drawn across thin 14-gauge wiring.",
+            "rubric": [
+              "Identifies immediate fire hazard",
+              "Mentions amperage exceeds gauge rating"
+            ]
+          }
+        }
+      ],
+      "capstone_project": null
+    },
+    {
+      "target_category": "admin",
+      "target_job_id": null,
+      "target_job_title": "Virtual Assistant / Customer Service Rep",
+      "experience_level": "beginner",
+      "path_summary": "Master the art of client communication, de-escalation, and structured content management critical to modern remote and operational support roles.",
+      "total_estimated_hours": 21,
+      "modules": [
+        {
+          "order": 1,
+          "module_title": "Client Management & Empathy",
+          "skill_ids": [
+            "admin-customer-support"
+          ],
+          "why_now": "Remote roles live and die by text and voice based empathy and conflict resolution.",
+          "resources": [
+            "res-support-coursera-1"
+          ],
+          "practice_task": {
+            "title": "Angry Email Resolution",
+            "description": "Draft a response to a client who received the wrong product and is threatening a chargeback.",
+            "success_criteria": [
+              "Apologetic tone",
+              "Immediate actionable solution offered",
+              "No defensive language"
+            ]
+          },
+          "assessment_follow_up": {
+            "question_type": "project_review",
+            "prompt": "Evaluate the drafted email for active listening components and empathy markers.",
+            "rubric": [
+              "Acknowledges frustration directly",
+              "Does not make excuses"
+            ]
+          }
+        }
+      ],
+      "capstone_project": null
+    }
+  ],
+  "new_skill_candidates": [
+    {
+      "skill_id": "finance-quickbooks",
+      "canonical_name": "QuickBooks Online",
+      "aliases": [
+        "QBO",
+        "QuickBooks"
+      ],
+      "domain": "Finance",
+      "category": "Accounting Software",
+      "reason": "Crucial requirement for SME specific 'Accountant' or 'Cashier' jobs that appear dominantly in jobtittle.csv.",
+      "recommended_resources": []
+    },
+    {
+      "skill_id": "fe-typescript",
+      "canonical_name": "TypeScript",
+      "aliases": [
+        "TS"
+      ],
+      "domain": "Frontend",
+      "category": "Languages",
+      "reason": "TypeScript has increasingly become a hard requirement for modern React/Frontend roles seen in jobtittle.csv.",
+      "recommended_resources": [
+        "res-tech-fe-ts-1"
+      ]
+    }
+  ]
+}
