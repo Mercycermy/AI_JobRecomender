@@ -15,6 +15,7 @@ from app.gap_analyzer import GapAnalyzer
 from app.learning_path import LearningPath
 from app.recommender import RecommendationEngine
 from app.resume_tips import ResumeCoach
+from app.skill_normalizer import SkillNormalizer
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", "dev-secret-change-me")
@@ -24,6 +25,7 @@ _recommender: Optional[RecommendationEngine] = None
 _gap_analyzer: Optional[GapAnalyzer] = None
 _learning_path: Optional[LearningPath] = None
 _resume_coach: Optional[ResumeCoach] = None
+_skill_normalizer: Optional[SkillNormalizer] = None
 _quiz_sessions: Dict[str, AgentState] = {}
 
 
@@ -62,6 +64,13 @@ def _get_resume_coach() -> ResumeCoach:
     return _resume_coach
 
 
+def _get_skill_normalizer() -> SkillNormalizer:
+    global _skill_normalizer
+    if _skill_normalizer is None:
+        _skill_normalizer = SkillNormalizer()
+    return _skill_normalizer
+
+
 def _add_cors_headers(response):
     origin = request.headers.get("Origin", "*")
     response.headers["Access-Control-Allow-Origin"] = origin
@@ -87,6 +96,38 @@ def health():
     })
 
 
+_SIGNAL_LABELS = {
+    "SOFTWARE": "Software Engineering",
+    "DATA_AI": "Data & AI",
+    "CREATIVE": "Creative & Design",
+    "BUSINESS": "Business & Ops",
+    "SALES_MKT": "Sales & Marketing",
+    "ACCOUNTING": "Accounting & Finance",
+    "ADMIN": "Administration",
+    "ENGINEERING": "Engineering & Construction",
+}
+
+
+def _label_from_signals(signals: dict) -> str:
+    if not signals:
+        return ""
+    labels = []
+    for key in signals.keys():
+        label = _SIGNAL_LABELS.get(key)
+        if not label:
+            label = key.replace("_", " ").replace("-", " ").title()
+        labels.append(label)
+    return ", ".join(labels)
+
+
+def _label_from_skills(skills: list) -> str:
+    if not skills:
+        return ""
+    normalizer = _get_skill_normalizer()
+    labels = [normalizer.name_for(skill_id) for skill_id in skills]
+    return ", ".join(labels)
+
+
 def _format_question(q: dict, number: int, total: int) -> dict:
     raw_options = q.get("options", {})
     options = []
@@ -96,6 +137,10 @@ def _format_question(q: dict, number: int, total: int) -> dict:
             label = ""
             if isinstance(meta, dict):
                 label = meta.get("text") or meta.get("label") or ""
+                if not label:
+                    label = _label_from_skills(meta.get("skills", []))
+                if not label:
+                    label = _label_from_signals(meta.get("signals", {}))
             options.append({
                 "value": key,
                 "label": label or f"Option {key}",
