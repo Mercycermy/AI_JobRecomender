@@ -1,0 +1,8 @@
+flask
+pandas
+numpy
+scikit-learn
+anthropic
+sentence-transformers
+faiss-cpu
+python-dotenv
