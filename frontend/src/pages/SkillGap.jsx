@@ -1,7 +1,15 @@
+import { loadStoredAnalysis } from '../api/recommend.js'
 import { skillGaps } from '../data/mockData.js'
 
-function SkillGap({ job, standalone = false }) {
-  const gaps = [...skillGaps].sort((left, right) => right.priority - left.priority)
+function SkillGap({ gaps: providedGaps, job, standalone = false }) {
+  const stored = loadStoredAnalysis()
+  const sourceGaps = providedGaps?.length
+    ? providedGaps
+    : stored?.gaps?.length
+      ? stored.gaps
+      : skillGaps
+
+  const gaps = [...sourceGaps].sort((left, right) => right.priority - left.priority)
 
   return (
     <section className={standalone ? 'detail-page' : 'panel-section'}>

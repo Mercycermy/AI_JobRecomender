@@ -11,6 +11,8 @@ from typing import Any, Dict, Optional
 from flask import Flask, jsonify, request
 
 from app.agent import AssessmentAgent, AgentState
+from app.gap_analyzer import GapAnalyzer
+from app.learning_path import LearningPath
 from app.recommender import RecommendationEngine
 
 app = Flask(__name__)
@@ -18,6 +20,8 @@ app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", "dev-secret-change
 
 _agent: Optional[AssessmentAgent] = None
 _recommender: Optional[RecommendationEngine] = None
+_gap_analyzer: Optional[GapAnalyzer] = None
+_learning_path: Optional[LearningPath] = None
 _quiz_sessions: Dict[str, AgentState] = {}
 
 
@@ -33,6 +37,20 @@ def _get_recommender() -> RecommendationEngine:
     if _recommender is None:
         _recommender = RecommendationEngine()
     return _recommender
+
+
+def _get_gap_analyzer() -> GapAnalyzer:
+    global _gap_analyzer
+    if _gap_analyzer is None:
+        _gap_analyzer = GapAnalyzer()
+    return _gap_analyzer
+
+
+def _get_learning_path() -> LearningPath:
+    global _learning_path
+    if _learning_path is None:
+        _learning_path = LearningPath()
+    return _learning_path
 
 
 def _add_cors_headers(response):
@@ -179,6 +197,29 @@ def recommend():
             "engine": {
                 "semantic_search": _get_recommender().index is not None,
             },
+        })
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/analysis", methods=["POST", "OPTIONS"])
+def analysis():
+    """Return skill gap analysis and learning resources for a profile."""
+    if request.method == "OPTIONS":
+        return "", 204
+
+    body = request.get_json(silent=True) or {}
+    profile = body.get("skill_profile") or body.get("profile") or body.get("profile") or {}
+    recommendations = body.get("recommendations") or []
+
+    try:
+        gaps = _get_gap_analyzer().analyze(profile, recommendations)
+        resources = _get_learning_path().recommend_resources(
+            [gap["skill_id"] for gap in gaps]
+        )
+        return jsonify({
+            "gaps": gaps,
+            "resources": resources,
         })
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500

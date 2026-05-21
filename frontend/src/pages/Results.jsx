@@ -1,10 +1,16 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   categories,
   experienceLevels,
   jobRecommendations as mockJobRecommendations,
 } from '../data/mockData.js'
-import { loadStoredRecommendations } from '../api/recommend.js'
+import {
+  fetchAnalysis,
+  loadStoredAnalysis,
+  loadStoredProfile,
+  loadStoredRecommendations,
+  persistAnalysis,
+} from '../api/recommend.js'
 import LearningResources from './LearningResources.jsx'
 import ResumeTips from './ResumeTips.jsx'
 import SkillGap from './SkillGap.jsx'
@@ -37,10 +43,37 @@ function Results({ navigate }) {
   const [category, setCategory] = useState('All categories')
   const [experience, setExperience] = useState('All experience')
   const [activeTab, setActiveTab] = useState(tabs[0])
+  const [analysis, setAnalysis] = useState(() => loadStoredAnalysis())
 
   const jobRecommendations = useMemo(() => {
     const stored = loadStoredRecommendations()
     return stored?.length ? stored : mockJobRecommendations
+  }, [])
+
+  useEffect(() => {
+    let isMounted = true
+    const profile = loadStoredProfile()
+    const storedRecs = loadStoredRecommendations()
+
+    if (!profile || !storedRecs?.length) {
+      return () => {
+        isMounted = false
+      }
+    }
+
+    fetchAnalysis(profile, storedRecs)
+      .then((payload) => {
+        if (!isMounted) {
+          return
+        }
+        setAnalysis(payload)
+        persistAnalysis(payload)
+      })
+      .catch(() => {})
+
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   const categoryOptions = useMemo(() => {
@@ -68,8 +101,8 @@ function Results({ navigate }) {
   )
 
   const lowerPanel = {
-    'Skill Gap': <SkillGap />,
-    'Learning Resources': <LearningResources />,
+    'Skill Gap': <SkillGap gaps={analysis?.gaps} />,
+    'Learning Resources': <LearningResources resources={analysis?.resources} />,
     'Resume Tips': <ResumeTips />,
   }[activeTab]
 
