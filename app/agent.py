@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Optional, Set
 
 _DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 _QUESTIONS_PATH = _DATA_DIR / "questions.json"
+_QUESTION_PARTS_GLOB = "questions_part*.json"
 
 
 # ---------------------------------------------------------------------------
@@ -33,12 +34,27 @@ class QuestionBank:
 
     def __init__(self, path: Optional[Path] = None) -> None:
         path = path or _QUESTIONS_PATH
+        raw = self._load_questions_payload(path)
+        self._questions = {q["id"]: q for q in raw.get("questions", [])}
+        self._tiebreaker_map = raw.get("tiebreaker_map", {})
+
+    def _load_questions_payload(self, path: Path) -> Dict[str, Any]:
+        part_files = sorted(path.parent.glob(_QUESTION_PARTS_GLOB))
+        if part_files:
+            merged_questions: List[dict] = []
+            merged_tiebreakers: Dict[str, str] = {}
+            for part in part_files:
+                with open(part, "r", encoding="utf-8") as fh:
+                    payload = json.load(fh)
+                merged_questions.extend(payload.get("questions", []))
+                merged_tiebreakers.update(payload.get("tiebreaker_map", {}))
+            return {
+                "questions": merged_questions,
+                "tiebreaker_map": merged_tiebreakers,
+            }
+
         with open(path, "r", encoding="utf-8") as fh:
-            raw = json.load(fh)
-        self._questions: Dict[str, dict] = {
-            q["id"]: q for q in raw["questions"]
-        }
-        self._tiebreaker_map: Dict[str, str] = raw.get("tiebreaker_map", {})
+            return json.load(fh)
 
     # -- public API ---------------------------------------------------------
 
@@ -136,6 +152,7 @@ class AssessmentAgent:
     """
 
     MAX_QUESTIONS = 20
+    MIN_QUESTIONS = 10
     CONFIDENCE_THRESHOLD = 85
     TIEBREAK_GAP = 15
 
@@ -201,7 +218,10 @@ class AssessmentAgent:
         Returns ``None`` when the assessment should terminate.
         """
         # --- termination checks ---
-        if state.max_score() >= self.CONFIDENCE_THRESHOLD:
+        if (
+            state.question_count >= self.MIN_QUESTIONS
+            and state.max_score() >= self.CONFIDENCE_THRESHOLD
+        ):
             # High confidence reached — but still need Q_EXP / Q_PROJECT
             if "Q_EXP" not in state.asked:
                 return "Q_EXP"

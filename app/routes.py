@@ -88,7 +88,29 @@ def health():
 
 
 def _format_question(q: dict, number: int, total: int) -> dict:
-    options = list(q.get("options", {}).keys())
+    raw_options = q.get("options", {})
+    options = []
+
+    if isinstance(raw_options, dict):
+        for key, meta in raw_options.items():
+            label = ""
+            if isinstance(meta, dict):
+                label = meta.get("text") or meta.get("label") or ""
+            options.append({
+                "value": key,
+                "label": label or f"Option {key}",
+            })
+    elif isinstance(raw_options, list):
+        for item in raw_options:
+            if isinstance(item, dict):
+                value = item.get("value") or item.get("id") or item.get("label")
+                options.append({
+                    "value": value,
+                    "label": item.get("label") or item.get("text") or str(value),
+                })
+            else:
+                options.append({"value": item, "label": str(item)})
+
     return {
         "id": q["id"],
         "stem": q.get("stem") or q.get("text", ""),
@@ -108,7 +130,10 @@ def _quiz_payload(state: AgentState, question: Optional[dict], done: bool = Fals
     if profile is not None:
         payload["skill_profile"] = profile
     if question is not None:
-        total = min(AssessmentAgent.MAX_QUESTIONS, max(state.question_count + 3, 8))
+        total = max(
+            AssessmentAgent.MIN_QUESTIONS,
+            min(AssessmentAgent.MAX_QUESTIONS, state.question_count + 3),
+        )
         payload["question"] = _format_question(
             question, state.question_count + 1, total
         )

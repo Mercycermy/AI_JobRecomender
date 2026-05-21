@@ -4,15 +4,40 @@ import { mapJobToCard, persistRecommendationSession } from '../api/recommend.js'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000'
 
+function normalizeOptions(rawOptions, fallbackOptions) {
+  if (Array.isArray(rawOptions)) {
+    return rawOptions.map((option) => {
+      if (option && typeof option === 'object') {
+        const value = option.value ?? option.id ?? option.label
+        return {
+          value,
+          label: option.label ?? option.text ?? String(value ?? ''),
+        }
+      }
+      return { value: option, label: String(option) }
+    })
+  }
+
+  if (rawOptions && typeof rawOptions === 'object') {
+    return Object.entries(rawOptions).map(([key, meta]) => ({
+      value: key,
+      label: meta?.text ?? meta?.label ?? `Option ${key}`,
+    }))
+  }
+
+  return fallbackOptions.map((option) => ({ value: option, label: String(option) }))
+}
+
 function normalizeQuestion(payload, fallbackIndex) {
   const source = payload?.question || payload || fallbackQuestions[fallbackIndex]
+  const fallback = fallbackQuestions[fallbackIndex]
 
   return {
     id: source.id || source.questionId || `q${fallbackIndex + 1}`,
     number: source.number || fallbackIndex + 1,
     total: source.total || fallbackQuestions.length,
-    stem: source.stem || source.text || source.question || fallbackQuestions[fallbackIndex].stem,
-    options: source.options || source.choices || fallbackQuestions[fallbackIndex].options,
+    stem: source.stem || source.text || source.question || fallback.stem,
+    options: normalizeOptions(source.options || source.choices, fallback.options),
   }
 }
 
@@ -136,15 +161,15 @@ function Quiz({ navigate }) {
         <h1>{question.stem}</h1>
 
         <div className="option-grid">
-          {question.options.slice(0, 4).map((option) => (
+          {question.options.map((option) => (
             <button
-              className={`option-card ${selectedOption === option ? 'is-selected' : ''}`}
+              className={`option-card ${selectedOption === option.value ? 'is-selected' : ''}`}
               type="button"
-              key={option}
+              key={option.value}
               disabled={isAdvancing}
-              onClick={() => answerQuestion(option)}
+              onClick={() => answerQuestion(option.value)}
             >
-              {option}
+              {option.label}
             </button>
           ))}
         </div>
