@@ -6,6 +6,8 @@ import os
 import sys
 import time
 
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from app.recommender import (
@@ -14,6 +16,32 @@ from app.recommender import (
     MAPPER_PATH,
     DB_PATH,
 )
+
+
+def _vector_stack_ready() -> bool:
+    return (
+        os.path.exists(DB_PATH)
+        and os.path.exists(INDEX_PATH)
+        and os.path.exists(MAPPER_PATH)
+    )
+
+
+@pytest.fixture(scope="module")
+def warm_recommendation_engine():
+    """Load model/index once per module; warm up encode+search path."""
+    if not _vector_stack_ready():
+        return None
+    engine = RecommendationEngine()
+    engine.rank_jobs(
+        {
+            "skills": ["python"],
+            "experience": "junior",
+            "category": "backend-dev",
+            "location": "remote",
+        },
+        top_n=1,
+    )
+    return engine
 
 
 def test_experience_weight():
@@ -58,14 +86,6 @@ def test_rank_jobs_fallback():
         assert "breakdown" in first
 
 
-def _vector_stack_ready() -> bool:
-    return (
-        os.path.exists(DB_PATH)
-        and os.path.exists(INDEX_PATH)
-        and os.path.exists(MAPPER_PATH)
-    )
-
-
 def test_engine_loads_with_vectors():
     if not _vector_stack_ready():
         print("SKIP test_engine_loads_with_vectors (run seed_db.py + build_vectors.py)")
@@ -78,12 +98,11 @@ def test_engine_loads_with_vectors():
     assert engine.index.ntotal == len(engine.job_ids)
 
 
-def test_rank_jobs_semantic_profile():
-    if not _vector_stack_ready():
-        print("SKIP test_rank_jobs_semantic_profile (run seed_db.py + build_vectors.py)")
-        return
+def test_rank_jobs_semantic_profile(warm_recommendation_engine):
+    if warm_recommendation_engine is None:
+        pytest.skip("run seed_db.py + build_vectors.py")
 
-    engine = RecommendationEngine()
+    engine = warm_recommendation_engine
     profile = {
         "detected_skills": ["fastapi", "docker", "rest", "python"],
         "experience_level": "mid",
@@ -108,13 +127,12 @@ def test_rank_jobs_semantic_profile():
     )
 
 
-def test_semantic_query_returns_backend_roles():
+def test_semantic_query_returns_backend_roles(warm_recommendation_engine):
     """Profiles with API/backend skills should rank software roles when index exists."""
-    if not _vector_stack_ready():
-        print("SKIP test_semantic_query_returns_backend_roles")
-        return
+    if warm_recommendation_engine is None:
+        pytest.skip("run seed_db.py + build_vectors.py")
 
-    engine = RecommendationEngine()
+    engine = warm_recommendation_engine
     profile = {
         "skills": ["fastapi", "docker", "rest", "python", "sql"],
         "experience": "mid",
@@ -145,11 +163,14 @@ if __name__ == "__main__":
     test_engine_loads_with_vectors()
     print("✓ test_engine_loads_with_vectors PASSED (or skipped)")
 
-    test_rank_jobs_semantic_profile()
-    print("✓ test_rank_jobs_semantic_profile PASSED (or skipped)")
-
-    test_semantic_query_returns_backend_roles()
-    print("✓ test_semantic_query_returns_backend_roles PASSED (or skipped)")
+    warm = warm_recommendation_engine()
+    if warm is not None:
+        test_rank_jobs_semantic_profile(warm)
+        print("✓ test_rank_jobs_semantic_profile PASSED")
+        test_semantic_query_returns_backend_roles(warm)
+        print("✓ test_semantic_query_returns_backend_roles PASSED")
+    else:
+        print("SKIP semantic tests (run seed_db.py + build_vectors.py)")
 
     print("\n==============================")
     print("RECOMMENDER TESTS PASSED ✓")
