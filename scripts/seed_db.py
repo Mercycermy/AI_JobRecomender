@@ -28,7 +28,7 @@ def main():
         job_type TEXT,
         location TEXT,
         date_added TEXT,
-        tfidf_vector BLOB
+        tfidf_vector BLOB  -- legacy; embeddings live in data/jobs_faiss.index
     );
     CREATE TABLE IF NOT EXISTS skill_taxonomy (
         skill_id TEXT PRIMARY KEY,

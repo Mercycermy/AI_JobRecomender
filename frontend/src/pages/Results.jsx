@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react'
 import {
   categories,
   experienceLevels,
-  jobRecommendations,
+  jobRecommendations as mockJobRecommendations,
 } from '../data/mockData.js'
+import { loadStoredRecommendations } from '../api/recommend.js'
 import LearningResources from './LearningResources.jsx'
 import ResumeTips from './ResumeTips.jsx'
 import SkillGap from './SkillGap.jsx'
@@ -22,25 +23,48 @@ function getBadgeClass(match) {
   return 'match-low'
 }
 
+function formatCategoryLabel(slug) {
+  if (!slug) {
+    return 'Unknown'
+  }
+  return slug
+    .split('-')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
 function Results({ navigate }) {
   const [category, setCategory] = useState('All categories')
   const [experience, setExperience] = useState('All experience')
   const [activeTab, setActiveTab] = useState(tabs[0])
 
+  const jobRecommendations = useMemo(() => {
+    const stored = loadStoredRecommendations()
+    return stored?.length ? stored : mockJobRecommendations
+  }, [])
+
+  const categoryOptions = useMemo(() => {
+    const fromJobs = [...new Set(jobRecommendations.map((j) => j.category).filter(Boolean))]
+    return fromJobs.length ? fromJobs.map(formatCategoryLabel) : categories
+  }, [jobRecommendations])
+
   const filteredJobs = useMemo(
     () =>
       jobRecommendations.filter((job) => {
-        const categoryMatches = category === 'All categories' || job.category === category
-        const experienceMatches = experience === 'All experience' || job.experience === experience
+        const jobCategoryLabel = formatCategoryLabel(job.category)
+        const categoryMatches =
+          category === 'All categories' || job.category === category || jobCategoryLabel === category
+        const experienceMatches =
+          experience === 'All experience' || job.experience === experience
 
         return categoryMatches && experienceMatches
       }),
-    [category, experience],
+    [category, experience, jobRecommendations],
   )
 
   const readinessScore = Math.round(
-    jobRecommendations.reduce((total, job) => total + job.readiness, 0) /
-      jobRecommendations.length,
+    jobRecommendations.reduce((total, job) => total + (job.readiness ?? job.match ?? 0), 0) /
+      Math.max(jobRecommendations.length, 1),
   )
 
   const lowerPanel = {
@@ -80,7 +104,7 @@ function Results({ navigate }) {
             Category
             <select value={category} onChange={(event) => setCategory(event.target.value)}>
               <option>All categories</option>
-              {categories.map((item) => (
+              {categoryOptions.map((item) => (
                 <option key={item}>{item}</option>
               ))}
             </select>

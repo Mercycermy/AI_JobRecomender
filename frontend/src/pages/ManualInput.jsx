@@ -1,11 +1,18 @@
 import { useState } from 'react'
 import { categories, experienceLevels } from '../data/mockData.js'
+import {
+  fetchRecommendations,
+  persistRecommendationSession,
+  toApiProfile,
+} from '../api/recommend.js'
 
 function ManualInput({ navigate }) {
   const [skillInput, setSkillInput] = useState('')
   const [skills, setSkills] = useState(['SQL', 'React', 'Research'])
   const [experience, setExperience] = useState(experienceLevels[1])
   const [category, setCategory] = useState(categories[0])
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState('')
 
   const addSkill = () => {
     const nextSkill = skillInput.trim()
@@ -30,9 +37,22 @@ function ManualInput({ navigate }) {
     setSkills((currentSkills) => currentSkills.filter((skill) => skill !== skillToRemove))
   }
 
-  const submitManualInput = (event) => {
+  const submitManualInput = async (event) => {
     event.preventDefault()
-    navigate('/results')
+    setError('')
+    setIsSubmitting(true)
+
+    const profile = toApiProfile({ skills, experience, category })
+
+    try {
+      const jobs = await fetchRecommendations(profile)
+      persistRecommendationSession(profile, jobs)
+      navigate('/results')
+    } catch (err) {
+      setError(err.message || 'Could not reach the recommendation API.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -107,8 +127,14 @@ function ManualInput({ navigate }) {
           </div>
         </div>
 
-        <button className="button button-primary manual-submit" type="submit">
-          Generate Recommendations
+        {error && <p className="form-error">{error}</p>}
+
+        <button
+          className="button button-primary manual-submit"
+          type="submit"
+          disabled={isSubmitting || skills.length === 0}
+        >
+          {isSubmitting ? 'Generating…' : 'Generate Recommendations'}
         </button>
       </form>
     </section>

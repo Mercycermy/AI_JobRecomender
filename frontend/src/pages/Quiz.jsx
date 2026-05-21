@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { fallbackQuestions } from '../data/mockData.js'
+import { mapJobToCard, persistRecommendationSession } from '../api/recommend.js'
 
-const API_BASE = import.meta.env.VITE_API_URL || ''
+const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000'
 
 function normalizeQuestion(payload, fallbackIndex) {
   const source = payload?.question || payload || fallbackQuestions[fallbackIndex]
@@ -21,6 +22,7 @@ function Quiz({ navigate }) {
   const [selectedOption, setSelectedOption] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isAdvancing, setIsAdvancing] = useState(false)
+  const sessionIdRef = useRef('')
 
   useEffect(() => {
     let isMounted = true
@@ -29,6 +31,7 @@ function Quiz({ navigate }) {
       try {
         const response = await fetch(`${API_BASE}/quiz`)
         const payload = await response.json()
+        sessionIdRef.current = response.headers.get('X-Session-Id') || ''
 
         if (isMounted) {
           setQuestion(normalizeQuestion(payload, 0))
@@ -60,9 +63,14 @@ function Quiz({ navigate }) {
     setIsAdvancing(true)
 
     try {
+      const headers = { 'Content-Type': 'application/json' }
+      if (sessionIdRef.current) {
+        headers['X-Session-Id'] = sessionIdRef.current
+      }
+
       const response = await fetch(`${API_BASE}/quiz/answer`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           questionId: question.id,
           selectedOption: option,
@@ -71,6 +79,11 @@ function Quiz({ navigate }) {
       const payload = await response.json()
 
       if (payload.done) {
+        const profile = payload.skill_profile
+        const jobs = (payload.recommendations || []).map(mapJobToCard)
+        if (profile && jobs.length) {
+          persistRecommendationSession(profile, jobs)
+        }
         navigate('/results')
         return
       }

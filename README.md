@@ -1,6 +1,6 @@
 # AI Job Recommender
 
-An intelligent, full-stack application designed to match users with job postings based on their skills, generate personalized learning paths, and provide actionable resume feedback. The application relies on machine learning (TF-IDF + Cosine Similarity) and adaptive AI to accurately evaluate skill gaps.
+An intelligent, full-stack application designed to match users with job postings based on their skills, generate personalized learning paths, and provide actionable resume feedback. Job matching uses **Sentence Transformers** (`all-MiniLM-L6-v2`) with **FAISS** dense retrieval and a multi-factor hybrid ranker; an adaptive quiz agent builds the skill profile.
 
 ## Features
 - **Smart Recommendations:** Uses precomputed job vectors to find the best job matches based on your unique skill set.
@@ -13,7 +13,8 @@ An intelligent, full-stack application designed to match users with job postings
 - **Frontend:** React, Vite
 - **Backend:** Python (Flask/FastAPI)
 - **Database:** SQLite
-- **Machine Learning & AI:** Scikit-Learn (TF-IDF Vectorizer), Custom AI Wrapper (`ai_client.py`)
+- **Machine Learning:** Sentence Transformers, FAISS (`faiss-cpu`), hybrid scoring (`app/recommender.py`)
+- **Assessment:** Adaptive quiz agent (`app/agent.py`)
 
 ## File Structure
 ```text
@@ -21,7 +22,7 @@ An intelligent, full-stack application designed to match users with job postings
 ├── data/              # SQLite DB and raw JSON/CSV datasets
 ├── docs/              # Proprietary Internal system documentation (Git ignored)
 ├── frontend/          # React frontend (Vite source code)
-├── models/            # Pickle files (.pkl) containing job vectors
+├── models/            # Legacy pickle vectors (optional; superseded by FAISS index)
 ├── scripts/           # Python scripts for data seeding and model-building
 ├── tests/             # Unit and integration tests
 └── README.md          # You are here
@@ -44,10 +45,20 @@ An intelligent, full-stack application designed to match users with job postings
    pip install -r requirements.txt
    ```
 4. Configure your `.env` file with any required API keys (e.g., Anthropic, OpenAI).
-5. (Optional) Run the data/seed scripts to build your `db.sqlite3` and `.pkl` vector models if they aren't generated yet.
-6. Start the development server (adjust based on your framework):
+5. Seed the database, quiz bank, and FAISS index:
+   ```bash
+   python scripts/seed_db.py
+   python scripts/build_quiz_bank.py
+   python scripts/build_vectors.py
+   ```
+   See `skills.md` for architecture details and `recommendation_phases.md` for the roadmap.
+6. Start the Flask API:
    ```bash
    python app/routes.py
+   ```
+7. Run tests:
+   ```bash
+   python -m pytest tests/ -q
    ```
 
 ### 2. Frontend Setup

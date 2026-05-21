@@ -8,7 +8,8 @@ import Quiz from './pages/Quiz.jsx'
 import Results from './pages/Results.jsx'
 import ResumeTips from './pages/ResumeTips.jsx'
 import SkillGap from './pages/SkillGap.jsx'
-import { jobRecommendations } from './data/mockData.js'
+import { jobRecommendations as mockJobRecommendations } from './data/mockData.js'
+import { loadStoredRecommendations } from './api/recommend.js'
 import './App.css'
 
 const getPath = () => window.location.pathname
@@ -67,7 +68,9 @@ function App() {
 
     if (path.startsWith('/results/gap/')) {
       const jobId = path.split('/').filter(Boolean).at(-1)
-      const job = jobRecommendations.find((item) => item.id === jobId)
+      const stored = loadStoredRecommendations()
+      const jobs = stored?.length ? stored : mockJobRecommendations
+      const job = jobs.find((item) => item.id === jobId)
 
       return <SkillGap job={job} standalone />
     }
