@@ -12,8 +12,31 @@ function groupBySkill(resources) {
   }, {})
 }
 
-function LearningResources({ standalone = false, resources: providedResources }) {
+function LearningResources({ standalone = false, resources: providedResources, isLoading = false, error = null }) {
   const stored = loadStoredAnalysis()
+
+  if (isLoading) {
+    return (
+      <section className={standalone ? 'detail-page' : 'panel-section'}>
+        <div className="loading-container" style={{ textAlign: 'center', padding: '40px 20px' }}>
+          <p className="loading-text" style={{ fontStyle: 'italic', color: 'var(--slate)' }}>
+            Curating high-alignment learning resources...
+          </p>
+        </div>
+      </section>
+    )
+  }
+
+  if (error && !providedResources?.length && !stored?.resources?.length) {
+    return (
+      <section className={standalone ? 'detail-page' : 'panel-section'}>
+        <div className="error-container" style={{ textAlign: 'center', padding: '30px 20px', background: 'rgba(232, 93, 117, 0.08)', borderRadius: '8px', border: '1px solid var(--coral)' }}>
+          <p style={{ color: 'var(--coral)', fontWeight: 'bold' }}>{error}</p>
+        </div>
+      </section>
+    )
+  }
+
   const resolvedResources = providedResources?.length
     ? providedResources
     : stored?.resources?.length
@@ -47,7 +70,14 @@ function LearningResources({ standalone = false, resources: providedResources })
                       key={`${group.skill}-${resource.title}`}
                     >
                       <div>
-                        <span className="chip chip-blue">{resource.level}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                          <span className="chip chip-blue">{resource.level}</span>
+                          {resource.gap_priority && (
+                            <span className={`level-badge level-${resource.gap_priority.toLowerCase()}`} style={{ fontSize: '10px', padding: '3px 8px' }}>
+                              {resource.gap_priority} Priority
+                            </span>
+                          )}
+                        </div>
                         <h3>{resource.title}</h3>
                         <p>{resource.platform}</p>
                       </div>

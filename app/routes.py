@@ -14,6 +14,7 @@ from app.agent import AssessmentAgent, AgentState
 from app.gap_analyzer import GapAnalyzer
 from app.learning_path import LearningPath
 from app.recommender import RecommendationEngine
+from app.resume_tips import ResumeCoach
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", "dev-secret-change-me")
@@ -22,6 +23,7 @@ _agent: Optional[AssessmentAgent] = None
 _recommender: Optional[RecommendationEngine] = None
 _gap_analyzer: Optional[GapAnalyzer] = None
 _learning_path: Optional[LearningPath] = None
+_resume_coach: Optional[ResumeCoach] = None
 _quiz_sessions: Dict[str, AgentState] = {}
 
 
@@ -51,6 +53,13 @@ def _get_learning_path() -> LearningPath:
     if _learning_path is None:
         _learning_path = LearningPath()
     return _learning_path
+
+
+def _get_resume_coach() -> ResumeCoach:
+    global _resume_coach
+    if _resume_coach is None:
+        _resume_coach = ResumeCoach()
+    return _resume_coach
 
 
 def _add_cors_headers(response):
@@ -221,6 +230,23 @@ def analysis():
             "gaps": gaps,
             "resources": resources,
         })
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/resume-tips", methods=["POST", "OPTIONS"])
+def resume_tips():
+    """Return personalized resume tips and study schedule for a profile and gaps."""
+    if request.method == "OPTIONS":
+        return "", 204
+
+    body = request.get_json(silent=True) or {}
+    profile = body.get("skill_profile") or body.get("profile") or {}
+    gaps = body.get("gaps") or []
+
+    try:
+        coaching = _get_resume_coach().get_coaching(profile, gaps)
+        return jsonify(coaching)
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 

@@ -80,9 +80,10 @@ function Quiz({ navigate }) {
 
       if (payload.done) {
         const profile = payload.skill_profile
-        const jobs = (payload.recommendations || []).map(mapJobToCard)
+        const rawRecs = payload.recommendations || []
+        const jobs = rawRecs.map(mapJobToCard)
         if (profile && jobs.length) {
-          persistRecommendationSession(profile, jobs)
+          persistRecommendationSession(profile, jobs, rawRecs)
         }
         navigate('/results')
         return

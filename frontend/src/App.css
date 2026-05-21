@@ -1433,16 +1433,19 @@ button.chip {
   text-transform: uppercase;
 }
 
+.level-low,
 .level-beginner {
   color: var(--mint);
   background: rgba(34, 168, 120, 0.12);
 }
 
+.level-medium,
 .level-intermediate {
   color: var(--amber);
   background: rgba(243, 177, 61, 0.14);
 }
 
+.level-high,
 .level-advanced {
   color: var(--coral);
   background: rgba(232, 93, 117, 0.13);

@@ -2,6 +2,7 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000'
 
 export const PROFILE_STORAGE_KEY = 'skillProfile'
 export const RECOMMENDATIONS_STORAGE_KEY = 'jobRecommendations'
+export const RAW_RECOMMENDATIONS_STORAGE_KEY = 'rawJobRecommendations'
 export const ANALYSIS_STORAGE_KEY = 'recommendationAnalysis'
 
 const EXPERIENCE_MAP = {
@@ -62,12 +63,17 @@ export async function fetchRecommendations(profile, topN = 10) {
   }
 
   const data = await response.json()
-  return (data.recommendations || []).map(mapJobToCard)
+  const rawRecs = data.recommendations || []
+  sessionStorage.setItem(RAW_RECOMMENDATIONS_STORAGE_KEY, JSON.stringify(rawRecs))
+  return rawRecs.map(mapJobToCard)
 }
 
-export function persistRecommendationSession(profile, jobs) {
+export function persistRecommendationSession(profile, jobs, rawRecs = null) {
   sessionStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile))
   sessionStorage.setItem(RECOMMENDATIONS_STORAGE_KEY, JSON.stringify(jobs))
+  if (rawRecs) {
+    sessionStorage.setItem(RAW_RECOMMENDATIONS_STORAGE_KEY, JSON.stringify(rawRecs))
+  }
 }
 
 export function persistAnalysis(analysis) {
@@ -101,16 +107,40 @@ export function loadStoredAnalysis() {
   }
 }
 
+export function loadStoredRawRecommendations() {
+  try {
+    const raw = sessionStorage.getItem(RAW_RECOMMENDATIONS_STORAGE_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
 export async function fetchAnalysis(profile, recommendations) {
   const response = await fetch(`${API_BASE}/analysis`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ profile, recommendations }),
+    body: JSON.stringify({ skill_profile: profile, recommendations }),
   })
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}))
     throw new Error(err.error || `Analysis API failed (${response.status})`)
+  }
+
+  return response.json()
+}
+
+export async function fetchResumeTips(profile, gaps) {
+  const response = await fetch(`${API_BASE}/resume-tips`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ skill_profile: profile, gaps }),
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || `Resume Tips API failed (${response.status})`)
   }
 
   return response.json()

@@ -6,9 +6,11 @@ import {
 } from '../data/mockData.js'
 import {
   fetchAnalysis,
+  fetchResumeTips,
   loadStoredAnalysis,
   loadStoredProfile,
   loadStoredRecommendations,
+  loadStoredRawRecommendations,
   persistAnalysis,
 } from '../api/recommend.js'
 import LearningResources from './LearningResources.jsx'
@@ -43,7 +45,21 @@ function Results({ navigate }) {
   const [category, setCategory] = useState('All categories')
   const [experience, setExperience] = useState('All experience')
   const [activeTab, setActiveTab] = useState(tabs[0])
+  
   const [analysis, setAnalysis] = useState(() => loadStoredAnalysis())
+  const [isAnalysisLoading, setIsAnalysisLoading] = useState(!loadStoredAnalysis())
+  const [analysisError, setAnalysisError] = useState(null)
+
+  const [resumeTipsData, setResumeTipsData] = useState(() => {
+    try {
+      const raw = sessionStorage.getItem('resumeTipsCoaching')
+      return raw ? JSON.parse(raw) : null
+    } catch {
+      return null
+    }
+  })
+  const [isResumeTipsLoading, setIsResumeTipsLoading] = useState(false)
+  const [resumeTipsError, setResumeTipsError] = useState(null)
 
   const jobRecommendations = useMemo(() => {
     const stored = loadStoredRecommendations()
@@ -53,28 +69,76 @@ function Results({ navigate }) {
   useEffect(() => {
     let isMounted = true
     const profile = loadStoredProfile()
-    const storedRecs = loadStoredRecommendations()
+    const rawRecs = loadStoredRawRecommendations() || loadStoredRecommendations()
 
-    if (!profile || !storedRecs?.length) {
+    if (!profile || !rawRecs?.length) {
+      setIsAnalysisLoading(false)
       return () => {
         isMounted = false
       }
     }
 
-    fetchAnalysis(profile, storedRecs)
+    setIsAnalysisLoading(true)
+    setAnalysisError(null)
+
+    fetchAnalysis(profile, rawRecs)
       .then((payload) => {
         if (!isMounted) {
           return
         }
         setAnalysis(payload)
         persistAnalysis(payload)
+        setIsAnalysisLoading(false)
       })
-      .catch(() => {})
+      .catch((err) => {
+        if (!isMounted) {
+          return
+        }
+        setAnalysisError(err.message || 'Failed to load analysis')
+        setIsAnalysisLoading(false)
+      })
 
     return () => {
       isMounted = false
     }
   }, [])
+
+  useEffect(() => {
+    let isMounted = true
+    const profile = loadStoredProfile()
+    if (!profile || !analysis?.gaps?.length) {
+      return
+    }
+
+    // Only fetch if not already loaded
+    if (resumeTipsData) {
+      return
+    }
+
+    setIsResumeTipsLoading(true)
+    setResumeTipsError(null)
+
+    fetchResumeTips(profile, analysis.gaps)
+      .then((payload) => {
+        if (!isMounted) {
+          return
+        }
+        setResumeTipsData(payload)
+        sessionStorage.setItem('resumeTipsCoaching', JSON.stringify(payload))
+        setIsResumeTipsLoading(false)
+      })
+      .catch((err) => {
+        if (!isMounted) {
+          return
+        }
+        setResumeTipsError(err.message || 'Failed to load resume tips')
+        setIsResumeTipsLoading(false)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [analysis?.gaps])
 
   const categoryOptions = useMemo(() => {
     const fromJobs = [...new Set(jobRecommendations.map((j) => j.category).filter(Boolean))]
@@ -101,9 +165,27 @@ function Results({ navigate }) {
   )
 
   const lowerPanel = {
-    'Skill Gap': <SkillGap gaps={analysis?.gaps} />,
-    'Learning Resources': <LearningResources resources={analysis?.resources} />,
-    'Resume Tips': <ResumeTips />,
+    'Skill Gap': (
+      <SkillGap
+        gaps={analysis?.gaps}
+        isLoading={isAnalysisLoading}
+        error={analysisError}
+      />
+    ),
+    'Learning Resources': (
+      <LearningResources
+        resources={analysis?.resources}
+        isLoading={isAnalysisLoading}
+        error={analysisError}
+      />
+    ),
+    'Resume Tips': (
+      <ResumeTips
+        coaching={resumeTipsData}
+        isLoading={isResumeTipsLoading}
+        error={resumeTipsError}
+      />
+    ),
   }[activeTab]
 
   return (

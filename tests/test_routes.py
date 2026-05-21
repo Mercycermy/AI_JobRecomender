@@ -50,3 +50,26 @@ def test_recommend_with_profile(client):
     data = response.get_json()
     assert "recommendations" in data
     assert data["count"] <= 3
+
+
+def test_resume_tips_fallback(client):
+    response = client.post(
+        "/resume-tips",
+        json={
+            "profile": {
+                "detected_skills": ["python"],
+                "top_category": "engineering",
+            },
+            "gaps": [
+                {"skill": "docker", "priority_label": "High"},
+            ],
+        },
+    )
+    assert response.status_code == 200
+    data = response.get_json()
+    assert "tips" in data
+    assert "schedule" in data
+    assert len(data["tips"]) > 0
+    assert len(data["schedule"]) > 0
+    assert data["is_ai"] is False  # Fallback should trigger when no API key is configured in tests
+

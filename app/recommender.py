@@ -121,34 +121,35 @@ class RecommendationEngine:
             return []
 
         # Connect to SQLite
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
-        cur = conn.cursor()
+        conn = sqlite3.connect(DB_PATH, timeout=30.0)
+        try:
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
 
-        # Query metadata
-        placeholders = ",".join("?" for _ in retrieved_job_ids)
-        cur.execute(f"""
-            SELECT job_id, job_title, description, category, exp_level, location
-            FROM jobs
-            WHERE job_id IN ({placeholders})
-        """, retrieved_job_ids)
-        jobs_metadata = {row["job_id"]: dict(row) for row in cur.fetchall()}
+            # Query metadata
+            placeholders = ",".join("?" for _ in retrieved_job_ids)
+            cur.execute(f"""
+                SELECT job_id, job_title, description, category, exp_level, location
+                FROM jobs
+                WHERE job_id IN ({placeholders})
+            """, retrieved_job_ids)
+            jobs_metadata = {row["job_id"]: dict(row) for row in cur.fetchall()}
 
-        # Query job required skills
-        cur.execute(f"""
-            SELECT job_id, skill_id
-            FROM job_skills
-            WHERE job_id IN ({placeholders}) AND is_required = 1
-        """, retrieved_job_ids)
-        job_skills_mapping = {}
-        for row in cur.fetchall():
-            jid = row["job_id"]
-            sid = row["skill_id"]
-            if jid not in job_skills_mapping:
-                job_skills_mapping[jid] = set()
-            job_skills_mapping[jid].add(sid.lower())
-
-        conn.close()
+            # Query job required skills
+            cur.execute(f"""
+                SELECT job_id, skill_id
+                FROM job_skills
+                WHERE job_id IN ({placeholders}) AND is_required = 1
+            """, retrieved_job_ids)
+            job_skills_mapping = {}
+            for row in cur.fetchall():
+                jid = row["job_id"]
+                sid = row["skill_id"]
+                if jid not in job_skills_mapping:
+                    job_skills_mapping[jid] = set()
+                job_skills_mapping[jid].add(sid.lower())
+        finally:
+            conn.close()
 
         # Create user skills set for quick intersection
         user_skills_set = set(detected_skills)
@@ -231,50 +232,50 @@ class RecommendationEngine:
         if not os.path.exists(DB_PATH):
             return []
 
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
-        cur = conn.cursor()
+        conn = sqlite3.connect(DB_PATH, timeout=30.0)
+        try:
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
 
-        # Query all jobs of the given category or general
-        if top_category:
-            cur.execute("""
-                SELECT job_id, job_title, description, category, exp_level, location
-                FROM jobs
-                WHERE category = ?
-                LIMIT 50
-            """, (top_category,))
-        else:
-            cur.execute("""
-                SELECT job_id, job_title, description, category, exp_level, location
-                FROM jobs
-                LIMIT 50
-            """)
-        
-        rows = cur.fetchall()
-        jobs_metadata = [dict(row) for row in rows]
-        job_ids = [j["job_id"] for j in jobs_metadata]
+            # Query all jobs of the given category or general
+            if top_category:
+                cur.execute("""
+                    SELECT job_id, job_title, description, category, exp_level, location
+                    FROM jobs
+                    WHERE category = ?
+                    LIMIT 50
+                """, (top_category,))
+            else:
+                cur.execute("""
+                    SELECT job_id, job_title, description, category, exp_level, location
+                    FROM jobs
+                    LIMIT 50
+                """)
+            
+            rows = cur.fetchall()
+            jobs_metadata = [dict(row) for row in rows]
+            job_ids = [j["job_id"] for j in jobs_metadata]
 
-        if not job_ids:
+            if not job_ids:
+                return []
+
+            # Fetch required skills
+            placeholders = ",".join("?" for _ in job_ids)
+            cur.execute(f"""
+                SELECT job_id, skill_id
+                FROM job_skills
+                WHERE job_id IN ({placeholders}) AND is_required = 1
+            """, job_ids)
+            
+            job_skills = {}
+            for row in cur.fetchall():
+                jid = row["job_id"]
+                sid = row["skill_id"]
+                if jid not in job_skills:
+                    job_skills[jid] = set()
+                job_skills[jid].add(sid.lower())
+        finally:
             conn.close()
-            return []
-
-        # Fetch required skills
-        placeholders = ",".join("?" for _ in job_ids)
-        cur.execute(f"""
-            SELECT job_id, skill_id
-            FROM job_skills
-            WHERE job_id IN ({placeholders}) AND is_required = 1
-        """, job_ids)
-        
-        job_skills = {}
-        for row in cur.fetchall():
-            jid = row["job_id"]
-            sid = row["skill_id"]
-            if jid not in job_skills:
-                job_skills[jid] = set()
-            job_skills[jid].add(sid.lower())
-
-        conn.close()
 
         user_skills_set = set(detected_skills)
         ranked_results = []

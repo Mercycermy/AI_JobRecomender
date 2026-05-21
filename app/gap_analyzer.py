@@ -16,7 +16,7 @@ class GapAnalyzer:
 		self,
 		profile: Optional[Dict[str, Any]],
 		recommendations: Iterable[Dict[str, Any]],
-		top_n: int = 10,
+		top_n: int = 3,
 		limit: int = 8,
 	) -> List[Dict[str, Any]]:
 		recs = list(recommendations)[:max(1, top_n)] if recommendations else []
@@ -40,10 +40,13 @@ class GapAnalyzer:
 			priority = round((count / total) * 100)
 			if priority >= 70:
 				level = "Advanced"
+				priority_label = "High"
 			elif priority >= 40:
 				level = "Intermediate"
+				priority_label = "Medium"
 			else:
 				level = "Beginner"
+				priority_label = "Low"
 
 			current = max(10, 70 - round(priority * 0.5))
 			required = min(95, current + 30)
@@ -53,6 +56,7 @@ class GapAnalyzer:
 					"skill_id": skill_id,
 					"skill": self.normalizer.name_for(skill_id),
 					"priority": priority,
+					"priority_label": priority_label,
 					"level": level,
 					"current": current,
 					"required": required,
