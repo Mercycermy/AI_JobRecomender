@@ -242,3 +242,138 @@ export const resumeTips = [
     ],
   },
 ]
+
+export const adminMetrics = [
+  {
+    label: 'Active Assessments',
+    value: '128',
+    delta: '+18%',
+    tone: 'good',
+  },
+  {
+    label: 'Jobs Indexed',
+    value: '31.4k',
+    delta: '+2.1k',
+    tone: 'good',
+  },
+  {
+    label: 'Question Coverage',
+    value: '84%',
+    delta: '12 gaps',
+    tone: 'warn',
+  },
+  {
+    label: 'Model Drift',
+    value: 'Low',
+    delta: '0.08',
+    tone: 'good',
+  },
+]
+
+export const adminJobs = [
+  {
+    id: 'job-1032',
+    title: 'Product Analyst',
+    category: 'Product',
+    source: 'CSV import',
+    status: 'Published',
+    quality: 94,
+    updated: '2h ago',
+  },
+  {
+    id: 'job-1047',
+    title: 'Frontend Engineer',
+    category: 'Engineering',
+    source: 'Manual review',
+    status: 'Published',
+    quality: 88,
+    updated: '6h ago',
+  },
+  {
+    id: 'job-1088',
+    title: 'ML Ops Specialist',
+    category: 'Engineering',
+    source: 'Vector rebuild',
+    status: 'Needs review',
+    quality: 61,
+    updated: '1d ago',
+  },
+  {
+    id: 'job-1104',
+    title: 'Growth Marketer',
+    category: 'Marketing',
+    source: 'CSV import',
+    status: 'Draft',
+    quality: 53,
+    updated: '2d ago',
+  },
+]
+
+export const adminQuestions = [
+  {
+    id: 'aq-01',
+    stem: 'Which kind of work gives you the most energy?',
+    type: 'Preference',
+    status: 'Live',
+    signal: 'Role affinity',
+  },
+  {
+    id: 'aq-02',
+    stem: 'How do you usually solve a new technical problem?',
+    type: 'Behavioral',
+    status: 'Live',
+    signal: 'Problem framing',
+  },
+  {
+    id: 'aq-03',
+    stem: 'Which skill would you most like to sharpen next?',
+    type: 'Gap probe',
+    status: 'Needs review',
+    signal: 'Learning intent',
+  },
+]
+
+export const adminResources = [
+  {
+    id: 'ar-01',
+    title: 'A/B Testing Foundations',
+    skill: 'Experiment Design',
+    platform: 'Coursera',
+    status: 'Verified',
+    score: 91,
+  },
+  {
+    id: 'ar-02',
+    title: 'Advanced SQL for Analytics',
+    skill: 'SQL Window Functions',
+    platform: 'Mode',
+    status: 'Verified',
+    score: 87,
+  },
+  {
+    id: 'ar-03',
+    title: 'Case Study Narrative Clinic',
+    skill: 'Portfolio Storytelling',
+    platform: 'ADPList',
+    status: 'Review',
+    score: 68,
+  },
+]
+
+export const adminActivity = [
+  {
+    time: '09:42',
+    title: 'Job vectors rebuilt',
+    detail: '31,408 rows processed with 98.6% usable skill coverage.',
+  },
+  {
+    time: '10:18',
+    title: 'Question gap detected',
+    detail: 'Marketing senior roles need additional strategic planning prompts.',
+  },
+  {
+    time: '11:05',
+    title: 'Resource audit completed',
+    detail: 'Two stale links were queued for replacement.',
+  },
+]

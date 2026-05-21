@@ -78,6 +78,13 @@ function Layout({ children, currentPath }) {
             >
               Manual
             </a>
+            <a
+              href="/admin"
+              aria-current={isCurrent('/admin') ? 'page' : undefined}
+              onClick={closeMenu}
+            >
+              Admin
+            </a>
           </div>
         </nav>
       </header>

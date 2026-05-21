@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Layout from './components/Layout.jsx'
+import Admin from './pages/Admin.jsx'
 import Home from './pages/Home.jsx'
 import LearningResources from './pages/LearningResources.jsx'
 import ManualInput from './pages/ManualInput.jsx'
@@ -44,6 +45,10 @@ function App() {
   }, [navigate])
 
   const route = useMemo(() => {
+    if (path.startsWith('/admin')) {
+      return <Admin />
+    }
+
     if (path === '/quiz') {
       return <Quiz navigate={navigate} />
     }
