@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { fallbackQuestions } from '../data/mockData.js'
-import { mapJobToCard, persistRecommendationSession } from '../api/recommend.js'
+import {
+  clearStoredRecommendations,
+  mapJobToCard,
+  persistRecommendationSession,
+} from '../api/recommend.js'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000'
 
@@ -51,6 +55,7 @@ function Quiz({ navigate }) {
   const [textAnswer, setTextAnswer] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isAdvancing, setIsAdvancing] = useState(false)
+  const [apiError, setApiError] = useState('')
   const sessionIdRef = useRef('')
 
   useEffect(() => {
@@ -58,16 +63,19 @@ function Quiz({ navigate }) {
 
     async function loadFirstQuestion() {
       try {
+        clearStoredRecommendations()
         const response = await fetch(`${API_BASE}/quiz`)
         const payload = await response.json()
         sessionIdRef.current = response.headers.get('X-Session-Id') || ''
 
         if (isMounted) {
           setQuestion(normalizeQuestion(payload, 0))
+          setApiError('')
         }
       } catch {
         if (isMounted) {
-          setQuestion(normalizeQuestion(null, 0))
+          setQuestion(null)
+          setApiError('Unable to reach the quiz service. Make sure the backend is running.')
         }
       } finally {
         if (isMounted) {
@@ -105,13 +113,19 @@ function Quiz({ navigate }) {
           selectedOption: option,
         }),
       })
-      const payload = await response.json()
+      const payload = await response.json().catch(() => ({}))
+
+      if (!response.ok || payload.error) {
+        const message = payload.error || `Quiz request failed (${response.status})`
+        setApiError(message)
+        return
+      }
 
       if (payload.done) {
         const profile = payload.skill_profile
         const rawRecs = payload.recommendations || []
         const jobs = rawRecs.map(mapJobToCard)
-        if (profile && jobs.length) {
+        if (profile) {
           persistRecommendationSession(profile, jobs, rawRecs)
         }
         navigate('/results')
@@ -123,29 +137,40 @@ function Quiz({ navigate }) {
       setQuestion(normalizeQuestion(payload, nextIndex))
       setSelectedOption('')
       setTextAnswer('')
-    } catch {
-      const nextIndex = currentIndex + 1
-
-      if (nextIndex >= fallbackQuestions.length) {
-        navigate('/results')
-        return
-      }
-
-      setCurrentIndex(nextIndex)
-      setQuestion(normalizeQuestion(null, nextIndex))
-      setSelectedOption('')
-      setTextAnswer('')
+    } catch (err) {
+      setApiError(err?.message || 'Quiz submission failed. Please refresh and try again.')
     } finally {
       setIsAdvancing(false)
     }
   }
 
-  if (isLoading || !question) {
+  if (isLoading) {
     return (
       <section className="quiz-page">
         <div className="quiz-card quiz-loading">Calibrating your first question...</div>
       </section>
     )
+  }
+
+  if (apiError) {
+    return (
+      <section className="quiz-page">
+        <div className="quiz-card quiz-loading">
+          <p>{apiError}</p>
+          <button
+            className="button button-primary"
+            type="button"
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </button>
+        </div>
+      </section>
+    )
+  }
+
+  if (!question) {
+    return null
   }
 
   const progress = Math.round((question.number / question.total) * 100)

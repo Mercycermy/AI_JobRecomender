@@ -40,214 +40,24 @@ class QuestionBank:
         self._questions = {q["id"]: q for q in raw.get("questions", [])}
         self._tiebreaker_map = raw.get("tiebreaker_map", {})
 
-        # Programmatically inject standard subdomain questions
-        subdomain_questions = {
-            "Q_G0_SUBDOMAIN_SOFTWARE": {
-                "id": "Q_G0_SUBDOMAIN_SOFTWARE",
-                "gate": 0,
-                "domain_scope": "SOFTWARE",
-                "question_type": "multiple_choice",
-                "role_targets": ["tech"],
-                "difficulty": "beginner",
-                "stem": "Which specific software development role or skill do you want to evaluate?",
-                "options": {
-                    "A": {"text": "Frontend Developer (React, CSS, HTML)", "signals": {"SOFTWARE": 10}, "skills": ["fe-react", "lang-js", "fe-css"]},
-                    "B": {"text": "Backend Developer (APIs, Databases, System design)", "signals": {"SOFTWARE": 10}, "skills": ["be-api", "be-sql"]},
-                    "C": {"text": "Full Stack Developer (Frontend + Backend)", "signals": {"SOFTWARE": 10}, "skills": ["fe-react", "be-api", "be-sql"]},
-                    "D": {"text": "Mobile Developer (Flutter, Mobile Apps)", "signals": {"SOFTWARE": 10}, "skills": ["mobile-flutter"]},
-                    "E": {"text": "Software Developer (General programming, algorithms)", "signals": {"SOFTWARE": 10}, "skills": ["lang-js"]}
-                }
-            },
-            "Q_G0_SUBDOMAIN_DATA_AI": {
-                "id": "Q_G0_SUBDOMAIN_DATA_AI",
-                "gate": 0,
-                "domain_scope": "DATA_AI",
-                "question_type": "multiple_choice",
-                "role_targets": ["tech"],
-                "difficulty": "beginner",
-                "stem": "Which data or AI role do you want to focus on?",
-                "options": {
-                    "A": {"text": "Data Scientist (ML models, Python, Statistics)", "signals": {"DATA_AI": 10}, "skills": ["ds-model-eval", "ml-deployment"]},
-                    "B": {"text": "Machine Learning Engineer (Deep Learning, MLOps, LLMs)", "signals": {"DATA_AI": 10}, "skills": ["ds-model-eval", "ml-deployment"]},
-                    "C": {"text": "Data Analyst (SQL, Business Intelligence, Dashboards)", "signals": {"DATA_AI": 10}, "skills": ["be-sql"]},
-                    "D": {"text": "Data Engineer (Pipelines, ETL, Big Data)", "signals": {"DATA_AI": 10}, "skills": ["be-sql"]}
-                }
-            },
-            "Q_G0_SUBDOMAIN_CREATIVE": {
-                "id": "Q_G0_SUBDOMAIN_CREATIVE",
-                "gate": 0,
-                "domain_scope": "CREATIVE",
-                "question_type": "multiple_choice",
-                "role_targets": ["creative"],
-                "difficulty": "beginner",
-                "stem": "Which creative role best fits your expertise?",
-                "options": {
-                    "A": {"text": "Graphic Designer (UI elements, Layouts, Branding)", "signals": {"CREATIVE": 10}, "skills": ["creative-design"]},
-                    "B": {"text": "UI/UX Designer (Wireframes, Figma, User Research)", "signals": {"CREATIVE": 10}, "skills": ["creative-uiux"]},
-                    "C": {"text": "Video Editor (Post-production, Audio, Motion graphics)", "signals": {"CREATIVE": 10}, "skills": ["creative-video"]},
-                    "D": {"text": "Content Creator / Digital Designer", "signals": {"CREATIVE": 10}, "skills": ["creative-design"]}
-                }
-            },
-            "Q_G0_SUBDOMAIN_SALES_MKT": {
-                "id": "Q_G0_SUBDOMAIN_SALES_MKT",
-                "gate": 0,
-                "domain_scope": "SALES_MKT",
-                "question_type": "multiple_choice",
-                "role_targets": ["sales_marketing"],
-                "difficulty": "beginner",
-                "stem": "Which growth or commercial role is your focus?",
-                "options": {
-                    "A": {"text": "Sales Representative / Account Executive", "signals": {"SALES_MKT": 10}, "skills": ["biz-sales"]},
-                    "B": {"text": "Digital Marketer (SEO, SEM, Social Media)", "signals": {"SALES_MKT": 10}, "skills": ["mkt-social"]},
-                    "C": {"text": "Marketing Manager / Brand Strategist", "signals": {"SALES_MKT": 10}, "skills": ["mkt-social"]}
-                }
-            },
-            "Q_G0_SUBDOMAIN_ACCOUNTING": {
-                "id": "Q_G0_SUBDOMAIN_ACCOUNTING",
-                "gate": 0,
-                "domain_scope": "ACCOUNTING",
-                "question_type": "multiple_choice",
-                "role_targets": ["finance"],
-                "difficulty": "beginner",
-                "stem": "Which financial role fits your experience?",
-                "options": {
-                    "A": {"text": "Accountant (Bookkeeping, tax, general ledger)", "signals": {"ACCOUNTING": 10}, "skills": ["biz-accounting"]},
-                    "B": {"text": "Senior Accountant / Controller", "signals": {"ACCOUNTING": 10}, "skills": ["biz-accounting"]},
-                    "C": {"text": "Junior Accountant", "signals": {"ACCOUNTING": 10}, "skills": ["biz-accounting"]},
-                    "D": {"text": "Cashier / Billing Clerk", "signals": {"ACCOUNTING": 10}, "skills": ["biz-accounting"]}
-                }
-            },
-            "Q_G0_SUBDOMAIN_ADMIN": {
-                "id": "Q_G0_SUBDOMAIN_ADMIN",
-                "gate": 0,
-                "domain_scope": "ADMIN",
-                "question_type": "multiple_choice",
-                "role_targets": ["admin"],
-                "difficulty": "beginner",
-                "stem": "Which administrative or management role are you targeting?",
-                "options": {
-                    "A": {"text": "Administrative Assistant / Secretary", "signals": {"ADMIN": 10}, "skills": ["biz-admin"]},
-                    "B": {"text": "Office Manager / HR Specialist", "signals": {"ADMIN": 10}, "skills": ["biz-admin"]},
-                    "C": {"text": "Project Manager (Agile, coordination)", "signals": {"ADMIN": 10}, "skills": ["biz-pm"]}
-                }
-            },
-            "Q_G0_SUBDOMAIN_ENGINEERING": {
-                "id": "Q_G0_SUBDOMAIN_ENGINEERING",
-                "gate": 0,
-                "domain_scope": "ENGINEERING",
-                "question_type": "multiple_choice",
-                "role_targets": ["tech"],
-                "difficulty": "beginner",
-                "stem": "Which technical or physical engineering role are you in?",
-                "options": {
-                    "A": {"text": "Architect / Designer", "signals": {"ENGINEERING": 10}, "skills": ["eng-cad"]},
-                    "B": {"text": "Junior Architect", "signals": {"ENGINEERING": 10}, "skills": ["eng-cad"]},
-                    "C": {"text": "Site Engineer / Construction Supervisor", "signals": {"ENGINEERING": 10}, "skills": ["eng-cad"]}
-                }
-            }
-        }
-        for qid, qdata in subdomain_questions.items():
-            if qid not in self._questions:
-                self._questions[qid] = qdata
-
-        # Programmatically inject standard high-level questions Q_EXP and Q_PROJECT
-        # to ensure downstream API, manual input workflows, and test coverage remains robust
-        if "Q_EXP" not in self._questions:
-            self._questions["Q_EXP"] = {
-                "id": "Q_EXP",
-                "gate": 3,
-                "stem": "What is your current experience level?",
-                "options": {
-                    "A": {
-                        "text": "Internship / Entry-level",
-                        "experience_level": "intern"
-                    },
-                    "B": {
-                        "text": "Junior (0-2 years)",
-                        "experience_level": "junior"
-                    },
-                    "C": {
-                        "text": "Mid-level (3-5 years)",
-                        "experience_level": "mid"
-                    },
-                    "D": {
-                        "text": "Senior (6+ years)",
-                        "experience_level": "senior"
-                    }
-                }
-            }
-
-        if "Q_PROJECT" not in self._questions:
-            self._questions["Q_PROJECT"] = {
-                "id": "Q_PROJECT",
-                "gate": 3,
-                "stem": "What kind of project have you worked on recently?",
-                "options": {
-                    "A": {
-                        "text": "Full-stack web application with user authentication",
-                        "signals": {
-                            "frontend-dev": 10,
-                            "backend-dev": 10
-                        }
-                    },
-                    "B": {
-                        "text": "End-to-end Machine Learning model training and deployment",
-                        "signals": {
-                            "ml-engineer": 15
-                        }
-                    },
-                    "C": {
-                        "text": "Data analysis, visualization dashboard, and predictive modeling",
-                        "signals": {
-                            "data-scientist": 10
-                        }
-                    },
-                    "D": {
-                        "text": "Scalable backend APIs, database modeling, and caching layers",
-                        "signals": {
-                            "backend-dev": 15
-                        }
-                    },
-                    "E": {
-                        "text": "Interactive user interfaces, wireframes, and design systems",
-                        "signals": {
-                            "ui-ux-designer": 15
-                        }
-                    }
-                }
-            }
-
     def _load_questions_payload(self, path: Path) -> Dict[str, Any]:
         global _QUESTIONS_CACHE
         if _QUESTIONS_CACHE is not None:
             return _QUESTIONS_CACHE
 
         part_files = sorted(path.parent.glob(_QUESTION_PARTS_GLOB))
-        if part_files:
-            merged_questions: List[dict] = []
-            merged_tiebreakers: Dict[str, str] = {}
-            if path.exists():
-                with open(path, "r", encoding="utf-8") as fh:
-                    payload = json.load(fh)
-                merged_questions.extend(payload.get("questions", []))
-                merged_tiebreakers.update(payload.get("tiebreaker_map", {}))
-            for part in part_files:
-                with open(part, "r", encoding="utf-8") as fh:
-                    payload = json.load(fh)
-                merged_questions.extend(payload.get("questions", []))
-                merged_tiebreakers.update(payload.get("tiebreaker_map", {}))
-            _QUESTIONS_CACHE = {
-                "questions": merged_questions,
-                "tiebreaker_map": merged_tiebreakers,
-            }
-            return _QUESTIONS_CACHE
+        merged_questions: List[dict] = []
+        merged_tiebreakers: Dict[str, str] = {}
+        for part in part_files:
+            with open(part, "r", encoding="utf-8") as fh:
+                payload = json.load(fh)
+            merged_questions.extend(payload.get("questions", []))
+            merged_tiebreakers.update(payload.get("tiebreaker_map", {}))
 
-        if path.exists():
-            with open(path, "r", encoding="utf-8") as fh:
-                _QUESTIONS_CACHE = json.load(fh)
-                return _QUESTIONS_CACHE
-
-        _QUESTIONS_CACHE = {"questions": [], "tiebreaker_map": {}}
+        _QUESTIONS_CACHE = {
+            "questions": merged_questions,
+            "tiebreaker_map": merged_tiebreakers,
+        }
         return _QUESTIONS_CACHE
 
     # -- public API ---------------------------------------------------------
@@ -469,8 +279,6 @@ class AssessmentAgent:
                 "G": "ENGINEERING"
             }
             state.domain = domain_map.get(option, "SOFTWARE")
-            # Route to subdomain question in Phase 2
-            state._pending_route = f"Q_G0_SUBDOMAIN_{state.domain}"
 
         # --- subdomain selection and specific role mapping ---
         elif question_id.startswith("Q_G0_SUBDOMAIN_"):
@@ -530,9 +338,12 @@ class AssessmentAgent:
         if state.question_count >= self.MAX_QUESTIONS:
             return None
 
+        has_exp = self.bank.get("Q_EXP") is not None
+        has_project = self.bank.get("Q_PROJECT") is not None
+
         # If we have reached MIN_QUESTIONS (16) and have asked both final metadata questions, we can terminate
         if state.question_count >= self.MIN_QUESTIONS:
-            if "Q_EXP" in state.asked and "Q_PROJECT" in state.asked:
+            if (not has_exp or "Q_EXP" in state.asked) and (not has_project or "Q_PROJECT" in state.asked):
                 return None
 
         # --- Phase 1: Sector/Domain Selection (Question 1) ---
@@ -552,9 +363,9 @@ class AssessmentAgent:
         # --- Phase 5: Metadata (Questions 15-16 / Q_EXP and Q_PROJECT) ---
         # When we are near MIN_QUESTIONS (at count 14 or 15), we must ask Q_EXP and Q_PROJECT
         if state.question_count >= 14 or state.question_count >= self.MIN_QUESTIONS - 2:
-            if "Q_EXP" not in state.asked:
+            if has_exp and "Q_EXP" not in state.asked:
                 return "Q_EXP"
-            if "Q_PROJECT" not in state.asked:
+            if has_project and "Q_PROJECT" not in state.asked:
                 return "Q_PROJECT"
 
         # --- follow pending route if it is valid and exists in the bank ---
@@ -641,9 +452,9 @@ class AssessmentAgent:
                 return qid
 
         # --- Phase 5 fallback ---
-        if "Q_EXP" not in state.asked:
+        if has_exp and "Q_EXP" not in state.asked:
             return "Q_EXP"
-        if "Q_PROJECT" not in state.asked:
+        if has_project and "Q_PROJECT" not in state.asked:
             return "Q_PROJECT"
 
         return None

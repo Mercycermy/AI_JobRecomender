@@ -6,6 +6,7 @@ import {
 } from '../data/mockData.js'
 import {
   fetchAnalysis,
+  fetchRecommendations,
   fetchResumeTips,
   loadStoredAnalysis,
   loadStoredProfile,
@@ -61,9 +62,52 @@ function Results({ navigate }) {
   const [isResumeTipsLoading, setIsResumeTipsLoading] = useState(false)
   const [resumeTipsError, setResumeTipsError] = useState(null)
 
-  const jobRecommendations = useMemo(() => {
+  const [jobRecommendations, setJobRecommendations] = useState(() => {
     const stored = loadStoredRecommendations()
-    return stored?.length ? stored : mockJobRecommendations
+    return stored?.length ? stored : []
+  })
+  const [jobsError, setJobsError] = useState(null)
+
+  useEffect(() => {
+    let isMounted = true
+    const profile = loadStoredProfile()
+    const stored = loadStoredRecommendations()
+    const rawStored = loadStoredRawRecommendations()
+
+    if (!profile) {
+      if (!stored?.length) {
+        setJobRecommendations(mockJobRecommendations)
+      }
+      return () => {
+        isMounted = false
+      }
+    }
+
+    if (stored?.length && rawStored?.length) {
+      return () => {
+        isMounted = false
+      }
+    }
+
+    fetchRecommendations(profile)
+      .then((jobs) => {
+        if (!isMounted) {
+          return
+        }
+        setJobRecommendations(jobs)
+        setJobsError(null)
+      })
+      .catch((err) => {
+        if (!isMounted) {
+          return
+        }
+        setJobsError(err.message || 'Failed to load recommendations')
+        setJobRecommendations([])
+      })
+
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   useEffect(() => {
@@ -101,7 +145,7 @@ function Results({ navigate }) {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [jobRecommendations.length])
 
   useEffect(() => {
     let isMounted = true
@@ -236,6 +280,12 @@ function Results({ navigate }) {
           </label>
         </div>
       </div>
+
+      {jobsError && (
+        <div className="error-container" style={{ textAlign: 'center', padding: '16px 20px', marginBottom: '16px', background: 'rgba(232, 93, 117, 0.08)', borderRadius: '8px', border: '1px solid var(--coral)' }}>
+          <p style={{ color: 'var(--coral)', fontWeight: 'bold' }}>{jobsError}</p>
+        </div>
+      )}
 
       <div className="job-grid">
         {filteredJobs.map((job) => (

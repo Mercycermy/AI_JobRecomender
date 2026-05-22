@@ -116,6 +116,14 @@ export function loadStoredRawRecommendations() {
   }
 }
 
+export function clearStoredRecommendations() {
+  sessionStorage.removeItem(PROFILE_STORAGE_KEY)
+  sessionStorage.removeItem(RECOMMENDATIONS_STORAGE_KEY)
+  sessionStorage.removeItem(RAW_RECOMMENDATIONS_STORAGE_KEY)
+  sessionStorage.removeItem(ANALYSIS_STORAGE_KEY)
+  sessionStorage.removeItem('resumeTipsCoaching')
+}
+
 export async function fetchAnalysis(profile, recommendations) {
   const response = await fetch(`${API_BASE}/analysis`, {
     method: 'POST',
