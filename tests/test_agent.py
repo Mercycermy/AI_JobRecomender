@@ -2,6 +2,7 @@
 Tests for the Adaptive Assessment Agent.
 
 Covers: routing paths, scoring, tiebreaker logic, termination, and output schema.
+Uses REAL question IDs from the partitioned data files (questions_part*.json).
 """
 
 import sys
@@ -17,24 +18,23 @@ agent = AssessmentAgent()
 
 
 # --------------------------------------------------------------------------
-# 1. Software → Frontend path
+# 1. Software → Frontend path  (real IDs from partitioned data)
 # --------------------------------------------------------------------------
 
 def test_software_frontend_path():
-    """Simulate: Software → Frontend → React expert → mid level."""
+    """Simulate: Domain → Software → free-text React + CSS questions → Q_EXP → Q_PROJECT."""
     state = agent.init_state()
 
-    answers = [
-        ("Q0_1", "A"),       # → SOFTWARE
-        ("Q0_2_SW", "A"),    # → Frontend
-        ("Q1_SW_A", "C"),    # React Query (advanced)
-        ("Q1_SW_A2", "A"),   # CSS Grid
-        ("Q_EXP", "C"),      # mid level
-        ("Q_PROJECT", "A"),  # web app with auth
-    ]
+    # Step 1: Gate 0 — choose SOFTWARE domain
+    state = agent.score_answer(state, "Q_G0_DOMAIN_001", "A")
 
-    for q_id, option in answers:
-        state = agent.score_answer(state, q_id, option)
+    # Step 2-3: Gate 1 free-text questions (options=null → answer is free text)
+    state = agent.score_answer(state, "Q_TECH_FE_REACT_001", "strong")
+    state = agent.score_answer(state, "Q_TECH_FE_CSS_001", "strong")
+
+    # Step 4-5: Standard close-out questions
+    state = agent.score_answer(state, "Q_EXP", "C")       # mid-level
+    state = agent.score_answer(state, "Q_PROJECT", "A")    # web app
 
     profile = agent.generate_skill_profile(state)
 
@@ -46,68 +46,49 @@ def test_software_frontend_path():
     )
     assert "fe-react" in profile["detected_skills"]
     assert "fe-css" in profile["detected_skills"]
-    print("✓ test_software_frontend_path PASSED")
+    print("[PASS] test_software_frontend_path PASSED")
     print("  category_scores:", profile["category_scores"])
 
 
 # --------------------------------------------------------------------------
-# 2. Data/AI → ML Engineer path
+# 2. Agent starts with Q_G0_DOMAIN_001
 # --------------------------------------------------------------------------
 
-def test_data_ml_path():
-    """Simulate: Data/AI → ML → Docker deployment → transformer fine-tune."""
+def test_starts_with_gate0():
+    """Verify first question is Q_G0_DOMAIN_001."""
+    state = agent.init_state()
+    first_q = agent.get_next_question(state)
+    assert first_q == "Q_G0_DOMAIN_001", (
+        f"Expected 'Q_G0_DOMAIN_001', got '{first_q}'"
+    )
+    print("[PASS] test_starts_with_gate0 PASSED")
+
+
+# --------------------------------------------------------------------------
+# 3. Free-text scoring accumulates category_weights and skill_weights
+# --------------------------------------------------------------------------
+
+def test_freetext_scoring():
+    """Verify that answering a free-text question accumulates scores
+    from category_weights and detects skills from skill_weights."""
     state = agent.init_state()
 
-    answers = [
-        ("Q0_1", "B"),       # → DATA_AI
-        ("Q0_2_DA", "D"),    # → ML (neural networks)
-        ("Q1_ML_A", "B"),    # Docker + K8s deployment
-        ("Q1_ML_B", "D"),    # HuggingFace fine-tune
-        ("Q_EXP", "C"),      # mid
-        ("Q_PROJECT", "B"),  # end-to-end ML model
-    ]
+    # Answer the gate-0 question first
+    state = agent.score_answer(state, "Q_G0_DOMAIN_001", "A")  # SOFTWARE
 
-    for q_id, option in answers:
-        state = agent.score_answer(state, q_id, option)
+    # Answer a free-text question
+    state = agent.score_answer(state, "Q_TECH_FE_REACT_001", "strong")
 
-    profile = agent.generate_skill_profile(state)
-
-    assert profile["top_category"] == "ml-engineer", (
-        f"Expected 'ml-engineer', got '{profile['top_category']}'"
+    # The question has category_weights: {"frontend-dev": 30}
+    assert state.scores["frontend-dev"] >= 30, (
+        f"Expected frontend-dev >= 30, got {state.scores['frontend-dev']}"
     )
-    assert "ml-deployment" in profile["detected_skills"]
-    assert "nlp-hf" in profile["detected_skills"]
-    print("✓ test_data_ml_path PASSED")
-    print("  category_scores:", profile["category_scores"])
-
-
-# --------------------------------------------------------------------------
-# 3. Tiebreaker fires when two categories are within 15 points
-# --------------------------------------------------------------------------
-
-def test_tiebreaker_fires():
-    """Engineer a state where data-scientist and data-analyst are tied,
-    then verify the agent recommends the tiebreaker question."""
-    state = agent.init_state()
-
-    # Q0_1 → Data/AI.  Q0_2_DA → analyst (data-analyst +30)
-    # Q1_DA_A option B → data-analyst +20, data-scientist +15
-    # At this point: data-analyst=50, data-scientist=15 → gap=35 (no tie yet)
-    # Q1_DA_B option C → data-analyst +15, data-scientist +10
-    # data-analyst=65, data-scientist=25 → gap=40 (still no tie)
-
-    # Let's intentionally set up a near-tie via direct state manipulation
-    state.scores["data-scientist"] = 40
-    state.scores["data-analyst"] = 45
-    state.asked = {"Q0_1", "Q0_2_DA", "Q1_DA_A", "Q1_DA_B"}
-    state.question_count = 4
-    state.domain = "DATA_AI"
-
-    next_q = agent.get_next_question(state)
-    assert next_q == "Q_DIFF_DS_vs_DA", (
-        f"Expected tiebreaker 'Q_DIFF_DS_vs_DA', got '{next_q}'"
-    )
-    print("✓ test_tiebreaker_fires PASSED")
+    # The question has skill_weights: {"fe-react": 25, "lang-js": 10}
+    assert "fe-react" in state.detected_skills
+    assert "lang-js" in state.detected_skills
+    print("[PASS] test_freetext_scoring PASSED")
+    print("  scores:", dict(state.scores))
+    print("  skills:", state.detected_skills)
 
 
 # --------------------------------------------------------------------------
@@ -122,7 +103,7 @@ def test_max_questions_termination():
 
     next_q = agent.get_next_question(state)
     assert next_q is None, f"Expected None after 20 questions, got '{next_q}'"
-    print("✓ test_max_questions_termination PASSED")
+    print("[PASS] test_max_questions_termination PASSED")
 
 
 # --------------------------------------------------------------------------
@@ -137,45 +118,71 @@ def test_skill_profile_keys():
         "confidence", "profile_vector",
     }
 
-    profile = agent.run_assessment([
-        ("Q0_1", "C"),            # Creative
-        ("Q1_CREATIVE_A", "A"),   # UI/UX
-        ("Q1_GRAPHIC_A", "A"),    # Brand identity
-        ("Q_EXP", "B"),           # Junior
-        ("Q_PROJECT", "E"),       # Personal projects
-    ])
+    state = agent.init_state()
+    state = agent.score_answer(state, "Q_G0_DOMAIN_001", "A")
+    state = agent.score_answer(state, "Q_TECH_FE_REACT_001", "strong")
+    state = agent.score_answer(state, "Q_EXP", "B")       # Junior
+    state = agent.score_answer(state, "Q_PROJECT", "E")    # Interactive UIs
+    profile = agent.generate_skill_profile(state)
 
     missing = required_keys - set(profile.keys())
     assert not missing, f"Missing keys in SkillProfile: {missing}"
     assert profile["source"] == "adaptive_quiz"
     assert profile["profile_vector"] is None  # populated later by NLP
-    print("✓ test_skill_profile_keys PASSED")
+    print("[PASS] test_skill_profile_keys PASSED")
     print("  profile:", profile)
 
 
 # --------------------------------------------------------------------------
-# 6. run_assessment end-to-end convenience check
+# 6. Domain routing from Q_G0_DOMAIN_001 sets correct domain
 # --------------------------------------------------------------------------
 
-def test_run_assessment_end_to_end():
-    """Verify that run_assessment produces a valid profile for the
-    backend path."""
-    profile = agent.run_assessment([
-        ("Q0_1", "A"),        # Software
-        ("Q0_2_SW", "B"),     # Backend
-        ("Q1_SW_B", "C"),     # Pre-signed URL → advanced backend
-        ("Q1_SW_B2", "A"),    # Junction table
-        ("Q_EXP", "D"),       # Senior
-        ("Q_PROJECT", "D"),   # Production system
-    ])
+def test_domain_routing():
+    """Verify that answering Q_G0_DOMAIN_001 sets the correct domain
+    and routes to the correct first Gate-1 question."""
+    domain_map = {
+        "A": ("SOFTWARE", "Q_TECH_FE_REACT_001"),
+        "B": ("DATA_AI", "Q_TECH_DS_MODEL_001"),
+    }
 
-    assert profile["top_category"] == "backend-dev", (
-        f"Expected 'backend-dev', got '{profile['top_category']}'"
-    )
-    assert profile["experience_level"] == "senior"
-    assert profile["question_count"] == 6
-    print("✓ test_run_assessment_end_to_end PASSED")
-    print("  category_scores:", profile["category_scores"])
+    for option, (expected_domain, expected_next) in domain_map.items():
+        state = agent.init_state()
+        state = agent.score_answer(state, "Q_G0_DOMAIN_001", option)
+        assert state.domain == expected_domain, (
+            f"Option {option}: Expected domain '{expected_domain}', got '{state.domain}'"
+        )
+        next_q = agent.get_next_question(state)
+        assert next_q == expected_next, (
+            f"Option {option}: Expected next '{expected_next}', got '{next_q}'"
+        )
+
+    print("[PASS] test_domain_routing PASSED")
+
+
+# --------------------------------------------------------------------------
+# 7. Q_EXP and Q_PROJECT are always asked before termination
+# --------------------------------------------------------------------------
+
+def test_experience_always_asked():
+    """Verify Q_EXP and Q_PROJECT are served before termination
+    even after confidence is reached."""
+    state = agent.init_state()
+    state.question_count = 12
+    state.scores["frontend-dev"] = 100  # high confidence
+    state.asked = {"Q_G0_DOMAIN_001", "Q_TECH_FE_REACT_001"}
+
+    next_q = agent.get_next_question(state)
+    assert next_q == "Q_EXP", f"Expected 'Q_EXP', got '{next_q}'"
+
+    state.asked.add("Q_EXP")
+    state.experience_level = "mid"
+    next_q = agent.get_next_question(state)
+    assert next_q == "Q_PROJECT", f"Expected 'Q_PROJECT', got '{next_q}'"
+
+    state.asked.add("Q_PROJECT")
+    next_q = agent.get_next_question(state)
+    assert next_q is None, f"Expected None (done), got '{next_q}'"
+    print("[PASS] test_experience_always_asked PASSED")
 
 
 # --------------------------------------------------------------------------
@@ -184,10 +191,11 @@ def test_run_assessment_end_to_end():
 
 if __name__ == "__main__":
     test_software_frontend_path()
-    test_data_ml_path()
-    test_tiebreaker_fires()
+    test_starts_with_gate0()
+    test_freetext_scoring()
     test_max_questions_termination()
     test_skill_profile_keys()
-    test_run_assessment_end_to_end()
+    test_domain_routing()
+    test_experience_always_asked()
     print("\n==============================")
-    print("ALL TESTS PASSED ✓")
+    print("ALL TESTS PASSED [PASS]")

@@ -32,12 +32,15 @@ function normalizeQuestion(payload, fallbackIndex) {
   const source = payload?.question || payload || fallbackQuestions[fallbackIndex]
   const fallback = fallbackQuestions[fallbackIndex]
 
+  const rawOpts = source.options || source.choices
   return {
     id: source.id || source.questionId || `q${fallbackIndex + 1}`,
     number: source.number || fallbackIndex + 1,
     total: source.total || fallbackQuestions.length,
     stem: source.stem || source.text || source.question || fallback.stem,
-    options: normalizeOptions(source.options || source.choices, fallback.options),
+    context: source.context || '',
+    practicalTask: source.practical_task || source.practicalTask || null,
+    options: rawOpts ? normalizeOptions(rawOpts, fallback.options) : [],
   }
 }
 
@@ -45,6 +48,7 @@ function Quiz({ navigate }) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [question, setQuestion] = useState(null)
   const [selectedOption, setSelectedOption] = useState('')
+  const [textAnswer, setTextAnswer] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isAdvancing, setIsAdvancing] = useState(false)
   const sessionIdRef = useRef('')
@@ -118,6 +122,7 @@ function Quiz({ navigate }) {
       setCurrentIndex(nextIndex)
       setQuestion(normalizeQuestion(payload, nextIndex))
       setSelectedOption('')
+      setTextAnswer('')
     } catch {
       const nextIndex = currentIndex + 1
 
@@ -129,6 +134,7 @@ function Quiz({ navigate }) {
       setCurrentIndex(nextIndex)
       setQuestion(normalizeQuestion(null, nextIndex))
       setSelectedOption('')
+      setTextAnswer('')
     } finally {
       setIsAdvancing(false)
     }
@@ -160,19 +166,47 @@ function Quiz({ navigate }) {
 
         <h1>{question.stem}</h1>
 
-        <div className="option-grid">
-          {question.options.map((option) => (
-            <button
-              className={`option-card ${selectedOption === option.value ? 'is-selected' : ''}`}
-              type="button"
-              key={option.value}
+        {question.options.length > 0 ? (
+          <div className="option-grid">
+            {question.options.map((option) => (
+              <button
+                className={`option-card ${selectedOption === option.value ? 'is-selected' : ''}`}
+                type="button"
+                key={option.value}
+                disabled={isAdvancing}
+                onClick={() => answerQuestion(option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="freetext-area">
+            {question.context && (
+              <p className="freetext-context">{question.context}</p>
+            )}
+            {question.practicalTask && question.practicalTask.starter_code && (
+              <pre className="freetext-code"><code>{question.practicalTask.starter_code}</code></pre>
+            )}
+            <textarea
+              className="freetext-input"
+              id="freetext-answer"
+              rows={6}
+              placeholder="Type your answer here..."
+              value={textAnswer}
+              onChange={(e) => setTextAnswer(e.target.value)}
               disabled={isAdvancing}
-              onClick={() => answerQuestion(option.value)}
+            />
+            <button
+              className="button button-primary freetext-submit"
+              type="button"
+              disabled={isAdvancing || !textAnswer.trim()}
+              onClick={() => answerQuestion(textAnswer.trim())}
             >
-              {option.label}
+              {isAdvancing ? 'Submitting...' : 'Submit Answer'}
             </button>
-          ))}
-        </div>
+          </div>
+        )}
       </div>
     </section>
   )

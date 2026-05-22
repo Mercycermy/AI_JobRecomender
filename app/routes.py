@@ -129,10 +129,13 @@ def _label_from_skills(skills: list) -> str:
 
 
 def _format_question(q: dict, number: int, total: int) -> dict:
-    raw_options = q.get("options", {})
+    raw_options = q.get("options")
     options = []
 
-    if isinstance(raw_options, dict):
+    if raw_options is None:
+        # Open-ended / free-text question — no options to format
+        pass
+    elif isinstance(raw_options, dict):
         for key, meta in raw_options.items():
             label = ""
             if isinstance(meta, dict):
@@ -156,13 +159,22 @@ def _format_question(q: dict, number: int, total: int) -> dict:
             else:
                 options.append({"value": item, "label": str(item)})
 
-    return {
+    result = {
         "id": q["id"],
         "stem": q.get("stem") or q.get("text", ""),
         "options": options,
         "number": number,
         "total": total,
     }
+
+    # Include context and practical_task for open-ended questions
+    if q.get("context"):
+        result["context"] = q["context"]
+    practical = q.get("practical_task")
+    if practical:
+        result["practical_task"] = practical
+
+    return result
 
 
 def _session_id() -> str:
