@@ -8,7 +8,7 @@ import {
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000'
 
-function normalizeOptions(rawOptions, fallbackOptions) {
+function normalizeOptions(rawOptions, fallbackOptions = []) {
   if (Array.isArray(rawOptions)) {
     return rawOptions.map((option) => {
       if (option && typeof option === 'object') {
@@ -29,22 +29,22 @@ function normalizeOptions(rawOptions, fallbackOptions) {
     }))
   }
 
-  return fallbackOptions.map((option) => ({ value: option, label: String(option) }))
+  return (fallbackOptions || []).map((option) => ({ value: option, label: String(option) }))
 }
 
 function normalizeQuestion(payload, fallbackIndex) {
   const source = payload?.question || payload || fallbackQuestions[fallbackIndex]
-  const fallback = fallbackQuestions[fallbackIndex]
+  const fallback = fallbackQuestions[fallbackIndex] || {}
 
-  const rawOpts = source.options || source.choices
+  const rawOpts = source?.options || source?.choices
   return {
-    id: source.id || source.questionId || `q${fallbackIndex + 1}`,
+    id: source?.id || source?.questionId || `q${fallbackIndex + 1}`,
     number: source.number || fallbackIndex + 1,
     total: source.total || fallbackQuestions.length,
-    stem: source.stem || source.text || source.question || fallback.stem,
-    context: source.context || '',
-    practicalTask: source.practical_task || source.practicalTask || null,
-    options: rawOpts ? normalizeOptions(rawOpts, fallback.options) : [],
+    stem: source?.stem || source?.text || source?.question || fallback.stem || '',
+    context: source?.context || '',
+    practicalTask: source?.practical_task || source?.practicalTask || null,
+    options: rawOpts ? normalizeOptions(rawOpts, fallback.options || []) : [],
   }
 }
 

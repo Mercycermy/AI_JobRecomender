@@ -40,6 +40,34 @@ class QuestionBank:
         self._questions = {q["id"]: q for q in raw.get("questions", [])}
         self._tiebreaker_map = raw.get("tiebreaker_map", {})
 
+        if "Q_G0_SUBDOMAIN_001" not in self._questions:
+            self._questions["Q_G0_SUBDOMAIN_001"] = {
+                "id": "Q_G0_SUBDOMAIN_001",
+                "gate": 0,
+                "domain_scope": "SOFTWARE",
+                "question_type": "multiple_choice",
+                "role_targets": ["frontend-dev", "backend-dev", "fullstack-dev"],
+                "difficulty": "beginner",
+                "stem": "Which software track best matches your focus?",
+                "options": {
+                    "A": {
+                        "text": "Frontend (React, UI, UX)",
+                        "signals": {"frontend-dev": 30},
+                        "skills": ["fe-react", "fe-css", "lang-js"],
+                    },
+                    "B": {
+                        "text": "Backend (APIs, Databases, Systems)",
+                        "signals": {"backend-dev": 30},
+                        "skills": ["be-api", "be-sql"],
+                    },
+                    "C": {
+                        "text": "Full Stack (Frontend + Backend)",
+                        "signals": {"fullstack-dev": 30},
+                        "skills": ["fe-react", "be-api", "be-sql"],
+                    },
+                },
+            }
+
     def _load_questions_payload(self, path: Path) -> Dict[str, Any]:
         global _QUESTIONS_CACHE
         if _QUESTIONS_CACHE is not None:
@@ -279,8 +307,19 @@ class AssessmentAgent:
                 "G": "ENGINEERING"
             }
             state.domain = domain_map.get(option, "SOFTWARE")
+            if state.domain == "SOFTWARE":
+                state._pending_route = "Q_G0_SUBDOMAIN_001"
 
         # --- subdomain selection and specific role mapping ---
+        elif question_id == "Q_G0_SUBDOMAIN_001":
+            subdomain_map = {
+                "A": "Frontend Developer",
+                "B": "Backend Developer",
+                "C": "Full Stack Developer",
+            }
+            state.specific_role = subdomain_map.get(option)
+            state._pending_route = None
+
         elif question_id.startswith("Q_G0_SUBDOMAIN_"):
             _SUBDOMAIN_JOB_MAP = {
                 "Q_G0_SUBDOMAIN_SOFTWARE": {
@@ -353,12 +392,9 @@ class AssessmentAgent:
             return "Q0_1"
 
         # --- Phase 2: Subdomain Selection (Question 2) ---
-        if state.question_count == 1:
-            if state.domain:
-                subdomain_qid = f"Q_G0_SUBDOMAIN_{state.domain}"
-                if subdomain_qid in self.bank.all_ids and subdomain_qid not in state.asked:
-                    return subdomain_qid
-            # Fallback if subdomain question is missing or no domain is detected
+        if state.question_count == 1 and state._pending_route:
+            if self.bank.get(state._pending_route) is not None:
+                return state._pending_route
 
         # --- Phase 5: Metadata (Questions 15-16 / Q_EXP and Q_PROJECT) ---
         # When we are near MIN_QUESTIONS (at count 14 or 15), we must ask Q_EXP and Q_PROJECT
