@@ -40,6 +40,116 @@ class QuestionBank:
         self._questions = {q["id"]: q for q in raw.get("questions", [])}
         self._tiebreaker_map = raw.get("tiebreaker_map", {})
 
+        # Programmatically inject standard subdomain questions
+        subdomain_questions = {
+            "Q_G0_SUBDOMAIN_SOFTWARE": {
+                "id": "Q_G0_SUBDOMAIN_SOFTWARE",
+                "gate": 0,
+                "domain_scope": "SOFTWARE",
+                "question_type": "multiple_choice",
+                "role_targets": ["tech"],
+                "difficulty": "beginner",
+                "stem": "Which specific software development role or skill do you want to evaluate?",
+                "options": {
+                    "A": {"text": "Frontend Developer (React, CSS, HTML)", "signals": {"SOFTWARE": 10}, "skills": ["fe-react", "lang-js", "fe-css"]},
+                    "B": {"text": "Backend Developer (APIs, Databases, System design)", "signals": {"SOFTWARE": 10}, "skills": ["be-api", "be-sql"]},
+                    "C": {"text": "Full Stack Developer (Frontend + Backend)", "signals": {"SOFTWARE": 10}, "skills": ["fe-react", "be-api", "be-sql"]},
+                    "D": {"text": "Mobile Developer (Flutter, Mobile Apps)", "signals": {"SOFTWARE": 10}, "skills": ["mobile-flutter"]},
+                    "E": {"text": "Software Developer (General programming, algorithms)", "signals": {"SOFTWARE": 10}, "skills": ["lang-js"]}
+                }
+            },
+            "Q_G0_SUBDOMAIN_DATA_AI": {
+                "id": "Q_G0_SUBDOMAIN_DATA_AI",
+                "gate": 0,
+                "domain_scope": "DATA_AI",
+                "question_type": "multiple_choice",
+                "role_targets": ["tech"],
+                "difficulty": "beginner",
+                "stem": "Which data or AI role do you want to focus on?",
+                "options": {
+                    "A": {"text": "Data Scientist (ML models, Python, Statistics)", "signals": {"DATA_AI": 10}, "skills": ["ds-model-eval", "ml-deployment"]},
+                    "B": {"text": "Machine Learning Engineer (Deep Learning, MLOps, LLMs)", "signals": {"DATA_AI": 10}, "skills": ["ds-model-eval", "ml-deployment"]},
+                    "C": {"text": "Data Analyst (SQL, Business Intelligence, Dashboards)", "signals": {"DATA_AI": 10}, "skills": ["be-sql"]},
+                    "D": {"text": "Data Engineer (Pipelines, ETL, Big Data)", "signals": {"DATA_AI": 10}, "skills": ["be-sql"]}
+                }
+            },
+            "Q_G0_SUBDOMAIN_CREATIVE": {
+                "id": "Q_G0_SUBDOMAIN_CREATIVE",
+                "gate": 0,
+                "domain_scope": "CREATIVE",
+                "question_type": "multiple_choice",
+                "role_targets": ["creative"],
+                "difficulty": "beginner",
+                "stem": "Which creative role best fits your expertise?",
+                "options": {
+                    "A": {"text": "Graphic Designer (UI elements, Layouts, Branding)", "signals": {"CREATIVE": 10}, "skills": ["creative-design"]},
+                    "B": {"text": "UI/UX Designer (Wireframes, Figma, User Research)", "signals": {"CREATIVE": 10}, "skills": ["creative-uiux"]},
+                    "C": {"text": "Video Editor (Post-production, Audio, Motion graphics)", "signals": {"CREATIVE": 10}, "skills": ["creative-video"]},
+                    "D": {"text": "Content Creator / Digital Designer", "signals": {"CREATIVE": 10}, "skills": ["creative-design"]}
+                }
+            },
+            "Q_G0_SUBDOMAIN_SALES_MKT": {
+                "id": "Q_G0_SUBDOMAIN_SALES_MKT",
+                "gate": 0,
+                "domain_scope": "SALES_MKT",
+                "question_type": "multiple_choice",
+                "role_targets": ["sales_marketing"],
+                "difficulty": "beginner",
+                "stem": "Which growth or commercial role is your focus?",
+                "options": {
+                    "A": {"text": "Sales Representative / Account Executive", "signals": {"SALES_MKT": 10}, "skills": ["biz-sales"]},
+                    "B": {"text": "Digital Marketer (SEO, SEM, Social Media)", "signals": {"SALES_MKT": 10}, "skills": ["mkt-social"]},
+                    "C": {"text": "Marketing Manager / Brand Strategist", "signals": {"SALES_MKT": 10}, "skills": ["mkt-social"]}
+                }
+            },
+            "Q_G0_SUBDOMAIN_ACCOUNTING": {
+                "id": "Q_G0_SUBDOMAIN_ACCOUNTING",
+                "gate": 0,
+                "domain_scope": "ACCOUNTING",
+                "question_type": "multiple_choice",
+                "role_targets": ["finance"],
+                "difficulty": "beginner",
+                "stem": "Which financial role fits your experience?",
+                "options": {
+                    "A": {"text": "Accountant (Bookkeeping, tax, general ledger)", "signals": {"ACCOUNTING": 10}, "skills": ["biz-accounting"]},
+                    "B": {"text": "Senior Accountant / Controller", "signals": {"ACCOUNTING": 10}, "skills": ["biz-accounting"]},
+                    "C": {"text": "Junior Accountant", "signals": {"ACCOUNTING": 10}, "skills": ["biz-accounting"]},
+                    "D": {"text": "Cashier / Billing Clerk", "signals": {"ACCOUNTING": 10}, "skills": ["biz-accounting"]}
+                }
+            },
+            "Q_G0_SUBDOMAIN_ADMIN": {
+                "id": "Q_G0_SUBDOMAIN_ADMIN",
+                "gate": 0,
+                "domain_scope": "ADMIN",
+                "question_type": "multiple_choice",
+                "role_targets": ["admin"],
+                "difficulty": "beginner",
+                "stem": "Which administrative or management role are you targeting?",
+                "options": {
+                    "A": {"text": "Administrative Assistant / Secretary", "signals": {"ADMIN": 10}, "skills": ["biz-admin"]},
+                    "B": {"text": "Office Manager / HR Specialist", "signals": {"ADMIN": 10}, "skills": ["biz-admin"]},
+                    "C": {"text": "Project Manager (Agile, coordination)", "signals": {"ADMIN": 10}, "skills": ["biz-pm"]}
+                }
+            },
+            "Q_G0_SUBDOMAIN_ENGINEERING": {
+                "id": "Q_G0_SUBDOMAIN_ENGINEERING",
+                "gate": 0,
+                "domain_scope": "ENGINEERING",
+                "question_type": "multiple_choice",
+                "role_targets": ["tech"],
+                "difficulty": "beginner",
+                "stem": "Which technical or physical engineering role are you in?",
+                "options": {
+                    "A": {"text": "Architect / Designer", "signals": {"ENGINEERING": 10}, "skills": ["eng-cad"]},
+                    "B": {"text": "Junior Architect", "signals": {"ENGINEERING": 10}, "skills": ["eng-cad"]},
+                    "C": {"text": "Site Engineer / Construction Supervisor", "signals": {"ENGINEERING": 10}, "skills": ["eng-cad"]}
+                }
+            }
+        }
+        for qid, qdata in subdomain_questions.items():
+            if qid not in self._questions:
+                self._questions[qid] = qdata
+
         # Programmatically inject standard high-level questions Q_EXP and Q_PROJECT
         # to ensure downstream API, manual input workflows, and test coverage remains robust
         if "Q_EXP" not in self._questions:
@@ -175,6 +285,7 @@ class AgentState:
     asked: Set[str] = field(default_factory=set)
     experience_level: Optional[str] = None
     domain: Optional[str] = None          # SOFTWARE | DATA_AI | CREATIVE | BUSINESS
+    specific_role: Optional[str] = None   # chosen specific job title target
     _pending_route: Optional[str] = None  # next question ID from routing table
     route_queue: List[str] = field(default_factory=list)
 
@@ -237,7 +348,7 @@ class AssessmentAgent:
     """
 
     MAX_QUESTIONS = 20
-    MIN_QUESTIONS = 10
+    MIN_QUESTIONS = 16
     CONFIDENCE_THRESHOLD = 85
     TIEBREAK_GAP = 15
 
@@ -358,18 +469,55 @@ class AssessmentAgent:
                 "G": "ENGINEERING"
             }
             state.domain = domain_map.get(option, "SOFTWARE")
-            
-            # Route directly to domain-specific Gate 1 questions from real parts
-            first_q_map = {
-                "SOFTWARE": "Q_TECH_FE_REACT_001",
-                "DATA_AI": "Q_TECH_DS_MODEL_001",
-                "CREATIVE": "Q_CREATIVE_DESIGN_BRIEF_001",
-                "SALES_MKT": "Q_BIZ_SALES_PIPE_001",
-                "ACCOUNTING": "Q_BIZ_ACC_JOURNAL_001",
-                "ADMIN": "Q_BIZ_ADMIN_WORKFLOW_001",
-                "ENGINEERING": "Q_ENG_CAD_001"
+            # Route to subdomain question in Phase 2
+            state._pending_route = f"Q_G0_SUBDOMAIN_{state.domain}"
+
+        # --- subdomain selection and specific role mapping ---
+        elif question_id.startswith("Q_G0_SUBDOMAIN_"):
+            _SUBDOMAIN_JOB_MAP = {
+                "Q_G0_SUBDOMAIN_SOFTWARE": {
+                    "A": "Web Developer",
+                    "B": "Software Developer",
+                    "C": "Full Stack Developer",
+                    "D": "Flutter Developer",
+                    "E": "Software Developer",
+                },
+                "Q_G0_SUBDOMAIN_DATA_AI": {
+                    "A": "Data Scientist",
+                    "B": "ML Engineer",
+                    "C": "Data Analyst",
+                    "D": "Data Scientist",
+                },
+                "Q_G0_SUBDOMAIN_CREATIVE": {
+                    "A": "Graphic Designer",
+                    "B": "UI/UX Designer",
+                    "C": "Video Editor",
+                    "D": "Content Creator",
+                },
+                "Q_G0_SUBDOMAIN_SALES_MKT": {
+                    "A": "Sales Representative",
+                    "B": "Digital Marketer",
+                    "C": "Marketing Manager",
+                },
+                "Q_G0_SUBDOMAIN_ACCOUNTING": {
+                    "A": "Accountant",
+                    "B": "Senior Accountant",
+                    "C": "Junior Accountant",
+                    "D": "Cashier",
+                },
+                "Q_G0_SUBDOMAIN_ADMIN": {
+                    "A": "Secretary",
+                    "B": "Office Manager",
+                    "C": "Project Manager",
+                },
+                "Q_G0_SUBDOMAIN_ENGINEERING": {
+                    "A": "Architect",
+                    "B": "Junior Architect",
+                    "C": "Site Engineer",
+                }
             }
-            state._pending_route = first_q_map.get(state.domain)
+            state.specific_role = _SUBDOMAIN_JOB_MAP.get(question_id, {}).get(option)
+            state._pending_route = None
 
         return state
 
@@ -379,63 +527,125 @@ class AssessmentAgent:
         Returns ``None`` when the assessment should terminate.
         """
         # --- termination checks ---
-        if (
-            state.question_count >= self.MIN_QUESTIONS
-            and state.max_score() >= self.CONFIDENCE_THRESHOLD
-        ):
-            # High confidence reached — but still need Q_EXP / Q_PROJECT
-            if "Q_EXP" not in state.asked:
-                return "Q_EXP"
-            if "Q_PROJECT" not in state.asked:
-                return "Q_PROJECT"
-            return None
-
         if state.question_count >= self.MAX_QUESTIONS:
             return None
 
-        # --- nothing asked yet → always start with Q_G0_DOMAIN_001 (or fallback Q0_1) ---
+        # If we have reached MIN_QUESTIONS (16) and have asked both final metadata questions, we can terminate
+        if state.question_count >= self.MIN_QUESTIONS:
+            if "Q_EXP" in state.asked and "Q_PROJECT" in state.asked:
+                return None
+
+        # --- Phase 1: Sector/Domain Selection (Question 1) ---
         if state.question_count == 0:
             if self.bank.get("Q_G0_DOMAIN_001") is not None:
                 return "Q_G0_DOMAIN_001"
             return "Q0_1"
 
-        # --- follow routing table if available ---
+        # --- Phase 2: Subdomain Selection (Question 2) ---
+        if state.question_count == 1:
+            if state.domain:
+                subdomain_qid = f"Q_G0_SUBDOMAIN_{state.domain}"
+                if subdomain_qid in self.bank.all_ids and subdomain_qid not in state.asked:
+                    return subdomain_qid
+            # Fallback if subdomain question is missing or no domain is detected
+
+        # --- Phase 5: Metadata (Questions 15-16 / Q_EXP and Q_PROJECT) ---
+        # When we are near MIN_QUESTIONS (at count 14 or 15), we must ask Q_EXP and Q_PROJECT
+        if state.question_count >= 14 or state.question_count >= self.MIN_QUESTIONS - 2:
+            if "Q_EXP" not in state.asked:
+                return "Q_EXP"
+            if "Q_PROJECT" not in state.asked:
+                return "Q_PROJECT"
+
+        # --- follow pending route if it is valid and exists in the bank ---
         if state._pending_route and state._pending_route not in state.asked:
-            return state._pending_route
+            if state._pending_route not in ("Q_EXP", "Q_PROJECT") and self.bank.get(state._pending_route) is not None:
+                return state._pending_route
 
-        # --- Domain-based Fallback ---
-        # If pending route is exhausted or was already asked, find the first unasked
-        # question in the bank that matches the user's selected domain
-        if state.domain:
-            for q_id in self.bank.all_ids:
-                if q_id not in state.asked and q_id not in ("Q_EXP", "Q_PROJECT"):
-                    q = self.bank.get(q_id)
-                    if q:
-                        # Match either by domain scope or by role targets in subjective interview questions
-                        scope = q.get("domain_scope", "").upper()
+        # --- Phase 3: Gate 1 Practical/Debugging Tasks (Questions 3-4) ---
+        # Ask up to 2 unasked questions where gate == 1 and domain matches
+        asked_gate1_count = sum(1 for qid in state.asked if (self.bank.get(qid) and self.bank.get(qid).get("gate") == 1))
+        if asked_gate1_count < 2:
+            for qid in self.bank.all_ids:
+                if qid in state.asked or qid in ("Q_EXP", "Q_PROJECT"):
+                    continue
+                q = self.bank.get(qid)
+                if q and q.get("gate") == 1:
+                    scope = q.get("domain_scope", "").upper()
+                    if scope == state.domain:
+                        return qid
+                    # Special fallback: DATA_AI can draw SQL from SOFTWARE domain
+                    if state.domain == "DATA_AI" and scope == "SOFTWARE":
                         role_targets = [r.lower() for r in q.get("role_targets", [])]
-                        if scope == state.domain or state.domain.lower() in role_targets:
-                            return q_id
+                        if "data-analyst" in role_targets or "data-scientist" in role_targets or "ml-engineer" in role_targets:
+                            return qid
 
-        # --- Gate-2: tiebreaker ---
-        top2 = state.top_two()
-        if len(top2) >= 2:
-            cat1, score1 = top2[0]
-            cat2, score2 = top2[1]
-            # skip domain-level keys for tiebreaker logic
-            if cat1 not in _DOMAIN_KEYS and cat2 not in _DOMAIN_KEYS:
-                if abs(score1 - score2) <= self.TIEBREAK_GAP:
-                    tb_id = self.bank.get_tiebreaker(cat1, cat2)
-                    if tb_id and tb_id not in state.asked:
-                        return tb_id
+        # --- Phase 4: Gate 2 Deep Technical (Questions 5-14) ---
+        # 4a. First try to find 2 role-specific questions for state.specific_role
+        if state.specific_role:
+            asked_role_specific = 0
+            for qid in state.asked:
+                q = self.bank.get(qid)
+                if q and q.get("gate") == 2:
+                    # check if matches role
+                    for ev in q.get("job_evidence", []):
+                        titles = ev.get("job_titles", [])
+                        if any(t.strip().lower() == state.specific_role.strip().lower() for t in titles):
+                            asked_role_specific += 1
+                            break
+            
+            if asked_role_specific < 2:
+                for qid in self.bank.all_ids:
+                    if qid in state.asked or qid in ("Q_EXP", "Q_PROJECT"):
+                        continue
+                    q = self.bank.get(qid)
+                    if q and q.get("gate") == 2:
+                        for ev in q.get("job_evidence", []):
+                            titles = ev.get("job_titles", [])
+                            if any(t.strip().lower() == state.specific_role.strip().lower() for t in titles):
+                                return qid
 
-        # --- Gate-3: always ask experience + project ---
+        # 4b. Then find domain-specific Gate 2 questions
+        db_domain_map = {
+            "SOFTWARE": "TECH",
+            "DATA_AI": "TECH",
+            "ENGINEERING": "TECH",
+            "ACCOUNTING": "FINANCE",
+            "SALES_MKT": "SALES_MARKETING",
+            "CREATIVE": "CREATIVE",
+            "ADMIN": "ADMIN"
+        }
+        target_scope = db_domain_map.get(state.domain) if state.domain else None
+        
+        if target_scope:
+            for qid in self.bank.all_ids:
+                if qid in state.asked or qid in ("Q_EXP", "Q_PROJECT"):
+                    continue
+                q = self.bank.get(qid)
+                if q and q.get("gate") == 2:
+                    if q.get("domain_scope", "").upper() == target_scope:
+                        return qid
+
+        # 4c. General Fallback Gate 2 questions
+        for qid in self.bank.all_ids:
+            if qid in state.asked or qid in ("Q_EXP", "Q_PROJECT"):
+                continue
+            q = self.bank.get(qid)
+            if q and q.get("gate") == 2:
+                if q.get("domain_scope", "").upper() == "GENERAL":
+                    return qid
+
+        # 4d. Absolute Fallback: any unasked non-metadata question
+        for qid in self.bank.all_ids:
+            if qid not in state.asked and qid not in ("Q_EXP", "Q_PROJECT"):
+                return qid
+
+        # --- Phase 5 fallback ---
         if "Q_EXP" not in state.asked:
             return "Q_EXP"
         if "Q_PROJECT" not in state.asked:
             return "Q_PROJECT"
 
-        # --- done ---
         return None
 
     def generate_skill_profile(self, state: AgentState) -> Dict[str, Any]:
