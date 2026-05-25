@@ -10,6 +10,21 @@ import os
 from typing import Dict
 
 
+def _api_key() -> str:
+    api_key = os.environ.get("GROQ_API_KEY", "")
+    if api_key or os.environ.get("AI_JOB_RECOMMENDER_SKIP_DOTENV") == "1":
+        return api_key
+
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv()
+    except Exception:
+        return api_key
+
+    return os.environ.get("GROQ_API_KEY", "")
+
+
 def _heuristic_score(question: dict, answer: str) -> Dict[str, object]:
     scoring = question.get("scoring") or {}
     skill_weights = scoring.get("skill_weights") or {}
@@ -28,7 +43,7 @@ def _heuristic_score(question: dict, answer: str) -> Dict[str, object]:
 
 
 def evaluate(question: dict, user_answer: str) -> Dict[str, object]:
-    api_key = os.environ.get("GROQ_API_KEY")
+    api_key = _api_key()
     if not api_key:
         return _heuristic_score(question, user_answer)
 
@@ -147,8 +162,8 @@ def evaluate_mcq(question: dict, answer_key: str) -> Dict[str, object]:
     return {
         "score": score,
         "feedback": f"You selected: {chosen.get('text','')}",
-        "skill_scores": {},
-        "category_score_deltas": {},
+        "skill_scores": {skill: score for skill in chosen.get("skills", [])},
+        "category_score_deltas": chosen.get("signals", {}),
         "confidence": 1.0,
         "follow_up_question": None,
     }

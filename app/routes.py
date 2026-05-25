@@ -176,6 +176,10 @@ def _format_question(q: dict, number: int, total: int) -> dict:
         "options": options,
         "number": number,
         "total": total,
+        "answer_mode": q.get("answer_mode"),
+        "question_type": q.get("question_type"),
+        "difficulty": q.get("difficulty"),
+        "estimated_minutes": q.get("estimated_minutes"),
     }
 
     # Include context and practical_task for open-ended questions
@@ -286,9 +290,10 @@ def quiz_answer():
         profile = result.get("profile") or {}
         skill_scores = profile.get("skill_scores", {})
         recommendations_profile = {
-            "detected_skills": list(skill_scores.keys()),
-            "top_category": profile.get("detected_role") or profile.get("detected_domain"),
-            "experience_level": "junior",
+            **profile,
+            "detected_skills": profile.get("detected_skills") or list(skill_scores.keys()),
+            "top_category": profile.get("top_category") or profile.get("detected_role") or profile.get("detected_domain"),
+            "experience_level": profile.get("experience_level") or "junior",
         }
         recommendations = _get_recommender().rank_jobs(recommendations_profile, top_n=10)
         return jsonify({
