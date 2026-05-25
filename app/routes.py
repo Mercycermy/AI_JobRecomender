@@ -11,8 +11,10 @@ from typing import Any, Dict, Optional
 from flask import Flask, jsonify, request
 
 from app.agent import AssessmentAgent, AgentState
+from app.answer_evaluator import evaluate, evaluate_mcq
 from app.gap_analyzer import GapAnalyzer
 from app.learning_path import LearningPath
+from app.quiz_engine import QuizEngine
 from app.recommender import RecommendationEngine
 from app.resume_tips import ResumeCoach
 from app.skill_normalizer import SkillNormalizer
@@ -26,6 +28,7 @@ _gap_analyzer: Optional[GapAnalyzer] = None
 _learning_path: Optional[LearningPath] = None
 _resume_coach: Optional[ResumeCoach] = None
 _skill_normalizer: Optional[SkillNormalizer] = None
+_quiz_engine: Optional[QuizEngine] = None
 _quiz_sessions: Dict[str, AgentState] = {}
 
 
@@ -69,6 +72,13 @@ def _get_skill_normalizer() -> SkillNormalizer:
     if _skill_normalizer is None:
         _skill_normalizer = SkillNormalizer()
     return _skill_normalizer
+
+
+def _get_quiz_engine() -> QuizEngine:
+    global _quiz_engine
+    if _quiz_engine is None:
+        _quiz_engine = QuizEngine()
+    return _quiz_engine
 
 
 def _add_cors_headers(response):
@@ -161,6 +171,7 @@ def _format_question(q: dict, number: int, total: int) -> dict:
 
     result = {
         "id": q["id"],
+        "gate": q.get("gate"),
         "stem": q.get("stem") or q.get("text", ""),
         "options": options,
         "number": number,
@@ -203,23 +214,24 @@ def quiz_start():
         return "", 204
 
     try:
-        agent = _get_agent()
+        engine = _get_quiz_engine()
     except Exception as exc:
         return jsonify({"error": f"Quiz unavailable: {exc}"}), 503
 
-    session_id = str(uuid.uuid4())
-    state = agent.init_state()
-    next_id = agent.get_next_question(state)
-    if not next_id:
-        return jsonify({"done": True, "skill_profile": agent.generate_skill_profile(state)})
+    session = engine.create_session()
+    session_state = engine.load_session(session["session_id"])
+    first_q = engine.get_question(session.get("first_question_id"))
+    if not first_q:
+        return jsonify({"error": "No quiz questions available."}), 500
 
-    question = agent.bank.get(next_id)
-    if not question:
-        return jsonify({"error": f"Question not found: {next_id}"}), 500
-
-    _quiz_sessions[session_id] = state
-    resp = jsonify(_quiz_payload(state, question))
-    resp.headers["X-Session-Id"] = session_id
+    progress = engine._progress(session_state)
+    total = progress.get("estimated_total", 12)
+    resp = jsonify({
+        "done": False,
+        "question": _format_question(first_q, 1, total),
+        "progress": progress,
+    })
+    resp.headers["X-Session-Id"] = session["session_id"]
     return resp
 
 
@@ -236,31 +248,55 @@ def quiz_answer():
         return jsonify({"error": "questionId and selectedOption are required"}), 400
 
     sid = _session_id()
-    state = _quiz_sessions.get(sid)
-    if state is None:
+    if not sid:
         return jsonify({"error": "Invalid or expired quiz session. Start with GET /quiz."}), 400
 
     try:
-        agent = _get_agent()
-        state = agent.score_answer(state, question_id, selected)
-        _quiz_sessions[sid] = state
+        engine = _get_quiz_engine()
+        question = engine.get_question(question_id)
+        if not question:
+            return jsonify({"error": f"Question not found: {question_id}"}), 404
 
-        next_id = agent.get_next_question(state)
-        if next_id is None:
-            profile = agent.generate_skill_profile(state)
-            _quiz_sessions.pop(sid, None)
-            recommendations = _get_recommender().rank_jobs(profile, top_n=10)
+        if question.get("answer_mode") == "single_choice":
+            ai_eval = evaluate_mcq(question, selected)
+            answer_key = selected
+        else:
+            ai_eval = evaluate(question, selected)
+            answer_key = None
+
+        result = engine.submit_answer(
+            session_id=sid,
+            question_id=question_id,
+            answer_raw=selected,
+            answer_key=answer_key,
+            ai_evaluation=ai_eval,
+        )
+
+        if result.get("status") == "continue":
+            next_q = result.get("next_question")
+            progress = result.get("progress") or {}
+            number = progress.get("questions_answered", 0) + 1
+            total = progress.get("estimated_total", 12)
             return jsonify({
-                "done": True,
-                "skill_profile": profile,
-                "recommendations": recommendations,
+                "done": False,
+                "question": _format_question(next_q, number, total),
+                "progress": progress,
             })
 
-        question = agent.bank.get(next_id)
-        if not question:
-            return jsonify({"error": f"Question not found: {next_id}"}), 500
-
-        return jsonify(_quiz_payload(state, question))
+        profile = result.get("profile") or {}
+        skill_scores = profile.get("skill_scores", {})
+        recommendations_profile = {
+            "detected_skills": list(skill_scores.keys()),
+            "top_category": profile.get("detected_role") or profile.get("detected_domain"),
+            "experience_level": "junior",
+        }
+        recommendations = _get_recommender().rank_jobs(recommendations_profile, top_n=10)
+        return jsonify({
+            "done": True,
+            "skill_profile": recommendations_profile,
+            "recommendations": recommendations,
+            "progress": result.get("progress"),
+        })
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
