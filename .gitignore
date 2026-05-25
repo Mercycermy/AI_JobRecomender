@@ -24,6 +24,9 @@ data/db.sqlite3
 data/jobs_faiss.index
 data/jobs_id_map.json
 
+# Local notes
+quizimplement.txt
+
 # OS
 .DS_Store
 Thumbs.db
