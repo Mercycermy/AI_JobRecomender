@@ -12,6 +12,7 @@ import {
   loadStoredProfile,
   loadStoredRecommendations,
   loadStoredRawRecommendations,
+  loadStoredSessionId,
   persistAnalysis,
 } from '../api/recommend.js'
 import LearningResources from './LearningResources.jsx'
@@ -114,8 +115,17 @@ function Results({ navigate }) {
     let isMounted = true
     const profile = loadStoredProfile()
     const rawRecs = loadStoredRawRecommendations() || loadStoredRecommendations()
+    const sessionId = loadStoredSessionId()
 
     if (!profile || !rawRecs?.length) {
+      setIsAnalysisLoading(false)
+      return () => {
+        isMounted = false
+      }
+    }
+
+    if (!sessionId) {
+      setAnalysisError('session_id required')
       setIsAnalysisLoading(false)
       return () => {
         isMounted = false
@@ -125,7 +135,7 @@ function Results({ navigate }) {
     setIsAnalysisLoading(true)
     setAnalysisError(null)
 
-    fetchAnalysis(profile, rawRecs)
+  fetchAnalysis(sessionId)
       .then((payload) => {
         if (!isMounted) {
           return
@@ -150,7 +160,13 @@ function Results({ navigate }) {
   useEffect(() => {
     let isMounted = true
     const profile = loadStoredProfile()
+    const sessionId = loadStoredSessionId()
     if (!profile || !analysis?.gaps?.length) {
+      return
+    }
+
+    if (!sessionId) {
+      setResumeTipsError('session_id required')
       return
     }
 
@@ -162,7 +178,7 @@ function Results({ navigate }) {
     setIsResumeTipsLoading(true)
     setResumeTipsError(null)
 
-    fetchResumeTips(profile, analysis.gaps)
+  fetchResumeTips(sessionId)
       .then((payload) => {
         if (!isMounted) {
           return

@@ -11,11 +11,13 @@ from typing import Any, Dict, Optional
 from flask import Flask, jsonify, request
 
 from app.agent import AssessmentAgent, AgentState
+from app.ai_tips import GroqResumeCoach
 from app.answer_evaluator import evaluate, evaluate_mcq
-from app.gap_analyzer import GapAnalyzer
+from app.gap_analyzer import GapAnalyzer, get_session_gaps
 from app.learning_path import LearningPath
 from app.quiz_engine import QuizEngine
 from app.recommender import RecommendationEngine
+from app.resource_recommender import ResourceRecommender
 from app.resume_tips import ResumeCoach
 from app.skill_normalizer import SkillNormalizer
 
@@ -29,6 +31,8 @@ _learning_path: Optional[LearningPath] = None
 _resume_coach: Optional[ResumeCoach] = None
 _skill_normalizer: Optional[SkillNormalizer] = None
 _quiz_engine: Optional[QuizEngine] = None
+_resource_recommender: Optional[ResourceRecommender] = None
+_ai_resume_coach: Optional[GroqResumeCoach] = None
 _quiz_sessions: Dict[str, AgentState] = {}
 
 
@@ -79,6 +83,20 @@ def _get_quiz_engine() -> QuizEngine:
     if _quiz_engine is None:
         _quiz_engine = QuizEngine()
     return _quiz_engine
+
+
+def _get_resource_recommender() -> ResourceRecommender:
+    global _resource_recommender
+    if _resource_recommender is None:
+        _resource_recommender = ResourceRecommender()
+    return _resource_recommender
+
+
+def _get_ai_resume_coach() -> GroqResumeCoach:
+    global _ai_resume_coach
+    if _ai_resume_coach is None:
+        _ai_resume_coach = GroqResumeCoach()
+    return _ai_resume_coach
 
 
 def _add_cors_headers(response):
@@ -338,19 +356,19 @@ def recommend():
 
 @app.route("/analysis", methods=["POST", "OPTIONS"])
 def analysis():
-    """Return skill gap analysis and learning resources for a profile."""
+    """Return skill gap analysis and learning resources for a profile or session."""
     if request.method == "OPTIONS":
         return "", 204
 
     body = request.get_json(silent=True) or {}
-    profile = body.get("skill_profile") or body.get("profile") or body.get("profile") or {}
-    recommendations = body.get("recommendations") or []
+    session_id = body.get("session_id")
+    if not session_id:
+        return jsonify({"error": "session_id required"}), 400
 
     try:
-        gaps = _get_gap_analyzer().analyze(profile, recommendations)
-        resources = _get_learning_path().recommend_resources(
-            [gap["skill_id"] for gap in gaps]
-        )
+        session = _get_quiz_engine().load_session(session_id)
+        gaps = get_session_gaps(session)
+        resources = _get_resource_recommender().recommend(session)
         return jsonify({
             "gaps": gaps,
             "resources": resources,
@@ -361,17 +379,80 @@ def analysis():
 
 @app.route("/resume-tips", methods=["POST", "OPTIONS"])
 def resume_tips():
-    """Return personalized resume tips and study schedule for a profile and gaps."""
+    """Return personalized resume tips and study schedule for a profile or session."""
     if request.method == "OPTIONS":
         return "", 204
 
     body = request.get_json(silent=True) or {}
-    profile = body.get("skill_profile") or body.get("profile") or {}
-    gaps = body.get("gaps") or []
+    session_id = body.get("session_id")
+    if not session_id:
+        return jsonify({"error": "session_id required"}), 400
 
     try:
-        coaching = _get_resume_coach().get_coaching(profile, gaps)
-        return jsonify(coaching)
+        session = _get_quiz_engine().load_session(session_id)
+        recs = _get_resource_recommender().recommend(session)
+        ai_payload = _get_ai_resume_coach().generate(session, recs)
+        return jsonify({
+            "summary": ai_payload.get("summary"),
+            "resume_tips": ai_payload.get("resume_tips"),
+            "resource_explanations": ai_payload.get("resource_explanations"),
+            "is_ai": ai_payload.get("is_ai", False),
+        })
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/recommendations", methods=["POST", "OPTIONS"])
+def recommendations():
+    """Return Groq AI analysis + FAISS learning resources for a completed quiz."""
+    if request.method == "OPTIONS":
+        return "", 204
+
+    body = request.get_json(silent=True) or {}
+    session_id = body.get("session_id")
+    if not session_id:
+        return jsonify({"error": "session_id required"}), 400
+
+    try:
+        session = _get_quiz_engine().load_session(session_id)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 404
+
+    if session.get("status") != "completed":
+        return jsonify({"error": "Quiz not yet completed"}), 400
+
+    try:
+        recs = _get_resource_recommender().recommend(session)
+        ai_payload = _get_ai_resume_coach().generate(session, recs)
+
+        resources_out = []
+        for rec in recs:
+            resource = rec.get("resource", {})
+            gap = rec.get("gap", {})
+            title = resource.get("title")
+            resources_out.append(
+                {
+                    "resource_id": resource.get("resource_id"),
+                    "title": title,
+                    "platform": resource.get("platform"),
+                    "url": resource.get("url"),
+                    "difficulty": resource.get("difficulty"),
+                    "is_free": resource.get("is_free"),
+                    "estimated_hours": resource.get("estimated_hours"),
+                    "covers": resource.get("covers"),
+                    "skill_gap": gap.get("skill_id"),
+                    "gap_score": gap.get("score"),
+                    "ai_explanation": ai_payload.get("resource_explanations", {}).get(title, ""),
+                }
+            )
+
+        return jsonify({
+            "summary": ai_payload.get("summary"),
+            "resources": resources_out,
+            "resume_tips": ai_payload.get("resume_tips"),
+            "detected_domain": session.get("detected_domain"),
+            "is_ai": ai_payload.get("is_ai", False),
+        })
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 

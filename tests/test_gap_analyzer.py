@@ -5,7 +5,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from app.gap_analyzer import GapAnalyzer
+from app.gap_analyzer import GapAnalyzer, get_session_gaps
 
 
 def test_gap_analyzer_basic():
@@ -47,3 +47,21 @@ def test_gap_analyzer_basic():
 	assert aws_gap["priority"] == 33
 	assert aws_gap["priority_label"] == "Low"
 	assert aws_gap["occurrences"] == 1
+
+
+def test_get_session_gaps_threshold_and_order():
+	session = {
+		"skill_scores": {
+			"marketing-digital": 0.32,
+			"finance-excel": 0.59,
+			"design-uiux": 0.75,
+			"sales-inbound": [0.2, 0.4],
+		}
+	}
+
+	gaps = get_session_gaps(session)
+	gap_ids = [gap["skill_id"] for gap in gaps]
+
+	assert "design-uiux" not in gap_ids
+	assert gap_ids[0] == "sales-inbound"
+	assert "finance-excel" in gap_ids

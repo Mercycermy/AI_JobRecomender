@@ -6,6 +6,68 @@ from typing import Any, Dict, Iterable, List, Optional
 from app.skill_normalizer import SkillNormalizer
 
 
+SKILL_THRESHOLD = 0.60
+MAX_GAPS = 4
+
+# Maps skill_ids to human-readable search phrases for FAISS queries.
+SKILL_QUERY_MAP = {
+	"it-support": "IT support networking troubleshooting",
+	"tech-docker": "Docker containers DevOps deployment",
+	"admin-hr": "human resources recruiting performance",
+	"wellness-fitness": "personal trainer fitness anatomy",
+	"sales-inbound": "inbound sales CRM closing strategies",
+	"marketing-digital": "digital marketing SEO social media",
+	"finance-excel": "Excel financial formulas pivot tables",
+	"design-uiux": "UI UX design Figma prototyping",
+	"eng-autocad": "AutoCAD 2D drafting civil mechanical",
+	"eng-construction-mgmt": "construction project management scheduling",
+	"admin-data-entry": "data entry typing speed accuracy",
+	"freelance-management": "freelance client acquisition proposals",
+	"admin-event-planning": "event planning vendor management logistics",
+	"supply-chain-mgmt": "supply chain logistics warehouse operations",
+	"logistics-safety": "workplace safety OSHA warehouse hazards",
+	"craft-culinary": "culinary arts cooking knife skills",
+	"med-health-science": "health sciences anatomy physiology nursing",
+	"edu-instructional-design": "instructional design curriculum teaching",
+	"prod-six-sigma": "six sigma quality control process improvement",
+	"hosp-management": "hospitality hotel management guest experience",
+	"hosp-food-safety": "food safety sanitation ServSafe",
+	"fac-management": "facility management building operations",
+	"sec-physical": "physical security threat assessment safety",
+}
+
+
+def get_session_gaps(session: Dict[str, Any]) -> List[Dict[str, Any]]:
+	"""Return ranked skill gaps from a completed quiz session.
+
+	Each gap is shaped as: {skill_id, score, query}.
+	"""
+	skill_scores = session.get("skill_scores", {}) or {}
+	if not isinstance(skill_scores, dict):
+		return []
+
+	gaps: List[Dict[str, Any]] = []
+	for skill_id, score in skill_scores.items():
+		if score is None:
+			continue
+		avg = sum(score) / len(score) if isinstance(score, list) and score else score
+		try:
+			avg_value = float(avg)
+		except (TypeError, ValueError):
+			continue
+
+		if avg_value < SKILL_THRESHOLD:
+			query = SKILL_QUERY_MAP.get(str(skill_id), str(skill_id).replace("-", " "))
+			gaps.append({
+				"skill_id": str(skill_id),
+				"score": round(avg_value, 3),
+				"query": query,
+			})
+
+	gaps.sort(key=lambda g: g["score"])
+	return gaps[:MAX_GAPS]
+
+
 class GapAnalyzer:
 	"""Summarize the highest-impact skill gaps from recommendation results."""
 

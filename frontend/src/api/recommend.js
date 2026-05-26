@@ -4,6 +4,7 @@ export const PROFILE_STORAGE_KEY = 'skillProfile'
 export const RECOMMENDATIONS_STORAGE_KEY = 'jobRecommendations'
 export const RAW_RECOMMENDATIONS_STORAGE_KEY = 'rawJobRecommendations'
 export const ANALYSIS_STORAGE_KEY = 'recommendationAnalysis'
+export const QUIZ_SESSION_STORAGE_KEY = 'quizSessionId'
 
 const EXPERIENCE_MAP = {
   Internship: 'intern',
@@ -76,6 +77,12 @@ export function persistRecommendationSession(profile, jobs, rawRecs = null) {
   }
 }
 
+export function persistQuizSessionId(sessionId) {
+  if (sessionId) {
+    sessionStorage.setItem(QUIZ_SESSION_STORAGE_KEY, sessionId)
+  }
+}
+
 export function persistAnalysis(analysis) {
   sessionStorage.setItem(ANALYSIS_STORAGE_KEY, JSON.stringify(analysis))
 }
@@ -107,6 +114,14 @@ export function loadStoredAnalysis() {
   }
 }
 
+export function loadStoredSessionId() {
+  try {
+    return sessionStorage.getItem(QUIZ_SESSION_STORAGE_KEY) || ''
+  } catch {
+    return ''
+  }
+}
+
 export function loadStoredRawRecommendations() {
   try {
     const raw = sessionStorage.getItem(RAW_RECOMMENDATIONS_STORAGE_KEY)
@@ -122,13 +137,14 @@ export function clearStoredRecommendations() {
   sessionStorage.removeItem(RAW_RECOMMENDATIONS_STORAGE_KEY)
   sessionStorage.removeItem(ANALYSIS_STORAGE_KEY)
   sessionStorage.removeItem('resumeTipsCoaching')
+  sessionStorage.removeItem(QUIZ_SESSION_STORAGE_KEY)
 }
 
-export async function fetchAnalysis(profile, recommendations) {
+export async function fetchAnalysis(sessionId) {
   const response = await fetch(`${API_BASE}/analysis`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ skill_profile: profile, recommendations }),
+    body: JSON.stringify({ session_id: sessionId }),
   })
 
   if (!response.ok) {
@@ -139,11 +155,11 @@ export async function fetchAnalysis(profile, recommendations) {
   return response.json()
 }
 
-export async function fetchResumeTips(profile, gaps) {
+export async function fetchResumeTips(sessionId) {
   const response = await fetch(`${API_BASE}/resume-tips`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ skill_profile: profile, gaps }),
+    body: JSON.stringify({ session_id: sessionId }),
   })
 
   if (!response.ok) {

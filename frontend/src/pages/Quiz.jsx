@@ -3,6 +3,7 @@ import { fallbackQuestions } from '../data/mockData.js'
 import {
   clearStoredRecommendations,
   mapJobToCard,
+  persistQuizSessionId,
   persistRecommendationSession,
 } from '../api/recommend.js'
 
@@ -67,7 +68,8 @@ function Quiz({ navigate }) {
         clearStoredRecommendations()
         const response = await fetch(`${API_BASE}/quiz`)
         const payload = await response.json()
-        sessionIdRef.current = response.headers.get('X-Session-Id') || ''
+  sessionIdRef.current = response.headers.get('X-Session-Id') || ''
+  persistQuizSessionId(sessionIdRef.current)
 
         if (isMounted) {
           setQuestion(normalizeQuestion(payload, 0))
@@ -130,6 +132,7 @@ function Quiz({ navigate }) {
         if (profile) {
           persistRecommendationSession(profile, jobs, rawRecs)
         }
+        persistQuizSessionId(sessionIdRef.current)
         navigate('/results')
         return
       }
