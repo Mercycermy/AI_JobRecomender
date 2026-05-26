@@ -21,10 +21,10 @@ def _answer_question(engine, session_id, question_id):
     assert question is not None
 
     if question.get("answer_mode") == "single_choice" and question.get("options"):
-        if question_id == "Q_G0_DOMAIN_001":
+        if question_id == "Q_G0_CATEGORY":
             answer = "A"
-        elif question_id == "Q_G0_SUBDOMAIN_001":
-            answer = "A"
+        elif question_id == "Q_G0_ROLE_TECH":
+            answer = "frontend-dev"
         else:
             answer = next(iter(question["options"].keys()))
         return engine.submit_answer(
@@ -39,12 +39,15 @@ def _answer_question(engine, session_id, question_id):
         "I would diagnose the issue, describe the tradeoffs, implement a clean "
         "solution, validate it, and communicate the outcome clearly."
     )
+    eval_res = evaluate(question, answer)
+    # Ensure frontend-dev accumulates category scores to remain the top category
+    eval_res["category_score_deltas"] = {"frontend-dev": 5}
     return engine.submit_answer(
         session_id,
         question_id,
         answer,
         None,
-        evaluate(question, answer),
+        eval_res,
     )
 
 

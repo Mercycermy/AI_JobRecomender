@@ -115,6 +115,8 @@ _SIGNAL_LABELS = {
     "ACCOUNTING": "Accounting & Finance",
     "ADMIN": "Administration",
     "ENGINEERING": "Engineering & Construction",
+    "EDUCATION": "Education & Training",
+    "LOGISTICS": "Logistics & Transport",
 }
 
 

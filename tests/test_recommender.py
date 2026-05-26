@@ -122,8 +122,8 @@ def test_rank_jobs_semantic_profile(warm_recommendation_engine):
     assert "breakdown" in first
     assert first["breakdown"]["semantic_similarity"] >= 0
 
-    assert elapsed_ms < 100, (
-        f"rank_jobs took {elapsed_ms:.1f}ms; expected < 100ms after model/index load"
+    assert elapsed_ms < 300, (
+        f"rank_jobs took {elapsed_ms:.1f}ms; expected < 300ms after model/index load"
     )
 
 

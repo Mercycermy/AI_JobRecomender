@@ -60,7 +60,6 @@ ROLE_SCOPE_ALIASES = {
     "data-analyst": ["DATA_AI", "TECH"],
     "data-scientist": ["DATA_AI", "TECH"],
     "ml-engineer": ["DATA_AI", "TECH"],
-    "data-engineer": ["DATA_AI", "TECH"],
     "graphic-designer": ["CREATIVE"],
     "ui-ux-designer": ["CREATIVE"],
     "video-editor": ["CREATIVE"],
@@ -70,7 +69,16 @@ ROLE_SCOPE_ALIASES = {
     "finance": ["ACCOUNTING", "FINANCE"],
     "admin": ["ADMIN"],
     "project-manager": ["BUSINESS", "GENERAL"],
-    "architect": ["ENGINEERING", "TECH"],
+    "architect": ["SOFTWARE", "TECH", "ENGINEERING"],
+    "tech": ["TECH"],
+    "creative": ["CREATIVE"],
+    "sales_marketing": ["SALES_MKT", "SALES_MARKETING"],
+    "teacher": ["EDUCATION"],
+    "trainer": ["EDUCATION"],
+    "education": ["EDUCATION"],
+    "medical": ["MEDICAL"],
+    "transport": ["LOGISTICS", "GENERAL"],
+    "general": ["GENERAL"],
 }
 
 ROLE_LABELS = {
@@ -82,7 +90,6 @@ ROLE_LABELS = {
     "data-analyst": ["data analyst", "business analyst"],
     "data-scientist": ["data scientist"],
     "ml-engineer": ["machine learning engineer", "ml engineer"],
-    "data-engineer": ["data engineer"],
     "graphic-designer": ["graphic designer", "graphics designer"],
     "ui-ux-designer": ["ui designer", "ux designer", "ui/ux designer"],
     "video-editor": ["video editor"],
@@ -93,6 +100,15 @@ ROLE_LABELS = {
     "admin": ["admin", "secretary", "office manager", "hr"],
     "project-manager": ["project manager"],
     "architect": ["architect", "site engineer", "civil engineer"],
+    "tech": ["tech", "it", "technology", "information technology"],
+    "creative": ["creative", "design", "art"],
+    "sales_marketing": ["sales", "marketing", "commerce"],
+    "teacher": ["teacher", "educator", "instructor"],
+    "trainer": ["trainer", "coach", "instructor"],
+    "education": ["education", "academic", "learning"],
+    "medical": ["medical", "healthcare", "nurse", "doctor"],
+    "transport": ["transport", "logistics", "driving", "driver", "delivery"],
+    "general": ["general", "foundational"],
 }
 
 SPECIFIC_ROLE_KEYS = set(ROLE_LABELS)
@@ -107,86 +123,57 @@ BROAD_CATEGORY_KEYS = {
 
 SUPPORT_QUESTIONS = [
     {
-        "id": "Q_G0_SUBDOMAIN_001",
+        "id": "Q_G0_CATEGORY",
         "gate": 0,
         "domain_scope": "ALL",
         "question_type": "multiple_choice",
-        "role_targets": [
-            "frontend-dev",
-            "backend-dev",
-            "fullstack-dev",
-            "data-analyst",
-            "data-scientist",
-            "graphic-designer",
-            "sales",
-            "accounting",
-            "admin",
-            "architect",
-        ],
+        "role_targets": [],
         "difficulty": "beginner",
         "experience_level_target": "any",
-        "stem": "Which focus area best matches the work you want to be tested for?",
+        "stem": "Which category best matches the work you want to be tested for?",
         "context": None,
         "answer_mode": "single_choice",
         "options": {
             "A": {
-                "text": "Frontend web apps, React, UI behavior, and responsive pages",
-                "signals": {"frontend-dev": 35},
-                "skills": ["fe-react", "fe-css", "lang-js", "fe-responsive"],
+                "text": "Technology & Software Development",
+                "signals": {"SOFTWARE": 30},
+                "skills": [],
                 "quality_level": "strong",
             },
             "B": {
-                "text": "Backend APIs, databases, services, and server-side logic",
-                "signals": {"backend-dev": 35},
-                "skills": ["be-rest", "be-fastapi", "db-schema", "lang-sql"],
+                "text": "Data & Artificial Intelligence",
+                "signals": {"DATA_AI": 30},
+                "skills": [],
                 "quality_level": "strong",
             },
             "C": {
-                "text": "Full-stack work across frontend, backend, and databases",
-                "signals": {"fullstack-dev": 35},
-                "skills": ["fe-react", "be-rest", "db-schema", "lang-js"],
+                "text": "Design & Creative Media",
+                "signals": {"CREATIVE": 30},
+                "skills": [],
                 "quality_level": "strong",
             },
             "D": {
-                "text": "Data analysis, dashboards, reporting, and SQL insights",
-                "signals": {"data-analyst": 35},
-                "skills": ["lang-sql", "da-pandas", "da-tableau", "da-excel"],
+                "text": "Corporate Operations, Finance & Management",
+                "signals": {"BUSINESS": 30},
+                "skills": [],
                 "quality_level": "strong",
             },
             "E": {
-                "text": "Machine learning, data science, and AI model work",
-                "signals": {"data-scientist": 30, "ml-engineer": 20},
-                "skills": ["lang-py", "ds-sklearn", "ds-model-eval", "ml-pipelines"],
+                "text": "Sales, Marketing & Commerce",
+                "signals": {"SALES_MKT": 30},
+                "skills": [],
                 "quality_level": "strong",
             },
             "F": {
-                "text": "Graphic design, UI/UX, brand visuals, or creative production",
-                "signals": {"graphic-designer": 25, "ui-ux-designer": 25},
-                "skills": ["fe-figma", "des-branding", "des-wireframe", "des-prototype"],
+                "text": "Education, Training & Instruction",
+                "signals": {"EDUCATION": 30},
+                "skills": [],
                 "quality_level": "strong",
             },
             "G": {
-                "text": "Sales, digital marketing, campaigns, and customer growth",
-                "signals": {"sales": 25, "digital-marketer": 25},
-                "skills": ["mkt-social", "mkt-seo", "mkt-analytics", "soft-comm"],
-                "quality_level": "strong",
-            },
-            "H": {
-                "text": "Accounting, finance, cash handling, or financial reporting",
-                "signals": {"accounting": 35},
-                "skills": ["fin-accounting", "fin-excel", "da-excel"],
-                "quality_level": "strong",
-            },
-            "I": {
-                "text": "Administration, office coordination, HR, and executive support",
-                "signals": {"admin": 35},
-                "skills": ["soft-mgmt", "soft-time", "soft-docs", "da-excel"],
-                "quality_level": "strong",
-            },
-            "J": {
-                "text": "Architecture, construction, CAD, or civil engineering",
-                "signals": {"architect": 35},
-                "skills": ["des-rhino", "soft-problem", "soft-docs"],
+                "text": "Specialized Services",
+                "signals": {"LOGISTICS": 30},
+                "skills": [],
                 "quality_level": "strong",
             },
         },
@@ -206,7 +193,379 @@ SUPPORT_QUESTIONS = [
         "route_partial": None,
         "route_weak": None,
         "estimated_minutes": 1,
-    }
+    },
+    {
+        "id": "Q_G0_ROLE_TECH",
+        "gate": 0,
+        "domain_scope": "ALL",
+        "question_type": "multiple_choice",
+        "role_targets": [],
+        "difficulty": "beginner",
+        "experience_level_target": "any",
+        "stem": "Select your specific role within Technology & Software Development:",
+        "context": None,
+        "answer_mode": "single_choice",
+        "options": {
+            "backend-dev": {
+                "text": "backend-dev",
+                "signals": {"backend-dev": 35},
+                "skills": ["be-rest", "be-fastapi", "db-schema", "lang-sql"],
+                "quality_level": "strong",
+            },
+            "frontend-dev": {
+                "text": "frontend-dev",
+                "signals": {"frontend-dev": 35},
+                "skills": ["fe-react", "fe-css", "lang-js", "fe-responsive"],
+                "quality_level": "strong",
+            },
+            "fullstack-dev": {
+                "text": "fullstack-dev",
+                "signals": {"fullstack-dev": 35},
+                "skills": ["fe-react", "be-rest", "db-schema", "lang-js"],
+                "quality_level": "strong",
+            },
+            "mobile-dev": {
+                "text": "mobile-dev",
+                "signals": {"mobile-dev": 35},
+                "skills": ["fe-responsive", "lang-js"],
+                "quality_level": "strong",
+            },
+            "architect": {
+                "text": "architect (Software/System Architecture)",
+                "signals": {"architect": 35},
+                "skills": ["soft-problem", "soft-docs"],
+                "quality_level": "strong",
+            },
+            "devops": {
+                "text": "devops",
+                "signals": {"devops": 35},
+                "skills": ["be-rest"],
+                "quality_level": "strong",
+            },
+            "tech": {
+                "text": "tech (General Tech/IT)",
+                "signals": {"tech": 35},
+                "skills": [],
+                "quality_level": "strong",
+            },
+        },
+        "practical_task": None,
+        "scoring": {
+            "max_score": 100,
+            "pass_score": 70,
+            "category_weights": {},
+            "skill_weights": {},
+            "rubric": [],
+            "red_flags": [],
+            "partial_credit_rules": [],
+        },
+        "ai_evaluation_prompt": None,
+        "job_evidence": [],
+        "route_strong": None,
+        "route_partial": None,
+        "route_weak": None,
+        "estimated_minutes": 1,
+    },
+    {
+        "id": "Q_G0_ROLE_DATA",
+        "gate": 0,
+        "domain_scope": "ALL",
+        "question_type": "multiple_choice",
+        "role_targets": [],
+        "difficulty": "beginner",
+        "experience_level_target": "any",
+        "stem": "Select your specific role within Data & Artificial Intelligence:",
+        "context": None,
+        "answer_mode": "single_choice",
+        "options": {
+            "data-analyst": {
+                "text": "data-analyst",
+                "signals": {"data-analyst": 35},
+                "skills": ["lang-sql", "da-pandas", "da-tableau", "da-excel"],
+                "quality_level": "strong",
+            },
+            "data-scientist": {
+                "text": "data-scientist",
+                "signals": {"data-scientist": 35},
+                "skills": ["lang-py", "ds-sklearn", "ds-model-eval", "ml-pipelines"],
+                "quality_level": "strong",
+            },
+            "ml-engineer": {
+                "text": "ml-engineer (Machine Learning)",
+                "signals": {"ml-engineer": 35},
+                "skills": ["lang-py", "ds-sklearn", "ds-model-eval", "ml-pipelines"],
+                "quality_level": "strong",
+            },
+        },
+        "practical_task": None,
+        "scoring": {
+            "max_score": 100,
+            "pass_score": 70,
+            "category_weights": {},
+            "skill_weights": {},
+            "rubric": [],
+            "red_flags": [],
+            "partial_credit_rules": [],
+        },
+        "ai_evaluation_prompt": None,
+        "job_evidence": [],
+        "route_strong": None,
+        "route_partial": None,
+        "route_weak": None,
+        "estimated_minutes": 1,
+    },
+    {
+        "id": "Q_G0_ROLE_DESIGN",
+        "gate": 0,
+        "domain_scope": "ALL",
+        "question_type": "multiple_choice",
+        "role_targets": [],
+        "difficulty": "beginner",
+        "experience_level_target": "any",
+        "stem": "Select your specific role within Design & Creative Media:",
+        "context": None,
+        "answer_mode": "single_choice",
+        "options": {
+            "graphic-designer": {
+                "text": "graphic-designer",
+                "signals": {"graphic-designer": 35},
+                "skills": ["fe-figma", "des-branding"],
+                "quality_level": "strong",
+            },
+            "ui-ux-designer": {
+                "text": "ui-ux-designer",
+                "signals": {"ui-ux-designer": 35},
+                "skills": ["fe-figma", "des-branding", "des-wireframe", "des-prototype"],
+                "quality_level": "strong",
+            },
+            "video-editor": {
+                "text": "video-editor",
+                "signals": {"video-editor": 35},
+                "skills": ["des-branding"],
+                "quality_level": "strong",
+            },
+            "creative": {
+                "text": "creative (Broad creative roles)",
+                "signals": {"creative": 35},
+                "skills": [],
+                "quality_level": "strong",
+            },
+        },
+        "practical_task": None,
+        "scoring": {
+            "max_score": 100,
+            "pass_score": 70,
+            "category_weights": {},
+            "skill_weights": {},
+            "rubric": [],
+            "red_flags": [],
+            "partial_credit_rules": [],
+        },
+        "ai_evaluation_prompt": None,
+        "job_evidence": [],
+        "route_strong": None,
+        "route_partial": None,
+        "route_weak": None,
+        "estimated_minutes": 1,
+    },
+    {
+        "id": "Q_G0_ROLE_CORP",
+        "gate": 0,
+        "domain_scope": "ALL",
+        "question_type": "multiple_choice",
+        "role_targets": [],
+        "difficulty": "beginner",
+        "experience_level_target": "any",
+        "stem": "Select your specific role within Corporate Operations, Finance & Management:",
+        "context": None,
+        "answer_mode": "single_choice",
+        "options": {
+            "admin": {
+                "text": "admin (Administration)",
+                "signals": {"admin": 35},
+                "skills": ["soft-mgmt", "soft-time", "soft-docs", "da-excel"],
+                "quality_level": "strong",
+            },
+            "project-manager": {
+                "text": "project-manager",
+                "signals": {"project-manager": 35},
+                "skills": ["soft-mgmt", "soft-time", "soft-docs"],
+                "quality_level": "strong",
+            },
+            "finance": {
+                "text": "finance",
+                "signals": {"finance": 35},
+                "skills": ["fin-accounting", "fin-excel", "da-excel"],
+                "quality_level": "strong",
+            },
+            "accounting": {
+                "text": "accounting",
+                "signals": {"accounting": 35},
+                "skills": ["fin-accounting", "fin-excel", "da-excel"],
+                "quality_level": "strong",
+            },
+        },
+        "practical_task": None,
+        "scoring": {
+            "max_score": 100,
+            "pass_score": 70,
+            "category_weights": {},
+            "skill_weights": {},
+            "rubric": [],
+            "red_flags": [],
+            "partial_credit_rules": [],
+        },
+        "ai_evaluation_prompt": None,
+        "job_evidence": [],
+        "route_strong": None,
+        "route_partial": None,
+        "route_weak": None,
+        "estimated_minutes": 1,
+    },
+    {
+        "id": "Q_G0_ROLE_SALES",
+        "gate": 0,
+        "domain_scope": "ALL",
+        "question_type": "multiple_choice",
+        "role_targets": [],
+        "difficulty": "beginner",
+        "experience_level_target": "any",
+        "stem": "Select your specific role within Sales, Marketing & Commerce:",
+        "context": None,
+        "answer_mode": "single_choice",
+        "options": {
+            "sales": {
+                "text": "sales",
+                "signals": {"sales": 35},
+                "skills": ["mkt-social", "soft-comm"],
+                "quality_level": "strong",
+            },
+            "digital-marketer": {
+                "text": "digital-marketer",
+                "signals": {"digital-marketer": 35},
+                "skills": ["mkt-social", "mkt-seo", "mkt-analytics", "soft-comm"],
+                "quality_level": "strong",
+            },
+            "sales_marketing": {
+                "text": "sales_marketing (Combined commerce roles)",
+                "signals": {"sales_marketing": 35},
+                "skills": ["mkt-social", "mkt-seo", "mkt-analytics", "soft-comm"],
+                "quality_level": "strong",
+            },
+        },
+        "practical_task": None,
+        "scoring": {
+            "max_score": 100,
+            "pass_score": 70,
+            "category_weights": {},
+            "skill_weights": {},
+            "rubric": [],
+            "red_flags": [],
+            "partial_credit_rules": [],
+        },
+        "ai_evaluation_prompt": None,
+        "job_evidence": [],
+        "route_strong": None,
+        "route_partial": None,
+        "route_weak": None,
+        "estimated_minutes": 1,
+    },
+    {
+        "id": "Q_G0_ROLE_EDU",
+        "gate": 0,
+        "domain_scope": "ALL",
+        "question_type": "multiple_choice",
+        "role_targets": [],
+        "difficulty": "beginner",
+        "experience_level_target": "any",
+        "stem": "Select your specific role within Education, Training & Instruction:",
+        "context": None,
+        "answer_mode": "single_choice",
+        "options": {
+            "teacher": {
+                "text": "teacher",
+                "signals": {"teacher": 35},
+                "skills": ["soft-mgmt", "soft-comm"],
+                "quality_level": "strong",
+            },
+            "trainer": {
+                "text": "trainer",
+                "signals": {"trainer": 35},
+                "skills": ["soft-mgmt", "soft-comm"],
+                "quality_level": "strong",
+            },
+            "education": {
+                "text": "education (Broad academic/instructional roles)",
+                "signals": {"education": 35},
+                "skills": ["soft-mgmt", "soft-comm"],
+                "quality_level": "strong",
+            },
+        },
+        "practical_task": None,
+        "scoring": {
+            "max_score": 100,
+            "pass_score": 70,
+            "category_weights": {},
+            "skill_weights": {},
+            "rubric": [],
+            "red_flags": [],
+            "partial_credit_rules": [],
+        },
+        "ai_evaluation_prompt": None,
+        "job_evidence": [],
+        "route_strong": None,
+        "route_partial": None,
+        "route_weak": None,
+        "estimated_minutes": 1,
+    },
+    {
+        "id": "Q_G0_ROLE_SPEC",
+        "gate": 0,
+        "domain_scope": "ALL",
+        "question_type": "multiple_choice",
+        "role_targets": [],
+        "difficulty": "beginner",
+        "experience_level_target": "any",
+        "stem": "Select your specific role within Specialized Services:",
+        "context": None,
+        "answer_mode": "single_choice",
+        "options": {
+            "medical": {
+                "text": "medical (Healthcare professionals)",
+                "signals": {"medical": 35},
+                "skills": ["soft-mgmt", "soft-comm"],
+                "quality_level": "strong",
+            },
+            "transport": {
+                "text": "transport (Logistics, delivery, and driving roles)",
+                "signals": {"transport": 35},
+                "skills": ["soft-time"],
+                "quality_level": "strong",
+            },
+            "general": {
+                "text": "general (Catch-all for non-specialized or foundational inquiries)",
+                "signals": {"general": 35},
+                "skills": [],
+                "quality_level": "strong",
+            },
+        },
+        "practical_task": None,
+        "scoring": {
+            "max_score": 100,
+            "pass_score": 70,
+            "category_weights": {},
+            "skill_weights": {},
+            "rubric": [],
+            "red_flags": [],
+            "partial_credit_rules": [],
+        },
+        "ai_evaluation_prompt": None,
+        "job_evidence": [],
+        "route_strong": None,
+        "route_partial": None,
+        "route_weak": None,
+        "estimated_minutes": 1,
+    },
 ]
 
 
@@ -239,6 +598,11 @@ class QuizEngine:
             conn.close()
 
     def _seed_support_questions(self, conn) -> None:
+        # Deactivate legacy gate-0 questions that were replaced by the new
+        # category-to-role flow so they never appear even after JSON re-seed.
+        conn.execute(
+            "UPDATE questions SET is_active = 0 WHERE id IN ('Q_G0_DOMAIN_001', 'Q_G0_SUBDOMAIN_001')"
+        )
         for q in SUPPORT_QUESTIONS:
             conn.execute(
                 """
@@ -354,10 +718,7 @@ class QuizEngine:
         conn = self._conn()
         try:
             sid = str(uuid.uuid4())
-            gate0 = conn.execute(
-                "SELECT id FROM questions WHERE gate=0 AND is_active=1 LIMIT 1"
-            ).fetchone()
-            first_q_id = gate0[0] if gate0 else None
+            first_q_id = "Q_G0_CATEGORY"
             conn.execute(
                 """
                 INSERT INTO quiz_sessions (id, user_id, current_question_id)
@@ -573,17 +934,25 @@ class QuizEngine:
         if len(session["questions_asked"]) + 1 >= TARGET_QUESTIONS:
             return None
 
-        route_key = f"route_{performance}"
-        next_id = question.get(route_key)
-        excluded = set(session["questions_asked"])
-        excluded.add(question["id"])
-        if (
-            next_id
-            and str(next_id).upper() not in TERMINAL_ROUTE_IDS
-            and next_id not in excluded
-            and self.get_question(next_id)
-        ):
-            return next_id
+        if question["id"] == "Q_G0_CATEGORY":
+            domain = session.get("detected_domain")
+            if domain == "SOFTWARE":
+                return "Q_G0_ROLE_TECH"
+            elif domain == "DATA_AI":
+                return "Q_G0_ROLE_DATA"
+            elif domain == "CREATIVE":
+                return "Q_G0_ROLE_DESIGN"
+            elif domain == "BUSINESS":
+                return "Q_G0_ROLE_CORP"
+            elif domain == "SALES_MKT":
+                return "Q_G0_ROLE_SALES"
+            elif domain == "EDUCATION":
+                return "Q_G0_ROLE_EDU"
+            elif domain == "LOGISTICS":
+                return "Q_G0_ROLE_SPEC"
+            else:
+                return "Q_G0_ROLE_SPEC"
+
         return self._fallback_next(question, session)
 
     def _select_question(
@@ -625,6 +994,12 @@ class QuizEngine:
             SELECT id FROM questions
             WHERE {' AND '.join(clauses)}
             ORDER BY
+              CASE
+                WHEN difficulty = 'beginner' THEN 0
+                WHEN difficulty = 'intermediate' THEN 1
+                WHEN difficulty = 'advanced' THEN 2
+                ELSE 3
+              END,
               CASE
                 WHEN gate = 1 THEN 0
                 WHEN gate = 2 THEN 1
