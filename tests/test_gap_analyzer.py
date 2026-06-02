@@ -5,7 +5,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from app.gap_analyzer import GapAnalyzer, get_session_gaps
+from app.gap_analyzer import GapAnalyzer, format_gaps_for_ui, get_session_gaps
 
 
 def test_gap_analyzer_basic():
@@ -65,3 +65,21 @@ def test_get_session_gaps_threshold_and_order():
 	assert "design-uiux" not in gap_ids
 	assert gap_ids[0] == "sales-inbound"
 	assert "finance-excel" in gap_ids
+
+
+def test_format_gaps_for_ui_shape():
+	session = {
+		"skill_scores": {
+			"marketing-digital": 0.32,
+			"design-uiux": 0.75,
+		}
+	}
+
+	formatted = format_gaps_for_ui(session)
+	assert len(formatted) == 1
+	gap = formatted[0]
+	assert gap["skill_id"] == "marketing-digital"
+	assert gap["skill"]
+	assert gap["current"] < gap["required"]
+	assert gap["priority"] >= 60
+	assert gap["priority_label"] in {"High", "Medium", "Low"}

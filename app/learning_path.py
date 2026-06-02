@@ -66,6 +66,7 @@ class LearningPath:
 					"resources": [
 						{
 							"resource_id": item.get("resource_id"),
+							"skill_id": item.get("skill_id"),
 							"title": item.get("title"),
 							"platform": item.get("platform"),
 							"level": item.get("difficulty"),
@@ -73,6 +74,9 @@ class LearningPath:
 							"url": item.get("url"),
 							"resource_type": item.get("resource_type"),
 							"gap_priority": item.get("job_gap_alignment", {}).get("gap_priority"),
+							"covers": item.get("covers", []),
+							"is_free": item.get("is_free"),
+							"best_for": item.get("best_for", []),
 						}
 						for item in trimmed
 					],

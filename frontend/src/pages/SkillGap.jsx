@@ -1,5 +1,4 @@
 import { loadStoredAnalysis } from '../api/recommend.js'
-import { skillGaps } from '../data/mockData.js'
 
 function SkillGap({ gaps: providedGaps, job, standalone = false, isLoading = false, error = null }) {
   const stored = loadStoredAnalysis()
@@ -30,7 +29,21 @@ function SkillGap({ gaps: providedGaps, job, standalone = false, isLoading = fal
     ? providedGaps
     : stored?.gaps?.length
       ? stored.gaps
-      : skillGaps
+      : []
+
+  if (!sourceGaps.length) {
+    return (
+      <section className={standalone ? 'detail-page' : 'panel-section'}>
+        <div className="empty-state" style={{ textAlign: 'center', padding: '32px 20px' }}>
+          <p>
+            {error
+              ? error
+              : 'Complete the skills assessment to see your real skill gaps from quiz results.'}
+          </p>
+        </div>
+      </section>
+    )
+  }
 
   const gaps = [...sourceGaps].sort((left, right) => right.priority - left.priority)
 

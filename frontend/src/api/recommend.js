@@ -155,6 +155,20 @@ export async function fetchAnalysis(sessionId) {
   return response.json()
 }
 
+function mapFlatTipsToSections(flatTips) {
+  if (!Array.isArray(flatTips) || !flatTips.length) {
+    return []
+  }
+
+  return [
+    {
+      section: 'Coaching',
+      icon: '01',
+      tips: flatTips,
+    },
+  ]
+}
+
 export async function fetchResumeTips(sessionId) {
   const response = await fetch(`${API_BASE}/resume-tips`, {
     method: 'POST',
@@ -167,5 +181,17 @@ export async function fetchResumeTips(sessionId) {
     throw new Error(err.error || `Resume Tips API failed (${response.status})`)
   }
 
-  return response.json()
+  const data = await response.json()
+  const tips = data.tips?.length
+    ? data.tips
+    : mapFlatTipsToSections(data.resume_tips)
+
+  return {
+    summary: data.summary,
+    tips,
+    schedule: data.schedule || [],
+    is_ai: data.is_ai,
+    resume_tips: data.resume_tips,
+    resource_explanations: data.resource_explanations,
+  }
 }

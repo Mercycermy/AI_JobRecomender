@@ -1,5 +1,3 @@
-import { resumeTips } from '../data/mockData.js'
-
 const emphasisTerms = [
   'measurable',
   'domain signal',
@@ -50,7 +48,23 @@ function ResumeTips({ standalone = false, coaching = null, isLoading = false, er
     )
   }
 
-  const resolvedTips = coaching?.tips?.length ? coaching.tips : resumeTips
+  const resolvedTips = coaching?.tips?.length ? coaching.tips : []
+
+  if (!resolvedTips.length) {
+    return (
+      <section className={standalone ? 'detail-page' : 'panel-section'}>
+        <div className="empty-state" style={{ textAlign: 'center', padding: '32px 20px' }}>
+          <p>
+            {error
+              ? error
+              : coaching?.is_ai === false
+                ? 'Set GROQ_API_KEY on the server to generate personalized resume coaching.'
+                : 'Complete the assessment to generate AI resume tips.'}
+          </p>
+        </div>
+      </section>
+    )
+  }
 
   return (
     <section className={standalone ? 'detail-page' : 'panel-section'}>

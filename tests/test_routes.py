@@ -65,9 +65,9 @@ def test_resume_tips_fallback(client):
     )
     assert response.status_code == 200
     data = response.get_json()
-    assert "resume_tips" in data
+    assert "tips" in data
+    assert "schedule" in data
     assert "summary" in data
-    assert len(data["resume_tips"]) > 0
-    assert data["is_ai"] is False  # Fallback should trigger when no API key is configured in tests
+    assert data["is_ai"] is False  # No GROQ_API_KEY in test environment
 
 

@@ -1,94 +1,248 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from groq import Groq
 
-DEFAULT_RESUME_TIPS = [
-	"Showcase one measurable project that closes your top gap.",
-	"Mirror role keywords in your summary and skills section.",
-	"Add a results-focused bullet for each key tool you learned.",
-]
+logger = logging.getLogger(__name__)
+
+DEFAULT_MODEL = "llama-3.3-70b-versatile"
 
 
 class GroqResumeCoach:
-	"""Generate AI analysis and resume tips using Groq."""
+	"""Generate AI analysis and resume coaching using the Groq API."""
 
-	def __init__(self, api_key: str | None = None, model: str = "llama3-70b-8192"):
+	def __init__(self, api_key: str | None = None, model: str | None = None):
 		self.api_key = api_key or os.environ.get("GROQ_API_KEY")
-		self.model = model
+		self.model = model or os.environ.get("GROQ_MODEL", DEFAULT_MODEL)
 		self.client = Groq(api_key=self.api_key) if self.api_key else None
 
 	def is_available(self) -> bool:
 		return self.client is not None
 
-	def _fallback(self, recommendations: List[Dict[str, Any]]) -> Dict[str, Any]:
-		resource_explanations = {
-			rec.get("resource", {}).get("title", ""): "Suggested to close a detected gap."
-			for rec in recommendations
-			if rec.get("resource", {}).get("title")
-		}
-		return {
-			"summary": "Focus on your highest-priority gaps with targeted practice and a showcase project.",
-			"resource_explanations": resource_explanations,
-			"resume_tips": DEFAULT_RESUME_TIPS,
-			"is_ai": False,
-		}
+	def _parse_json(self, raw: str) -> Optional[Dict[str, Any]]:
+		content = (raw or "").strip()
+		if content.startswith("```json"):
+			content = content[7:]
+		if content.startswith("```"):
+			content = content[3:]
+		if content.endswith("```"):
+			content = content[:-3]
+		content = content.strip()
+		try:
+			return json.loads(content)
+		except json.JSONDecodeError:
+			return None
 
-	def generate(self, session: Dict[str, Any], recommendations: List[Dict[str, Any]]) -> Dict[str, Any]:
+	def _chat_json(self, system: str, user: str, max_tokens: int = 1200) -> Optional[Dict[str, Any]]:
 		if not self.is_available():
-			return self._fallback(recommendations)
+			return None
+		try:
+			resp = self.client.chat.completions.create(
+				model=self.model,
+				messages=[
+					{"role": "system", "content": system},
+					{"role": "user", "content": user},
+				],
+				temperature=0.35,
+				max_tokens=max_tokens,
+			)
+			raw = resp.choices[0].message.content or ""
+			return self._parse_json(raw)
+		except Exception as exc:
+			logger.error("Groq API request failed: %s", exc)
+			return None
 
-		domain = session.get("detected_domain", "your field")
-		gaps = [rec.get("gap", {}).get("skill_id", "").replace("-", " ") for rec in recommendations]
-		gaps = [gap for gap in gaps if gap]
-
-		resources_summary = "\n".join(
-			f"- [{rec['resource'].get('skill_id', rec['gap'].get('skill_id', 'gap'))}] "
-			f"{rec['resource']['title']} (covers: {', '.join(rec['resource'].get('covers', [])[:3])})"
-			for rec in recommendations
-			if rec.get("resource", {}).get("title")
+	def _gap_lines(self, gaps: List[Dict[str, Any]]) -> str:
+		if not gaps:
+			return "- None identified"
+		return "\n".join(
+			f"- {gap.get('skill', gap.get('skill_id', 'skill'))}: "
+			f"current {gap.get('current', '?')}%, target {gap.get('required', '?')}% "
+			f"({gap.get('priority_label', 'Medium')} priority)"
+			for gap in gaps
 		)
 
-		prompt = f"""
-You are a career coach. A candidate just completed a skills assessment.
+	def _resource_lines(self, resources: List[Dict[str, Any]]) -> str:
+		if not resources:
+			return "- None"
+		lines: List[str] = []
+		for group in resources:
+			skill = group.get("skill") or group.get("skill_id", "skill")
+			for resource in group.get("resources", []):
+				covers = ", ".join((resource.get("covers") or [])[:4])
+				lines.append(
+					f"- [{skill}] {resource.get('title')} on {resource.get('platform')} "
+					f"(covers: {covers or 'n/a'})"
+				)
+		return "\n".join(lines) if lines else "- None"
+
+	def _pair_lines(self, recommendations: List[Dict[str, Any]]) -> str:
+		if not recommendations:
+			return "- None"
+		lines: List[str] = []
+		for rec in recommendations:
+			resource = rec.get("resource") or {}
+			gap = rec.get("gap") or {}
+			title = resource.get("title")
+			if not title:
+				continue
+			skill = gap.get("skill_id") or resource.get("skill_id", "gap")
+			covers = ", ".join((resource.get("covers") or [])[:3])
+			lines.append(f"- [{skill}] {title} (covers: {covers or 'n/a'})")
+		return "\n".join(lines) if lines else "- None"
+
+	def generate_analysis(
+		self,
+		session: Dict[str, Any],
+		gaps: List[Dict[str, Any]],
+		resource_groups: List[Dict[str, Any]],
+	) -> Dict[str, Any]:
+		"""Short Groq summary for the analysis panel."""
+		if not self.is_available():
+			return {"summary": None, "is_ai": False}
+
+		domain = session.get("detected_domain", "your field")
+		prompt = f"""You are a career coach. A candidate completed a skills assessment.
 
 Detected domain: {domain}
-Skill gaps identified: {', '.join(gaps) or 'None'}
+
+Skill gaps (from quiz scores):
+{self._gap_lines(gaps)}
+
+Curated learning resources (from verified catalog):
+{self._resource_lines(resource_groups)}
+
+Return ONLY valid JSON:
+{{
+  "summary": "2 sentences on what to focus on next, referencing their real gaps and resources"
+}}
+"""
+		payload = self._chat_json(
+			"You are a career coach. Return ONLY valid JSON.",
+			prompt,
+			max_tokens=400,
+		)
+		if payload and payload.get("summary"):
+			return {"summary": payload["summary"], "is_ai": True}
+		return {"summary": None, "is_ai": False}
+
+	def generate(
+		self,
+		session: Dict[str, Any],
+		recommendations: List[Dict[str, Any]],
+		gaps: Optional[List[Dict[str, Any]]] = None,
+	) -> Dict[str, Any]:
+		"""Legacy flat resume tips + resource explanations for /recommendations."""
+		if not self.is_available():
+			return {
+				"summary": None,
+				"resource_explanations": {},
+				"resume_tips": [],
+				"is_ai": False,
+			}
+
+		domain = session.get("detected_domain", "your field")
+		gap_lines = self._gap_lines(gaps or [])
+		resources_summary = self._pair_lines(recommendations)
+
+		prompt = f"""You are a career coach. A candidate just completed a skills assessment.
+
+Detected domain: {domain}
+Skill gaps:
+{gap_lines}
 
 Recommended learning resources:
-{resources_summary or '- None'}
+{resources_summary}
 
-Return ONLY valid JSON (no markdown, no explanation):
+Return ONLY valid JSON:
 {{
   "summary": "2-sentence personalised summary of what the candidate should focus on",
   "resource_explanations": {{
-    "<resource_title>": "1-sentence explanation of exactly why this resource closes their specific gap"
+    "<resource_title>": "1-sentence explanation of why this resource closes their gap"
   }},
   "resume_tips": [
-    "Actionable resume tip 1 based on their gaps",
+    "Actionable resume tip 1",
     "Actionable resume tip 2",
     "Actionable resume tip 3"
   ]
 }}
 """
+		payload = self._chat_json(
+			"You are a career coach. Return ONLY valid JSON.",
+			prompt,
+			max_tokens=900,
+		)
+		if not payload:
+			return {
+				"summary": None,
+				"resource_explanations": {},
+				"resume_tips": [],
+				"is_ai": False,
+			}
+		payload["is_ai"] = True
+		return payload
 
-		try:
-			resp = self.client.chat.completions.create(
-				model=self.model,
-				messages=[
-					{"role": "system", "content": "You are a career coach. Return ONLY valid JSON."},
-					{"role": "user", "content": prompt},
-				],
-				temperature=0.4,
-				max_tokens=800,
-			)
-			raw = resp.choices[0].message.content.strip()
-			raw = raw.replace("```json", "").replace("```", "").strip()
-			payload = json.loads(raw)
-			payload["is_ai"] = True
-			return payload
-		except Exception:
-			return self._fallback(recommendations)
+	def generate_coaching(
+		self,
+		session: Dict[str, Any],
+		gaps: List[Dict[str, Any]],
+		recommendations: Optional[List[Dict[str, Any]]] = None,
+		resource_groups: Optional[List[Dict[str, Any]]] = None,
+	) -> Dict[str, Any]:
+		"""Structured resume sections + weekly schedule for the Resume Tips tab."""
+		if not self.is_available():
+			return {"tips": [], "schedule": [], "summary": None, "is_ai": False}
+
+		domain = session.get("detected_domain", "your field")
+		skills = session.get("skill_scores") or {}
+		skill_names = ", ".join(sorted(skills.keys())[:12]) or "assessed skills"
+		resource_block = self._resource_lines(resource_groups or [])
+		if recommendations and not resource_groups:
+			resource_block = self._pair_lines(recommendations)
+
+		prompt = f"""You are an expert resume coach. Use the candidate's real assessment data only.
+
+Detected domain: {domain}
+Assessed skills: {skill_names}
+
+Skill gaps:
+{self._gap_lines(gaps)}
+
+Learning resources to reference:
+{resource_block}
+
+Return ONLY valid JSON:
+{{
+  "summary": "1-2 sentence coaching headline",
+  "tips": [
+    {{"section": "Summary", "icon": "01", "tips": ["...", "..."]}},
+    {{"section": "Experience", "icon": "02", "tips": ["...", "..."]}},
+    {{"section": "Skills", "icon": "03", "tips": ["...", "..."]}},
+    {{"section": "Keywords", "icon": "04", "tips": ["...", "..."]}}
+  ],
+  "schedule": [
+    {{"week": "Week 1", "focus": "...", "tasks": ["...", "..."]}},
+    {{"week": "Week 2", "focus": "...", "tasks": ["...", "..."]}},
+    {{"week": "Week 3", "focus": "...", "tasks": ["...", "..."]}},
+    {{"week": "Week 4", "focus": "...", "tasks": ["...", "..."]}}
+  ]
+}}
+"""
+		payload = self._chat_json(
+			"You are a professional resume writer. Return ONLY valid JSON.",
+			prompt,
+			max_tokens=2200,
+		)
+		if not payload or not isinstance(payload.get("tips"), list):
+			return {"tips": [], "schedule": [], "summary": None, "is_ai": False}
+
+		return {
+			"summary": payload.get("summary"),
+			"tips": payload["tips"],
+			"schedule": payload.get("schedule") or [],
+			"is_ai": True,
+		}

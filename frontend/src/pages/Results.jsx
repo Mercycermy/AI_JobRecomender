@@ -161,7 +161,7 @@ function Results({ navigate }) {
     let isMounted = true
     const profile = loadStoredProfile()
     const sessionId = loadStoredSessionId()
-    if (!profile || !analysis?.gaps?.length) {
+    if (!profile) {
       return
     }
 
@@ -198,7 +198,7 @@ function Results({ navigate }) {
     return () => {
       isMounted = false
     }
-  }, [analysis?.gaps])
+  }, [analysis?.gaps?.length])
 
   const categoryOptions = useMemo(() => {
     const fromJobs = [...new Set(jobRecommendations.map((j) => j.category).filter(Boolean))]
@@ -351,6 +351,29 @@ function Results({ navigate }) {
           </button>
         ))}
       </div>
+
+      {analysis?.summary && (
+        <p
+          className="analysis-summary"
+          style={{
+            margin: '0 0 16px',
+            padding: '14px 18px',
+            borderRadius: '10px',
+            background: 'rgba(46, 134, 193, 0.08)',
+            border: '1px solid rgba(46, 134, 193, 0.2)',
+            color: 'var(--slate)',
+            fontSize: '14px',
+            lineHeight: 1.6,
+          }}
+        >
+          {analysis.is_ai && (
+            <strong style={{ display: 'block', marginBottom: '6px', color: 'var(--blue)' }}>
+              AI analysis
+            </strong>
+          )}
+          {analysis.summary}
+        </p>
+      )}
 
       <div className="tab-panel">{lowerPanel}</div>
     </section>

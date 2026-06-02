@@ -68,6 +68,47 @@ def get_session_gaps(session: Dict[str, Any]) -> List[Dict[str, Any]]:
 	return gaps[:MAX_GAPS]
 
 
+def format_gaps_for_ui(
+	session: Dict[str, Any],
+	normalizer: Optional[SkillNormalizer] = None,
+) -> List[Dict[str, Any]]:
+	"""Map quiz session gaps to the shape expected by the results UI."""
+	normalizer = normalizer or SkillNormalizer()
+	formatted: List[Dict[str, Any]] = []
+
+	for gap in get_session_gaps(session):
+		score = float(gap.get("score", 0.0))
+		current = max(5, min(99, round(score * 100)))
+		required = min(95, max(current + 20, 75))
+		priority = round((1.0 - score) * 100)
+
+		if priority >= 70:
+			level = "Advanced"
+			priority_label = "High"
+		elif priority >= 40:
+			level = "Intermediate"
+			priority_label = "Medium"
+		else:
+			level = "Beginner"
+			priority_label = "Low"
+
+		formatted.append(
+			{
+				"skill_id": gap["skill_id"],
+				"skill": normalizer.name_for(gap["skill_id"]),
+				"priority": priority,
+				"priority_label": priority_label,
+				"level": level,
+				"current": current,
+				"required": required,
+				"score": gap.get("score"),
+			}
+		)
+
+	formatted.sort(key=lambda item: item["priority"], reverse=True)
+	return formatted
+
+
 class GapAnalyzer:
 	"""Summarize the highest-impact skill gaps from recommendation results."""
 

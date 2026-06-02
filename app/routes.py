@@ -13,7 +13,7 @@ from flask import Flask, jsonify, request
 from app.agent import AssessmentAgent, AgentState
 from app.ai_tips import GroqResumeCoach
 from app.answer_evaluator import evaluate, evaluate_mcq
-from app.gap_analyzer import GapAnalyzer, get_session_gaps
+from app.gap_analyzer import GapAnalyzer, format_gaps_for_ui
 from app.learning_path import LearningPath
 from app.quiz_engine import QuizEngine
 from app.recommender import RecommendationEngine
@@ -367,11 +367,14 @@ def analysis():
 
     try:
         session = _get_quiz_engine().load_session(session_id)
-        gaps = get_session_gaps(session)
-        resources = _get_resource_recommender().recommend(session)
+        gaps = format_gaps_for_ui(session)
+        resources = _get_resource_recommender().recommend_grouped(session)
+        ai_payload = _get_ai_resume_coach().generate_analysis(session, gaps, resources)
         return jsonify({
             "gaps": gaps,
             "resources": resources,
+            "summary": ai_payload.get("summary"),
+            "is_ai": ai_payload.get("is_ai", False),
         })
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
@@ -390,12 +393,21 @@ def resume_tips():
 
     try:
         session = _get_quiz_engine().load_session(session_id)
+        gaps = format_gaps_for_ui(session)
+        resource_groups = _get_resource_recommender().recommend_grouped(session)
         recs = _get_resource_recommender().recommend(session)
-        ai_payload = _get_ai_resume_coach().generate(session, recs)
+        ai_payload = _get_ai_resume_coach().generate_coaching(
+            session,
+            gaps,
+            recommendations=recs,
+            resource_groups=resource_groups,
+        )
         return jsonify({
             "summary": ai_payload.get("summary"),
-            "resume_tips": ai_payload.get("resume_tips"),
-            "resource_explanations": ai_payload.get("resource_explanations"),
+            "tips": ai_payload.get("tips", []),
+            "schedule": ai_payload.get("schedule", []),
+            "resume_tips": ai_payload.get("resume_tips", []),
+            "resource_explanations": ai_payload.get("resource_explanations", {}),
             "is_ai": ai_payload.get("is_ai", False),
         })
     except Exception as exc:
@@ -422,8 +434,9 @@ def recommendations():
         return jsonify({"error": "Quiz not yet completed"}), 400
 
     try:
+        gaps = format_gaps_for_ui(session)
         recs = _get_resource_recommender().recommend(session)
-        ai_payload = _get_ai_resume_coach().generate(session, recs)
+        ai_payload = _get_ai_resume_coach().generate(session, recs, gaps=gaps)
 
         resources_out = []
         for rec in recs:
