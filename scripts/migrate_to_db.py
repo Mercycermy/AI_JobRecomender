@@ -2,48 +2,37 @@ import glob
 import json
 import os
 import sqlite3
+import sys
+from pathlib import Path
 
-DB_PATH = os.path.join("data", "jobs.db")
-SCHEMA_PATH = os.path.join("scripts", "schema.sql")
+BASE_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(BASE_DIR))
+
+from app.quiz_engine import CATEGORY_LABELS, CATEGORY_TO_ROLES, ROLE_DISPLAY_LABELS
+
+
+DB_PATH = str(BASE_DIR / "data" / "jobs.db")
+SCHEMA_PATH = str(BASE_DIR / "scripts" / "schema.sql")
 
 DOMAIN_LABELS = {
-    "SOFTWARE": "Software Development",
-    "DATA_AI": "Data & AI",
-    "CREATIVE": "Design & Creative",
-    "SALES_MKT": "Sales & Marketing",
-    "ACCOUNTING": "Accounting & Finance",
-    "ADMIN": "Administration",
-    "ENGINEERING": "Architecture & Engineering",
+    **CATEGORY_LABELS,
+    "FINANCE": CATEGORY_LABELS["ACCOUNTING"],
+    "SALES_MARKETING": CATEGORY_LABELS["SALES_MKT"],
+    "TECH": CATEGORY_LABELS["SOFTWARE"],
     "ALL": "All Domains",
 }
 
 ROLE_DOMAIN_MAP = {
-    "frontend-dev": "SOFTWARE",
-    "backend-dev": "SOFTWARE",
-    "fullstack-dev": "SOFTWARE",
-    "mobile-dev": "SOFTWARE",
-    "data-analyst": "DATA_AI",
-    "data-scientist": "DATA_AI",
-    "ml-engineer": "DATA_AI",
-    "data-engineer": "DATA_AI",
-    "graphic-designer": "CREATIVE",
-    "ui-designer": "CREATIVE",
-    "ux-researcher": "CREATIVE",
-    "sales": "SALES_MKT",
-    "marketing": "SALES_MKT",
-    "accounting": "ACCOUNTING",
-    "finance": "ACCOUNTING",
-    "admin": "ADMIN",
-    "hr": "ADMIN",
-    "architect": "ENGINEERING",
-    "civil-engineer": "ENGINEERING",
+    role: category
+    for category, roles in CATEGORY_TO_ROLES.items()
+    for role in roles
 }
 
 
 def apply_schema(conn):
     with open(SCHEMA_PATH, encoding="utf-8") as fh:
         conn.executescript(fh.read())
-    print("✓ Schema applied")
+    print("[OK] Schema applied")
 
 
 def seed_taxonomy(conn):
@@ -62,10 +51,17 @@ def seed_taxonomy(conn):
                 INSERT OR IGNORE INTO roles (slug, domain_id, label)
                 VALUES (?, ?, ?)
                 """,
-                (role_slug, domain_id[0], role_slug.replace("-", " ").title()),
+                (
+                    role_slug,
+                    domain_id[0],
+                    ROLE_DISPLAY_LABELS.get(
+                        role_slug,
+                        role_slug.replace("-", " ").replace("_", " ").title(),
+                    ),
+                ),
             )
     conn.commit()
-    print("✓ Taxonomy seeded")
+    print("[OK] Taxonomy seeded")
 
 
 def _normalize_questions(raw):
@@ -82,7 +78,7 @@ def _normalize_questions(raw):
 def migrate_questions(conn):
     files = sorted(glob.glob(os.path.join("data", "questions_part*.json")))
     if not files:
-        print("⚠ No questions_part*.json files found in data/")
+        print("[WARN] No questions_part*.json files found in data/")
         return
 
     total_inserted = 0
@@ -146,12 +142,12 @@ def migrate_questions(conn):
                 )
                 file_inserted += 1
             except Exception as exc:
-                print(f"  ⚠ Skipped {q.get('id','?')}: {exc}")
+                print(f"  [WARN] Skipped {q.get('id','?')}: {exc}")
                 total_skipped += 1
 
         conn.commit()
         total_inserted += file_inserted
-        print(f"  ✓ {file_inserted} questions inserted")
+        print(f"  [OK] {file_inserted} questions inserted")
 
     print("\n" + "=" * 50)
     print(f"TOTAL: {total_inserted} inserted, {total_skipped} skipped")

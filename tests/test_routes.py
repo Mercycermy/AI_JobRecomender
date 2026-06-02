@@ -53,23 +53,21 @@ def test_recommend_with_profile(client):
 
 
 def test_resume_tips_fallback(client):
+    from app.quiz_engine import QuizEngine
+    engine = QuizEngine()
+    session = engine.create_session()
+
     response = client.post(
         "/resume-tips",
         json={
-            "profile": {
-                "detected_skills": ["python"],
-                "top_category": "engineering",
-            },
-            "gaps": [
-                {"skill": "docker", "priority_label": "High"},
-            ],
+            "session_id": session["session_id"]
         },
     )
     assert response.status_code == 200
     data = response.get_json()
-    assert "tips" in data
-    assert "schedule" in data
-    assert len(data["tips"]) > 0
-    assert len(data["schedule"]) > 0
+    assert "resume_tips" in data
+    assert "summary" in data
+    assert len(data["resume_tips"]) > 0
     assert data["is_ai"] is False  # Fallback should trigger when no API key is configured in tests
+
 

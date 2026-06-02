@@ -35,12 +35,17 @@ DOMAIN_SIGNAL_KEYS = {
     "ENGINEERING",
     "EDUCATION",
     "LOGISTICS",
+    "MEDICAL",
+    "GENERAL",
+    "FINANCE",
+    "SALES_MARKETING",
+    "TECH",
     "ALL",
 }
 
 DOMAIN_SCOPE_ALIASES = {
     "SOFTWARE": ["SOFTWARE", "TECH"],
-    "DATA_AI": ["DATA_AI", "TECH"],
+    "DATA_AI": ["DATA_AI"],
     "CREATIVE": ["CREATIVE"],
     "SALES_MKT": ["SALES_MKT", "SALES_MARKETING"],
     "ACCOUNTING": ["ACCOUNTING", "FINANCE"],
@@ -49,6 +54,11 @@ DOMAIN_SCOPE_ALIASES = {
     "BUSINESS": ["BUSINESS", "GENERAL"],
     "EDUCATION": ["EDUCATION"],
     "LOGISTICS": ["LOGISTICS", "GENERAL"],
+    "MEDICAL": ["MEDICAL"],
+    "GENERAL": ["GENERAL"],
+    "FINANCE": ["FINANCE", "ACCOUNTING"],
+    "SALES_MARKETING": ["SALES_MARKETING", "SALES_MKT"],
+    "TECH": ["TECH", "SOFTWARE"],
 }
 
 ROLE_SCOPE_ALIASES = {
@@ -57,22 +67,22 @@ ROLE_SCOPE_ALIASES = {
     "fullstack-dev": ["SOFTWARE", "TECH"],
     "mobile-dev": ["SOFTWARE", "TECH"],
     "devops": ["SOFTWARE", "TECH"],
-    "data-analyst": ["DATA_AI", "TECH"],
-    "data-scientist": ["DATA_AI", "TECH"],
-    "ml-engineer": ["DATA_AI", "TECH"],
+    "data-analyst": ["DATA_AI"],
+    "data-scientist": ["DATA_AI"],
+    "ml-engineer": ["DATA_AI"],
     "graphic-designer": ["CREATIVE"],
     "ui-ux-designer": ["CREATIVE"],
     "video-editor": ["CREATIVE"],
     "sales": ["SALES_MKT", "SALES_MARKETING"],
     "digital-marketer": ["SALES_MKT", "SALES_MARKETING"],
     "accounting": ["ACCOUNTING", "FINANCE"],
-    "finance": ["ACCOUNTING", "FINANCE"],
+    "finance": ["FINANCE", "ACCOUNTING"],
     "admin": ["ADMIN"],
     "project-manager": ["BUSINESS", "GENERAL"],
-    "architect": ["SOFTWARE", "TECH", "ENGINEERING"],
-    "tech": ["TECH"],
+    "architect": ["ENGINEERING"],
+    "tech": ["TECH", "SOFTWARE"],
     "creative": ["CREATIVE"],
-    "sales_marketing": ["SALES_MKT", "SALES_MARKETING"],
+    "sales_marketing": ["SALES_MARKETING", "SALES_MKT"],
     "teacher": ["EDUCATION"],
     "trainer": ["EDUCATION"],
     "education": ["EDUCATION"],
@@ -87,7 +97,7 @@ ROLE_LABELS = {
     "fullstack-dev": ["full stack developer", "fullstack developer"],
     "mobile-dev": ["mobile developer", "flutter developer"],
     "devops": ["devops", "devops engineer"],
-    "data-analyst": ["data analyst", "business analyst"],
+    "data-analyst": ["data analyst", "bi analyst"],
     "data-scientist": ["data scientist"],
     "ml-engineer": ["machine learning engineer", "ml engineer"],
     "graphic-designer": ["graphic designer", "graphics designer"],
@@ -111,6 +121,78 @@ ROLE_LABELS = {
     "general": ["general", "foundational"],
 }
 
+ROLE_DISPLAY_LABELS = {
+    "frontend-dev": "Frontend Developer",
+    "backend-dev": "Backend Developer",
+    "fullstack-dev": "Full Stack Developer",
+    "mobile-dev": "Mobile Developer",
+    "devops": "DevOps Engineer",
+    "data-analyst": "Data Analyst",
+    "data-scientist": "Data Scientist",
+    "ml-engineer": "Machine Learning Engineer",
+    "graphic-designer": "Graphic Designer",
+    "ui-ux-designer": "UI/UX Designer",
+    "video-editor": "Video Editor",
+    "sales": "Sales Representative",
+    "digital-marketer": "Digital Marketer",
+    "accounting": "Accountant",
+    "finance": "Finance / Banking",
+    "admin": "Administration / HR",
+    "project-manager": "Project Manager",
+    "architect": "Architect",
+    "tech": "General Tech / IT",
+    "creative": "Creative Media Specialist",
+    "sales_marketing": "Sales & Marketing",
+    "teacher": "Teacher",
+    "trainer": "Trainer",
+    "education": "Education Specialist",
+    "medical": "Healthcare Professional",
+    "transport": "Transport / Logistics",
+    "general": "General Role",
+}
+
+CATEGORY_TO_ROLES = {
+    "SOFTWARE": ["frontend-dev", "backend-dev", "fullstack-dev", "mobile-dev", "devops", "tech"],
+    "DATA_AI": ["data-analyst", "data-scientist", "ml-engineer"],
+    "CREATIVE": ["graphic-designer", "ui-ux-designer", "video-editor", "creative"],
+    "BUSINESS": ["project-manager"],
+    "SALES_MKT": ["sales", "digital-marketer", "sales_marketing"],
+    "ACCOUNTING": ["accounting", "finance"],
+    "ADMIN": ["admin"],
+    "ENGINEERING": ["architect"],
+    "EDUCATION": ["teacher", "trainer", "education"],
+    "LOGISTICS": ["transport"],
+    "MEDICAL": ["medical"],
+    "GENERAL": ["general"],
+}
+
+CATEGORY_LABELS = {
+    "SOFTWARE": "Technology & Software Development",
+    "DATA_AI": "Data & Artificial Intelligence",
+    "CREATIVE": "Design & Creative Media",
+    "BUSINESS": "Business, Product & Project Management",
+    "SALES_MKT": "Sales, Marketing & Commerce",
+    "ACCOUNTING": "Accounting, Finance & Banking",
+    "ADMIN": "Administration, Office Management & HR",
+    "ENGINEERING": "Architecture, Engineering & Construction",
+    "EDUCATION": "Education, Training & Instruction",
+    "LOGISTICS": "Logistics, Delivery & Transport",
+    "MEDICAL": "Healthcare & Medical",
+    "GENERAL": "General / Other",
+}
+
+DOMAIN_CATEGORY_ALIASES = {
+    "FINANCE": "ACCOUNTING",
+    "SALES_MARKETING": "SALES_MKT",
+    "TECH": "SOFTWARE",
+}
+
+ROLE_TO_CATEGORY = {
+    role: category
+    for category, roles in CATEGORY_TO_ROLES.items()
+    for role in roles
+}
+
 SPECIFIC_ROLE_KEYS = set(ROLE_LABELS)
 BROAD_CATEGORY_KEYS = {
     "tech",
@@ -122,6 +204,136 @@ BROAD_CATEGORY_KEYS = {
 }
 
 SUPPORT_QUESTIONS = [
+    {
+        "id": "Q_G0_DOMAIN_001",
+        "gate": 0,
+        "domain_scope": "ALL",
+        "question_type": "multiple_choice",
+        "role_targets": [
+            "frontend-dev",
+            "backend-dev",
+            "fullstack-dev",
+            "mobile-dev",
+            "devops",
+            "tech",
+            "data-analyst",
+            "data-scientist",
+            "ml-engineer",
+            "graphic-designer",
+            "ui-ux-designer",
+            "video-editor",
+            "creative",
+            "project-manager",
+            "sales",
+            "digital-marketer",
+            "sales_marketing",
+            "accounting",
+            "finance",
+            "admin",
+            "architect",
+            "teacher",
+            "trainer",
+            "education",
+            "transport",
+            "medical",
+            "general",
+        ],
+        "difficulty": "beginner",
+        "experience_level_target": "any",
+        "stem": "What best describes the kind of work you do or want to do?",
+        "context": "We'll use your answer to tailor the rest of the assessment.",
+        "answer_mode": "single_choice",
+        "options": {
+            "A": {
+                "text": "Build software, websites, or apps",
+                "signals": {"SOFTWARE": 30},
+                "skills": [],
+                "quality_level": "strong",
+            },
+            "B": {
+                "text": "Work with data, analytics, or AI models",
+                "signals": {"DATA_AI": 30},
+                "skills": [],
+                "quality_level": "strong",
+            },
+            "C": {
+                "text": "Design visuals, interfaces, or creative content",
+                "signals": {"CREATIVE": 30},
+                "skills": [],
+                "quality_level": "strong",
+            },
+            "D": {
+                "text": "Business, product, or project management",
+                "signals": {"BUSINESS": 30},
+                "skills": [],
+                "quality_level": "strong",
+            },
+            "E": {
+                "text": "Sales, marketing, or customer-facing work",
+                "signals": {"SALES_MKT": 30},
+                "skills": [],
+                "quality_level": "strong",
+            },
+            "F": {
+                "text": "Accounting, finance, or banking",
+                "signals": {"ACCOUNTING": 30},
+                "skills": [],
+                "quality_level": "strong",
+            },
+            "G": {
+                "text": "Administration, office management, or HR",
+                "signals": {"ADMIN": 30},
+                "skills": [],
+                "quality_level": "strong",
+            },
+            "H": {
+                "text": "Architecture, engineering, or construction",
+                "signals": {"ENGINEERING": 30},
+                "skills": [],
+                "quality_level": "strong",
+            },
+            "I": {
+                "text": "Education, training, or instruction",
+                "signals": {"EDUCATION": 30},
+                "skills": [],
+                "quality_level": "strong",
+            },
+            "J": {
+                "text": "Logistics, delivery, or transport",
+                "signals": {"LOGISTICS": 30},
+                "skills": [],
+                "quality_level": "strong",
+            },
+            "K": {
+                "text": "Healthcare or medical work",
+                "signals": {"MEDICAL": 30},
+                "skills": [],
+                "quality_level": "strong",
+            },
+            "L": {
+                "text": "General or other",
+                "signals": {"GENERAL": 30},
+                "skills": [],
+                "quality_level": "strong",
+            },
+        },
+        "practical_task": None,
+        "scoring": {
+            "max_score": 100,
+            "pass_score": 70,
+            "category_weights": {},
+            "skill_weights": {},
+            "rubric": [],
+            "red_flags": [],
+            "partial_credit_rules": [],
+        },
+        "ai_evaluation_prompt": None,
+        "job_evidence": [],
+        "route_strong": None,
+        "route_partial": None,
+        "route_weak": None,
+        "estimated_minutes": 1,
+    },
     {
         "id": "Q_G0_CATEGORY",
         "gate": 0,
@@ -153,7 +365,7 @@ SUPPORT_QUESTIONS = [
                 "quality_level": "strong",
             },
             "D": {
-                "text": "Corporate Operations, Finance & Management",
+                "text": "Business, Product & Project Management",
                 "signals": {"BUSINESS": 30},
                 "skills": [],
                 "quality_level": "strong",
@@ -165,14 +377,44 @@ SUPPORT_QUESTIONS = [
                 "quality_level": "strong",
             },
             "F": {
+                "text": "Accounting, Finance & Banking",
+                "signals": {"ACCOUNTING": 30},
+                "skills": [],
+                "quality_level": "strong",
+            },
+            "G": {
+                "text": "Administration, Office Management & HR",
+                "signals": {"ADMIN": 30},
+                "skills": [],
+                "quality_level": "strong",
+            },
+            "H": {
+                "text": "Architecture, Engineering & Construction",
+                "signals": {"ENGINEERING": 30},
+                "skills": [],
+                "quality_level": "strong",
+            },
+            "I": {
                 "text": "Education, Training & Instruction",
                 "signals": {"EDUCATION": 30},
                 "skills": [],
                 "quality_level": "strong",
             },
-            "G": {
-                "text": "Specialized Services",
+            "J": {
+                "text": "Logistics, Delivery & Transport",
                 "signals": {"LOGISTICS": 30},
+                "skills": [],
+                "quality_level": "strong",
+            },
+            "K": {
+                "text": "Healthcare & Medical",
+                "signals": {"MEDICAL": 30},
+                "skills": [],
+                "quality_level": "strong",
+            },
+            "L": {
+                "text": "General / Other",
+                "signals": {"GENERAL": 30},
                 "skills": [],
                 "quality_level": "strong",
             },
@@ -369,39 +611,21 @@ SUPPORT_QUESTIONS = [
         "estimated_minutes": 1,
     },
     {
-        "id": "Q_G0_ROLE_CORP",
+        "id": "Q_G0_ROLE_BUSINESS",
         "gate": 0,
         "domain_scope": "ALL",
         "question_type": "multiple_choice",
         "role_targets": [],
         "difficulty": "beginner",
         "experience_level_target": "any",
-        "stem": "Select your specific role within Corporate Operations, Finance & Management:",
+        "stem": "Select your specific role within Business, Product & Project Management:",
         "context": None,
         "answer_mode": "single_choice",
         "options": {
-            "admin": {
-                "text": "admin (Administration)",
-                "signals": {"admin": 35},
-                "skills": ["soft-mgmt", "soft-time", "soft-docs", "da-excel"],
-                "quality_level": "strong",
-            },
             "project-manager": {
-                "text": "project-manager",
+                "text": "Project Manager",
                 "signals": {"project-manager": 35},
                 "skills": ["soft-mgmt", "soft-time", "soft-docs"],
-                "quality_level": "strong",
-            },
-            "finance": {
-                "text": "finance",
-                "signals": {"finance": 35},
-                "skills": ["fin-accounting", "fin-excel", "da-excel"],
-                "quality_level": "strong",
-            },
-            "accounting": {
-                "text": "accounting",
-                "signals": {"accounting": 35},
-                "skills": ["fin-accounting", "fin-excel", "da-excel"],
                 "quality_level": "strong",
             },
         },
@@ -471,6 +695,120 @@ SUPPORT_QUESTIONS = [
         "estimated_minutes": 1,
     },
     {
+        "id": "Q_G0_ROLE_ACCOUNTING",
+        "gate": 0,
+        "domain_scope": "ALL",
+        "question_type": "multiple_choice",
+        "role_targets": [],
+        "difficulty": "beginner",
+        "experience_level_target": "any",
+        "stem": "Select your specific role within Accounting, Finance & Banking:",
+        "context": None,
+        "answer_mode": "single_choice",
+        "options": {
+            "accounting": {
+                "text": "Accountant",
+                "signals": {"accounting": 35},
+                "skills": ["fin-accounting", "fin-excel", "da-excel"],
+                "quality_level": "strong",
+            },
+            "finance": {
+                "text": "Finance / Banking",
+                "signals": {"finance": 35},
+                "skills": ["fin-accounting", "fin-excel", "da-excel"],
+                "quality_level": "strong",
+            },
+        },
+        "practical_task": None,
+        "scoring": {
+            "max_score": 100,
+            "pass_score": 70,
+            "category_weights": {},
+            "skill_weights": {},
+            "rubric": [],
+            "red_flags": [],
+            "partial_credit_rules": [],
+        },
+        "ai_evaluation_prompt": None,
+        "job_evidence": [],
+        "route_strong": None,
+        "route_partial": None,
+        "route_weak": None,
+        "estimated_minutes": 1,
+    },
+    {
+        "id": "Q_G0_ROLE_ADMIN",
+        "gate": 0,
+        "domain_scope": "ALL",
+        "question_type": "multiple_choice",
+        "role_targets": [],
+        "difficulty": "beginner",
+        "experience_level_target": "any",
+        "stem": "Select your specific role within Administration, Office Management & HR:",
+        "context": None,
+        "answer_mode": "single_choice",
+        "options": {
+            "admin": {
+                "text": "Administration / HR",
+                "signals": {"admin": 35},
+                "skills": ["soft-mgmt", "soft-time", "soft-docs", "da-excel"],
+                "quality_level": "strong",
+            },
+        },
+        "practical_task": None,
+        "scoring": {
+            "max_score": 100,
+            "pass_score": 70,
+            "category_weights": {},
+            "skill_weights": {},
+            "rubric": [],
+            "red_flags": [],
+            "partial_credit_rules": [],
+        },
+        "ai_evaluation_prompt": None,
+        "job_evidence": [],
+        "route_strong": None,
+        "route_partial": None,
+        "route_weak": None,
+        "estimated_minutes": 1,
+    },
+    {
+        "id": "Q_G0_ROLE_ENGINEERING",
+        "gate": 0,
+        "domain_scope": "ALL",
+        "question_type": "multiple_choice",
+        "role_targets": [],
+        "difficulty": "beginner",
+        "experience_level_target": "any",
+        "stem": "Select your specific role within Architecture, Engineering & Construction:",
+        "context": None,
+        "answer_mode": "single_choice",
+        "options": {
+            "architect": {
+                "text": "Architect",
+                "signals": {"architect": 35},
+                "skills": ["soft-problem", "soft-docs"],
+                "quality_level": "strong",
+            },
+        },
+        "practical_task": None,
+        "scoring": {
+            "max_score": 100,
+            "pass_score": 70,
+            "category_weights": {},
+            "skill_weights": {},
+            "rubric": [],
+            "red_flags": [],
+            "partial_credit_rules": [],
+        },
+        "ai_evaluation_prompt": None,
+        "job_evidence": [],
+        "route_strong": None,
+        "route_partial": None,
+        "route_weak": None,
+        "estimated_minutes": 1,
+    },
+    {
         "id": "Q_G0_ROLE_EDU",
         "gate": 0,
         "domain_scope": "ALL",
@@ -519,31 +857,91 @@ SUPPORT_QUESTIONS = [
         "estimated_minutes": 1,
     },
     {
-        "id": "Q_G0_ROLE_SPEC",
+        "id": "Q_G0_ROLE_LOGISTICS",
         "gate": 0,
         "domain_scope": "ALL",
         "question_type": "multiple_choice",
         "role_targets": [],
         "difficulty": "beginner",
         "experience_level_target": "any",
-        "stem": "Select your specific role within Specialized Services:",
+        "stem": "Select your specific role within Logistics, Delivery & Transport:",
         "context": None,
         "answer_mode": "single_choice",
         "options": {
-            "medical": {
-                "text": "medical (Healthcare professionals)",
-                "signals": {"medical": 35},
-                "skills": ["soft-mgmt", "soft-comm"],
-                "quality_level": "strong",
-            },
             "transport": {
-                "text": "transport (Logistics, delivery, and driving roles)",
+                "text": "Transport / Logistics",
                 "signals": {"transport": 35},
                 "skills": ["soft-time"],
                 "quality_level": "strong",
             },
+        },
+        "practical_task": None,
+        "scoring": {
+            "max_score": 100,
+            "pass_score": 70,
+            "category_weights": {},
+            "skill_weights": {},
+            "rubric": [],
+            "red_flags": [],
+            "partial_credit_rules": [],
+        },
+        "ai_evaluation_prompt": None,
+        "job_evidence": [],
+        "route_strong": None,
+        "route_partial": None,
+        "route_weak": None,
+        "estimated_minutes": 1,
+    },
+    {
+        "id": "Q_G0_ROLE_MEDICAL",
+        "gate": 0,
+        "domain_scope": "ALL",
+        "question_type": "multiple_choice",
+        "role_targets": [],
+        "difficulty": "beginner",
+        "experience_level_target": "any",
+        "stem": "Select your specific role within Healthcare & Medical:",
+        "context": None,
+        "answer_mode": "single_choice",
+        "options": {
+            "medical": {
+                "text": "Healthcare Professional",
+                "signals": {"medical": 35},
+                "skills": ["soft-mgmt", "soft-comm"],
+                "quality_level": "strong",
+            },
+        },
+        "practical_task": None,
+        "scoring": {
+            "max_score": 100,
+            "pass_score": 70,
+            "category_weights": {},
+            "skill_weights": {},
+            "rubric": [],
+            "red_flags": [],
+            "partial_credit_rules": [],
+        },
+        "ai_evaluation_prompt": None,
+        "job_evidence": [],
+        "route_strong": None,
+        "route_partial": None,
+        "route_weak": None,
+        "estimated_minutes": 1,
+    },
+    {
+        "id": "Q_G0_ROLE_GENERAL",
+        "gate": 0,
+        "domain_scope": "ALL",
+        "question_type": "multiple_choice",
+        "role_targets": [],
+        "difficulty": "beginner",
+        "experience_level_target": "any",
+        "stem": "Select your specific role within General / Other:",
+        "context": None,
+        "answer_mode": "single_choice",
+        "options": {
             "general": {
-                "text": "general (Catch-all for non-specialized or foundational inquiries)",
+                "text": "General Role",
                 "signals": {"general": 35},
                 "skills": [],
                 "quality_level": "strong",
@@ -574,6 +972,9 @@ class QuizEngine:
         self.db_path = db_path
         self.normalizer = SkillNormalizer()
         self._ensure_db()
+        self.all_roles = self.get_all_roles_in_db()
+        global SPECIFIC_ROLE_KEYS
+        SPECIFIC_ROLE_KEYS = set(self.all_roles)
 
     def _conn(self):
         conn = sqlite3.connect(self.db_path, check_same_thread=False)
@@ -598,10 +999,9 @@ class QuizEngine:
             conn.close()
 
     def _seed_support_questions(self, conn) -> None:
-        # Deactivate legacy gate-0 questions that were replaced by the new
-        # category-to-role flow so they never appear even after JSON re-seed.
+        # Keep Q_G0_DOMAIN_001 active as it is the domain-selection question from the question file.
         conn.execute(
-            "UPDATE questions SET is_active = 0 WHERE id IN ('Q_G0_DOMAIN_001', 'Q_G0_SUBDOMAIN_001')"
+            "UPDATE questions SET is_active = 0 WHERE id = 'Q_G0_SUBDOMAIN_001'"
         )
         for q in SUPPORT_QUESTIONS:
             conn.execute(
@@ -718,7 +1118,7 @@ class QuizEngine:
         conn = self._conn()
         try:
             sid = str(uuid.uuid4())
-            first_q_id = "Q_G0_CATEGORY"
+            first_q_id = "Q_G0_DOMAIN_001"
             conn.execute(
                 """
                 INSERT INTO quiz_sessions (id, user_id, current_question_id)
@@ -781,7 +1181,175 @@ class QuizEngine:
         )
         conn.commit()
 
+    def get_all_roles_in_db(self) -> List[str]:
+        conn = self._conn()
+        try:
+            rows = conn.execute("SELECT DISTINCT role_targets FROM questions WHERE is_active = 1").fetchall()
+            roles = set()
+            for row in rows:
+                if row[0]:
+                    try:
+                        targets = json.loads(row[0])
+                        if isinstance(targets, list):
+                            roles.update(targets)
+                    except Exception:
+                        pass
+            return sorted(list(roles))
+        finally:
+            conn.close()
+
+    def get_ordered_questions_for_role(self, role: str) -> List[str]:
+        conn = self._conn()
+        try:
+            rows = conn.execute(
+                """
+                SELECT questions.id FROM questions, json_each(questions.role_targets)
+                WHERE questions.is_active = 1 AND json_each.value = ?
+                ORDER BY
+                  CASE
+                    WHEN difficulty = 'beginner' THEN 0
+                    WHEN difficulty = 'intermediate' THEN 1
+                    WHEN difficulty = 'advanced' THEN 2
+                    ELSE 3
+                  END,
+                  gate,
+                  questions.id
+                """,
+                (role,)
+            ).fetchall()
+            return [row[0] for row in rows]
+        finally:
+            conn.close()
+
+    def _get_role_label(self, role: str) -> str:
+        if role in ROLE_DISPLAY_LABELS:
+            return ROLE_DISPLAY_LABELS[role]
+        if role in ROLE_LABELS and ROLE_LABELS[role]:
+            return ROLE_LABELS[role][0].title()
+        return role.replace("-", " ").replace("_", " ").title()
+
+    def _category_for_domain(self, domain: Optional[str]) -> str:
+        category = str(domain or "SOFTWARE").upper()
+        return DOMAIN_CATEGORY_ALIASES.get(category, category)
+
+    def _roles_for_domain(self, domain: Optional[str]) -> List[str]:
+        category = self._category_for_domain(domain)
+        return CATEGORY_TO_ROLES.get(category, [])
+
+    def _category_label(self, domain: Optional[str]) -> str:
+        category = self._category_for_domain(domain)
+        return CATEGORY_LABELS.get(category, category.replace("_", " ").title())
+
+    def _build_dynamic_role_question(self, session_id: str, session: Optional[dict] = None) -> dict:
+        session = session or self.load_session(session_id)
+        detected_domain = session.get("detected_domain") or "SOFTWARE"
+        fitting_roles = self._roles_for_domain(detected_domain)
+        all_db_roles = self.get_all_roles_in_db()
+        available_fitting_roles = [r for r in fitting_roles if r in all_db_roles]
+        
+        options = {}
+        for role in available_fitting_roles:
+            options[role] = {
+                "text": self._get_role_label(role),
+                "signals": {role: 35},
+                "skills": [],
+                "quality_level": "strong"
+            }
+        options["other"] = {
+            "text": "Other Category Roles",
+            "signals": {},
+            "skills": [],
+            "quality_level": "strong"
+        }
+        
+        cat_name = self._category_label(detected_domain)
+        
+        return {
+            "id": f"Q_G0_ROLE_SELECT:{session_id}",
+            "gate": 0,
+            "domain_scope": "ALL",
+            "question_type": "multiple_choice",
+            "role_targets": [],
+            "difficulty": "beginner",
+            "experience_level_target": "any",
+            "stem": f"Select your specific role within {cat_name}:",
+            "context": None,
+            "answer_mode": "single_choice",
+            "options": options,
+            "practical_task": None,
+            "scoring": {
+                "max_score": 100,
+                "pass_score": 70,
+                "category_weights": {},
+                "skill_weights": {},
+                "rubric": [],
+                "red_flags": [],
+                "partial_credit_rules": [],
+            },
+            "ai_evaluation_prompt": None,
+            "job_evidence": [],
+            "route_strong": None,
+            "route_partial": None,
+            "route_weak": None,
+            "estimated_minutes": 1,
+        }
+
+    def _build_dynamic_role_other_question(self, session_id: str, session: Optional[dict] = None) -> dict:
+        session = session or self.load_session(session_id)
+        detected_domain = session.get("detected_domain") or "SOFTWARE"
+        fitting_roles = self._roles_for_domain(detected_domain)
+        all_db_roles = self.get_all_roles_in_db()
+        leftover_roles = [r for r in all_db_roles if r not in fitting_roles]
+        
+        options = {}
+        for role in leftover_roles:
+            options[role] = {
+                "text": self._get_role_label(role),
+                "signals": {role: 35},
+                "skills": [],
+                "quality_level": "strong"
+            }
+            
+        return {
+            "id": f"Q_G0_ROLE_OTHER:{session_id}",
+            "gate": 0,
+            "domain_scope": "ALL",
+            "question_type": "multiple_choice",
+            "role_targets": [],
+            "difficulty": "beginner",
+            "experience_level_target": "any",
+            "stem": "Select your specific role from the other categories:",
+            "context": None,
+            "answer_mode": "single_choice",
+            "options": options,
+            "practical_task": None,
+            "scoring": {
+                "max_score": 100,
+                "pass_score": 70,
+                "category_weights": {},
+                "skill_weights": {},
+                "rubric": [],
+                "red_flags": [],
+                "partial_credit_rules": [],
+            },
+            "ai_evaluation_prompt": None,
+            "job_evidence": [],
+            "route_strong": None,
+            "route_partial": None,
+            "route_weak": None,
+            "estimated_minutes": 1,
+        }
+
     def get_question(self, question_id: str) -> Optional[dict]:
+        if ":" in question_id:
+            parts = question_id.split(":", 1)
+            prefix = parts[0]
+            session_id = parts[1]
+            if prefix == "Q_G0_ROLE_SELECT":
+                return self._build_dynamic_role_question(session_id)
+            elif prefix == "Q_G0_ROLE_OTHER":
+                return self._build_dynamic_role_other_question(session_id)
+
         conn = self._conn()
         try:
             row = conn.execute(
@@ -930,28 +1498,43 @@ class QuizEngine:
             return "partial"
         return "weak"
 
-    def next_question_id(self, question: dict, performance: str, session: dict) -> Optional[str]:
-        if len(session["questions_asked"]) + 1 >= TARGET_QUESTIONS:
+    def next_question_id(self, question: dict, performance: str, session: dict, answer_key: Optional[str] = None) -> Optional[str]:
+        if question["id"] in ("Q_G0_CATEGORY", "Q_G0_DOMAIN_001"):
+            return f"Q_G0_ROLE_SELECT:{session['id']}"
+
+        if question["id"].startswith("Q_G0_ROLE_SELECT:"):
+            if answer_key == "other":
+                return f"Q_G0_ROLE_OTHER:{session['id']}"
+            
+            role = session.get("detected_role")
+            if role:
+                ordered_qids = self.get_ordered_questions_for_role(role)
+                asked = set(session.get("questions_asked", []))
+                for qid in ordered_qids:
+                    if qid not in asked:
+                        return qid
             return None
 
-        if question["id"] == "Q_G0_CATEGORY":
-            domain = session.get("detected_domain")
-            if domain == "SOFTWARE":
-                return "Q_G0_ROLE_TECH"
-            elif domain == "DATA_AI":
-                return "Q_G0_ROLE_DATA"
-            elif domain == "CREATIVE":
-                return "Q_G0_ROLE_DESIGN"
-            elif domain == "BUSINESS":
-                return "Q_G0_ROLE_CORP"
-            elif domain == "SALES_MKT":
-                return "Q_G0_ROLE_SALES"
-            elif domain == "EDUCATION":
-                return "Q_G0_ROLE_EDU"
-            elif domain == "LOGISTICS":
-                return "Q_G0_ROLE_SPEC"
-            else:
-                return "Q_G0_ROLE_SPEC"
+        if question["id"].startswith("Q_G0_ROLE_OTHER:"):
+            role = session.get("detected_role")
+            if role:
+                ordered_qids = self.get_ordered_questions_for_role(role)
+                asked = set(session.get("questions_asked", []))
+                for qid in ordered_qids:
+                    if qid not in asked:
+                        return qid
+            return None
+
+        role = session.get("detected_role")
+        if role:
+            ordered_qids = self.get_ordered_questions_for_role(role)
+            asked = set(session.get("questions_asked", []))
+            # Also exclude the current question because it hasn't been added to asked list yet
+            asked.add(question["id"])
+            for qid in ordered_qids:
+                if qid not in asked:
+                    return qid
+            return None
 
         return self._fallback_next(question, session)
 
@@ -1091,8 +1674,15 @@ class QuizEngine:
 
         self._merge_ai_evidence(session, question, chosen, ai_evaluation, ai_score)
 
-        next_id = self.next_question_id(question, performance, session)
-        next_q = self.get_question(next_id) if next_id else None
+        next_id = self.next_question_id(question, performance, session, answer_key)
+        next_q = None
+        if next_id:
+            if next_id.startswith("Q_G0_ROLE_SELECT:"):
+                next_q = self._build_dynamic_role_question(session["id"], session)
+            elif next_id.startswith("Q_G0_ROLE_OTHER:"):
+                next_q = self._build_dynamic_role_other_question(session["id"], session)
+            else:
+                next_q = self.get_question(next_id)
         if next_id and not next_q:
             next_id = self._fallback_next(question, session)
             next_q = self.get_question(next_id) if next_id else None
@@ -1197,12 +1787,18 @@ class QuizEngine:
 
     def _progress(self, session: dict) -> dict:
         asked = len(session["questions_asked"])
-        total_estimate = TARGET_QUESTIONS
+        role = session.get("detected_role")
+        if role:
+            ordered_qids = self.get_ordered_questions_for_role(role)
+            total_estimate = len(ordered_qids) + 2
+        else:
+            total_estimate = 12
         overall = self._overall_score(session)
+        percent = min(100, round(asked / total_estimate * 100)) if total_estimate > 0 else 0
         return {
             "questions_answered": asked,
             "estimated_total": total_estimate,
-            "percent": min(100, round(asked / total_estimate * 100)),
+            "percent": percent,
             "detected_domain": session.get("detected_domain"),
             "detected_role": session.get("detected_role"),
             "detected_skills": len(session.get("skill_scores") or {}),
