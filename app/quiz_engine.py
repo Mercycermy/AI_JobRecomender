@@ -22,6 +22,8 @@ DOMAIN_DETECT_THRESHOLD = 25
 STRONG_THRESHOLD = 0.75
 PARTIAL_THRESHOLD = 0.45
 TARGET_QUESTIONS = 12
+MIN_ROLE_INTERVIEW_QUESTIONS = 10
+ROLE_INTERVIEW_PATH = os.path.join(BASE_DIR, "data", "questions_role_interviews.json")
 TERMINAL_ROUTE_IDS = {"PASS", "FAIL", "DONE", "END", "STOP"}
 
 DOMAIN_SIGNAL_KEYS = {
@@ -995,6 +997,7 @@ class QuizEngine:
             if needs_seed:
                 self._seed_questions(conn)
             self._seed_support_questions(conn)
+            self._seed_role_interview_questions(conn)
         finally:
             conn.close()
 
@@ -1035,6 +1038,58 @@ class QuizEngine:
                     q.get("route_strong"),
                     q.get("route_partial"),
                     q.get("route_weak"),
+                    q.get("estimated_minutes"),
+                ),
+            )
+        conn.commit()
+
+    def _seed_role_interview_questions(self, conn) -> None:
+        """Upsert curated per-role interview questions (idempotent)."""
+        if not os.path.exists(ROLE_INTERVIEW_PATH):
+            return
+        with open(ROLE_INTERVIEW_PATH, encoding="utf-8") as fh:
+            payload = json.load(fh)
+        questions = payload.get("questions", [])
+        if not questions:
+            return
+
+        for q in questions:
+            qid = q.get("id")
+            stem = q.get("stem")
+            if not qid or not stem:
+                continue
+            routing = q.get("routing", {})
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO questions (
+                    id, gate, domain_scope, question_type,
+                    role_targets, difficulty, experience_level_target,
+                    stem, context, answer_mode,
+                    options, practical_task, scoring,
+                    ai_evaluation_prompt, job_evidence,
+                    route_strong, route_partial, route_weak,
+                    estimated_minutes, is_active
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)
+                """,
+                (
+                    qid,
+                    q.get("gate", 2),
+                    q.get("domain_scope", "ALL"),
+                    q.get("question_type", "free_response"),
+                    json.dumps(q.get("role_targets", [])),
+                    q.get("difficulty", "beginner"),
+                    q.get("experience_level_target", "any"),
+                    stem,
+                    q.get("context"),
+                    q.get("answer_mode", "free_text"),
+                    json.dumps(q["options"]) if q.get("options") else None,
+                    json.dumps(q["practical_task"]) if q.get("practical_task") else None,
+                    json.dumps(q.get("scoring", {})),
+                    q.get("ai_evaluation_prompt"),
+                    json.dumps(q.get("job_evidence", [])),
+                    routing.get("strong"),
+                    routing.get("partial"),
+                    routing.get("weak"),
                     q.get("estimated_minutes"),
                 ),
             )
@@ -1790,9 +1845,12 @@ class QuizEngine:
         role = session.get("detected_role")
         if role:
             ordered_qids = self.get_ordered_questions_for_role(role)
-            total_estimate = len(ordered_qids) + 2
+            role_count = len(ordered_qids)
+            total_estimate = role_count + 2
+            if role_count < MIN_ROLE_INTERVIEW_QUESTIONS:
+                total_estimate = max(total_estimate, MIN_ROLE_INTERVIEW_QUESTIONS + 2)
         else:
-            total_estimate = 12
+            total_estimate = TARGET_QUESTIONS
         overall = self._overall_score(session)
         percent = min(100, round(asked / total_estimate * 100)) if total_estimate > 0 else 0
         return {

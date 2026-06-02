@@ -7,7 +7,13 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from app.answer_evaluator import evaluate, evaluate_mcq
-from app.quiz_engine import CATEGORY_TO_ROLES, DB_PATH, ROLE_TO_CATEGORY, TARGET_QUESTIONS, QuizEngine
+from app.quiz_engine import (
+	CATEGORY_TO_ROLES,
+	DB_PATH,
+	MIN_ROLE_INTERVIEW_QUESTIONS,
+	ROLE_TO_CATEGORY,
+	QuizEngine,
+)
 
 
 pytestmark = pytest.mark.skipif(
@@ -106,6 +112,18 @@ def test_dynamic_role_selector_uses_domain_specific_roles():
     assert {"accounting", "finance"} <= finance_roles
 
 
+def test_each_canonical_role_has_minimum_interview_questions():
+	engine = QuizEngine()
+	for role in sorted({r for roles in CATEGORY_TO_ROLES.values() for r in roles}):
+		count = len(engine.get_ordered_questions_for_role(role))
+		interview_count = sum(
+			1 for qid in engine.get_ordered_questions_for_role(role) if qid.startswith("Q_ROLE_INT_")
+		)
+		assert interview_count >= MIN_ROLE_INTERVIEW_QUESTIONS, (
+			f"{role} has {interview_count} interview questions"
+		)
+
+
 def test_quiz_engine_reaches_target_questions_and_builds_profile(monkeypatch):
     monkeypatch.delenv("GROQ_API_KEY", raising=False)
     monkeypatch.setenv("AI_JOB_RECOMMENDER_SKIP_DOTENV", "1")
@@ -127,10 +145,8 @@ def test_quiz_engine_reaches_target_questions_and_builds_profile(monkeypatch):
     else:
         pytest.fail("Quiz ended without returning a completed profile")
 
-    # For frontend-dev, total active questions is 3, plus 2 selection questions = 5
-    expected_total = 5
-    assert answered == expected_total
-    assert profile["question_count"] == expected_total
+    assert answered >= MIN_ROLE_INTERVIEW_QUESTIONS + 2
+    assert profile["question_count"] >= MIN_ROLE_INTERVIEW_QUESTIONS + 2
     assert profile["detected_domain"] == "SOFTWARE"
     assert profile["top_category"] == "frontend-dev"
     assert profile["detected_skills"]
