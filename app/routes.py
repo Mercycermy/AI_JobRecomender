@@ -326,6 +326,19 @@ def normalize_profile():
         return jsonify({"error": str(exc)}), 400
 
 
+@app.route("/skills/normalize", methods=["POST", "OPTIONS"])
+def normalize_skills():
+    """Normalize skill labels or skill-containing phrases for UI feedback."""
+    if request.method == "OPTIONS":
+        return "", 204
+
+    body = request.get_json(silent=True) or {}
+    try:
+        return jsonify(_get_profile_service().normalize_skills(body.get("skills")))
+    except ProfileValidationError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
 @app.route("/analysis", methods=["POST", "OPTIONS"])
 def analysis():
     """Return skill gap analysis and learning resources for a profile or session."""

@@ -339,11 +339,17 @@ def load_skills(path: Path | str = TAXONOMY_PATH) -> List[CanonicalSkill]:
     return [skill_from_taxonomy(item) for item in payload.get("skills", [])]
 
 
-def learning_resource_from_json(item: Dict[str, Any]) -> CanonicalLearningResource:
+def learning_resource_from_json(
+    item: Dict[str, Any],
+    normalizer: Optional[SkillNormalizer] = None,
+) -> CanonicalLearningResource:
+    normalizer = normalizer or SkillNormalizer()
     alignment = item.get("job_gap_alignment") or {}
+    raw_skill_id = item.get("skill_id")
+    skill_id = normalizer.to_skill_id(str(raw_skill_id)) or slugify(raw_skill_id)
     return CanonicalLearningResource(
         resource_id=str(item.get("resource_id") or stable_id("resource", item.get("title"))),
-        skill_id=slugify(item.get("skill_id")),
+        skill_id=skill_id,
         title=str(item.get("title") or "").strip(),
         platform=item.get("platform"),
         url=item.get("url"),
@@ -360,7 +366,11 @@ def learning_resource_from_json(item: Dict[str, Any]) -> CanonicalLearningResour
 def load_learning_resources(path: Path | str = LEARNING_RESOURCES_PATH) -> List[CanonicalLearningResource]:
     with open(path, "r", encoding="utf-8") as handle:
         payload = json.load(handle)
-    return [learning_resource_from_json(item) for item in payload.get("resources", [])]
+    normalizer = SkillNormalizer()
+    return [
+        learning_resource_from_json(item, normalizer)
+        for item in payload.get("resources", [])
+    ]
 
 
 def load_job_skill_links_from_sqlite(
@@ -538,16 +548,22 @@ def profile_from_manual_input(
     )
 
 
-def profile_from_quiz_result(result: Dict[str, Any], user_id: Optional[str] = None) -> CanonicalProfile:
+def profile_from_quiz_result(
+    result: Dict[str, Any],
+    user_id: Optional[str] = None,
+    normalizer: Optional[SkillNormalizer] = None,
+) -> CanonicalProfile:
+    normalizer = normalizer or SkillNormalizer()
     raw_scores = result.get("skill_scores") or {}
     skill_scores: Dict[str, float] = {}
     for skill_id, score in raw_scores.items():
         values = score if isinstance(score, list) else [score]
         numeric = [float(value) for value in values if isinstance(value, (int, float))]
         if numeric:
-            skill_scores[slugify(skill_id)] = round(sum(numeric) / len(numeric), 3)
+            resolved = normalizer.to_skill_id(str(skill_id)) or slugify(skill_id)
+            skill_scores[resolved] = round(sum(numeric) / len(numeric), 3)
 
-    skill_ids = list(dict.fromkeys([slugify(item) for item in result.get("detected_skills", []) if item]))
+    skill_ids = normalizer.normalize_list(result.get("detected_skills", []))
     for skill_id in skill_scores:
         if skill_id not in skill_ids:
             skill_ids.append(skill_id)

@@ -106,6 +106,26 @@ def test_normalize_rejects_non_list_skills(client):
     assert "skills must be a list" in response.get_json()["error"]
 
 
+def test_normalize_skill_phrases_reports_matches_and_unknowns(client):
+    response = client.post(
+        "/skills/normalize",
+        json={
+            "skills": [
+                "HTML/CSS/JavaScript",
+                "Built REST APIs with Python and Docker",
+                "Unknown Future Skill",
+            ]
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.get_json()
+    assert {"fe-html", "fe-css", "lang-js", "be-rest", "lang-py", "ops-docker"} <= set(
+        data["skill_ids"]
+    )
+    assert data["unresolved"] == ["Unknown Future Skill"]
+
+
 def test_cors_only_allows_configured_frontend(client):
     allowed = client.get(
         "/health",

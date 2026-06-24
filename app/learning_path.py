@@ -29,7 +29,12 @@ class LearningPath:
 		with open(self.resources_path, "r", encoding="utf-8") as handle:
 			payload = json.load(handle)
 
-		self._resources = payload.get("resources", [])
+		self._resources = []
+		for resource in payload.get("resources", []):
+			item = dict(resource)
+			raw_skill_id = item.get("skill_id")
+			item["skill_id"] = self.normalizer.to_skill_id(raw_skill_id) or raw_skill_id
+			self._resources.append(item)
 
 	def recommend_resources(
 		self,

@@ -1,0 +1,154 @@
+{
+  "preferred_aliases": {
+    "excel": "ba-excel",
+    "ms excel": "ba-excel",
+    "spreadsheet": "ba-excel",
+    "spreadsheets": "ba-excel",
+    "photoshop": "dm-ps",
+    "adobe photoshop": "dm-ps",
+    "illustrator": "dm-ill",
+    "adobe illustrator": "dm-ill",
+    "indesign": "dm-ind",
+    "adobe indesign": "dm-ind",
+    "after effects": "dm-ae",
+    "adobe after effects": "dm-ae",
+    "premiere": "dm-pr",
+    "premiere pro": "dm-pr",
+    "video editing": "dm-vedit",
+    "typography": "dm-typography",
+    "seo": "sm-seo",
+    "search engine optimization": "sm-seo",
+    "social media marketing": "mkt-social",
+    "copywriting": "mkt-content",
+    "sales": "sm-sales",
+    "crm": "ba-crm",
+    "accounting": "fa-acc",
+    "financial accounting": "fa-acc",
+    "collaboration": "soft-collab",
+    "teamwork": "soft-teamwork",
+    "leadership": "soft-lead",
+    "people management": "soft-mgmt",
+    "time management": "soft-timemgmt",
+    "forecasting": "biz-forecasting",
+    "airflow": "de-airflow",
+    "keras": "ml-keras",
+    "huggingface": "nlp-hf"
+  },
+  "legacy_skill_ids": {
+    "admin-customer-support": "soft-cust",
+    "admin-hr": "hr-mgmt",
+    "be-api": "be-rest",
+    "be-python": "lang-py",
+    "be-sql": "lang-sql",
+    "craft-culinary": "hosp-culinary",
+    "data-pandas": "da-pandas",
+    "data-sql": "da-sql-analytics",
+    "db-sql": "lang-sql",
+    "edu-instructional-design": "edu-instructional-design",
+    "eng-autocad": "dm-cad",
+    "fe-javascript": "lang-js",
+    "finance-excel": "fin-excel",
+    "marketing-content": "mkt-content",
+    "marketing-digital": "sm-market",
+    "mobile-flutter": "mob-flutter",
+    "sales-inbound": "sm-sales",
+    "soft-communication": "soft-comm",
+    "tech-docker": "ops-docker"
+  },
+  "extra_aliases": {
+    "lang-sql": [
+      "structured query language"
+    ],
+    "fe-react": [
+      "hooks",
+      "react hooks"
+    ],
+    "lang-cs": [
+      ".net",
+      "dotnet",
+      "asp.net"
+    ],
+    "be-rest": [
+      "rest apis",
+      "restful api",
+      "restful apis",
+      "web api"
+    ],
+    "dm-graphdes": [
+      "adobe creative suite",
+      "creative suite"
+    ],
+    "ba-msoffice": [
+      "microsoft office suite",
+      "ms office suite"
+    ],
+    "ba-excel": [
+      "spreadsheets"
+    ],
+    "fa-acc": [
+      "journal entries",
+      "double entry",
+      "financial statements",
+      "trial balance",
+      "auditing"
+    ],
+    "soft-time": [
+      "scheduling"
+    ],
+    "mkt-content": [
+      "content planning"
+    ],
+    "mkt-social": [
+      "instagram",
+      "tiktok"
+    ],
+    "eng-techdrawing": [
+      "floor plans"
+    ],
+    "ml-deployment": [
+      "deployment"
+    ],
+    "soft-agile": [
+      "agile"
+    ],
+    "edu-teaching": [
+      "instruction"
+    ],
+    "sm-sales": [
+      "objection handling"
+    ],
+    "ba-pos": [
+      "cash handling"
+    ],
+    "logistics-safety": [
+      "safety"
+    ],
+    "supply-chain-mgmt": [
+      "logistics"
+    ],
+    "soft-comm": [
+      "communication skills",
+      "verbal communication",
+      "written communication"
+    ],
+    "soft-problem": [
+      "problem-solving",
+      "analytical problem solving"
+    ],
+    "ml-general": [
+      "machine learning",
+      "ml"
+    ],
+    "design-uiux": [
+      "ui ux",
+      "ui/ux",
+      "ui ux design",
+      "user interface design",
+      "user experience design"
+    ]
+  },
+  "ignored_terms": [
+    "core domain process",
+    "domain detection"
+  ]
+}

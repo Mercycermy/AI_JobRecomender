@@ -34,7 +34,11 @@ class ProfileService:
 
         source = source_hint or payload.get("source")
         if source == "quiz" or self._looks_like_quiz_profile(payload):
-            profile = profile_from_quiz_result(payload, user_id=user_id)
+            profile = profile_from_quiz_result(
+                payload,
+                user_id=user_id,
+                normalizer=self.normalizer,
+            )
         else:
             raw_skills = (
                 payload.get("skill_ids")
@@ -62,6 +66,10 @@ class ProfileService:
                 user_id=user_id or payload.get("user_id"),
                 normalizer=self.normalizer,
             )
+            if raw_skills and not profile.skill_ids:
+                raise ProfileValidationError(
+                    "No supplied skills matched the project skill taxonomy."
+                )
             profile.detected_domain = payload.get("detected_domain")
             profile.detected_role = (
                 payload.get("detected_role") or profile.target_role
@@ -110,6 +118,22 @@ class ProfileService:
             or profile.detected_domain
         )
         return data
+
+    def normalize_skills(self, values: Any) -> Dict[str, Any]:
+        if not isinstance(values, list):
+            raise ProfileValidationError("skills must be a list.")
+        skill_ids, unresolved = self.normalizer.normalize_with_unresolved(values)
+        return {
+            "skill_ids": skill_ids,
+            "skills": [
+                {
+                    "skill_id": skill_id,
+                    "skill_name": self.normalizer.name_for(skill_id),
+                }
+                for skill_id in skill_ids
+            ],
+            "unresolved": unresolved,
+        }
 
     @staticmethod
     def _looks_like_quiz_profile(payload: Dict[str, Any]) -> bool:

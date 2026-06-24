@@ -30,10 +30,12 @@ def test_skills_taxonomy_loads_as_canonical_skills():
 
 def test_learning_resources_load_as_canonical_resources():
     resources = load_learning_resources()
+    taxonomy_ids = {skill.skill_id for skill in load_skills()}
 
     assert resources
     assert all(not validate_learning_resource(resource) for resource in resources[:20])
     assert all(resource.skill_id for resource in resources[:20])
+    assert all(resource.skill_id in taxonomy_ids for resource in resources)
 
 
 def test_jobs_csv_and_db_skill_links_load_as_canonical_jobs():
