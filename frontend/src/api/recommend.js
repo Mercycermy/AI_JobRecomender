@@ -65,8 +65,11 @@ export async function fetchRecommendations(profile, topN = 10) {
 
   const data = await response.json()
   const rawRecs = data.recommendations || []
-  sessionStorage.setItem(RAW_RECOMMENDATIONS_STORAGE_KEY, JSON.stringify(rawRecs))
-  return rawRecs.map(mapJobToCard)
+  return {
+    jobs: rawRecs.map(mapJobToCard),
+    profile: data.skill_profile || profile,
+    rawRecs,
+  }
 }
 
 export function persistRecommendationSession(profile, jobs, rawRecs = null) {

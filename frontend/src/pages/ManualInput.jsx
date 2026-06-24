@@ -45,8 +45,8 @@ function ManualInput({ navigate }) {
     const profile = toApiProfile({ skills, experience, category })
 
     try {
-      const jobs = await fetchRecommendations(profile)
-      persistRecommendationSession(profile, jobs)
+      const result = await fetchRecommendations(profile)
+      persistRecommendationSession(result.profile, result.jobs, result.rawRecs)
       navigate('/results')
     } catch (err) {
       setError(err.message || 'Could not reach the recommendation API.')

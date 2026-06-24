@@ -3,11 +3,11 @@ import json
 import sqlite3
 import numpy as np
 
-# Resolve paths relative to the project root
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DB_PATH = os.path.join(BASE_DIR, "data", "db.sqlite3")
-INDEX_PATH = os.path.join(BASE_DIR, "data", "jobs_faiss.index")
-MAPPER_PATH = os.path.join(BASE_DIR, "data", "jobs_id_map.json")
+from app.config import settings
+
+DB_PATH = str(settings.recommender_db_path)
+INDEX_PATH = str(settings.jobs_index_path)
+MAPPER_PATH = str(settings.jobs_id_map_path)
 
 class RecommendationEngine:
     def __init__(self):
@@ -21,7 +21,7 @@ class RecommendationEngine:
         # 1. Load Sentence Transformer
         try:
             from sentence_transformers import SentenceTransformer
-            self.model = SentenceTransformer('all-MiniLM-L6-v2')
+            self.model = SentenceTransformer(settings.embedding_model)
         except Exception as e:
             print(f"Warning: Failed to load SentenceTransformer model: {e}")
 
@@ -82,7 +82,12 @@ class RecommendationEngine:
         - 05% Location Match
         """
         # Parse skill profile
-        detected_skills = skill_profile.get("detected_skills") or skill_profile.get("skills") or []
+        detected_skills = (
+            skill_profile.get("skill_ids")
+            or skill_profile.get("detected_skills")
+            or skill_profile.get("skills")
+            or list((skill_profile.get("skill_scores") or {}).keys())
+        )
         user_exp = skill_profile.get("experience_level") or skill_profile.get("experience") or "junior"
         top_category = skill_profile.get("top_category") or skill_profile.get("category") or ""
         location_pref = skill_profile.get("location") or "remote"

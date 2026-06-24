@@ -14,6 +14,7 @@ import {
   loadStoredRawRecommendations,
   loadStoredSessionId,
   persistAnalysis,
+  persistRecommendationSession,
 } from '../api/recommend.js'
 import LearningResources from './LearningResources.jsx'
 import ResumeTips from './ResumeTips.jsx'
@@ -47,10 +48,20 @@ function Results({ navigate }) {
   const [category, setCategory] = useState('All categories')
   const [experience, setExperience] = useState('All experience')
   const [activeTab, setActiveTab] = useState(tabs[0])
-  
+
   const [analysis, setAnalysis] = useState(() => loadStoredAnalysis())
-  const [isAnalysisLoading, setIsAnalysisLoading] = useState(!loadStoredAnalysis())
-  const [analysisError, setAnalysisError] = useState(null)
+  const [isAnalysisLoading, setIsAnalysisLoading] = useState(() => {
+    const profile = loadStoredProfile()
+    const rawRecs = loadStoredRawRecommendations() || loadStoredRecommendations()
+    return Boolean(!loadStoredAnalysis() && profile && rawRecs?.length && loadStoredSessionId())
+  })
+  const [analysisError, setAnalysisError] = useState(() => {
+    const profile = loadStoredProfile()
+    const rawRecs = loadStoredRawRecommendations() || loadStoredRecommendations()
+    return profile && rawRecs?.length && !loadStoredSessionId()
+      ? 'session_id required'
+      : null
+  })
 
   const [resumeTipsData, setResumeTipsData] = useState(() => {
     try {
@@ -60,12 +71,19 @@ function Results({ navigate }) {
       return null
     }
   })
-  const [isResumeTipsLoading, setIsResumeTipsLoading] = useState(false)
-  const [resumeTipsError, setResumeTipsError] = useState(null)
+  const [isResumeTipsLoading, setIsResumeTipsLoading] = useState(() =>
+    Boolean(loadStoredProfile() && loadStoredSessionId()),
+  )
+  const [resumeTipsError, setResumeTipsError] = useState(() =>
+    loadStoredProfile() && !loadStoredSessionId() ? 'session_id required' : null,
+  )
 
   const [jobRecommendations, setJobRecommendations] = useState(() => {
     const stored = loadStoredRecommendations()
-    return stored?.length ? stored : []
+    if (stored?.length) {
+      return stored
+    }
+    return loadStoredProfile() ? [] : mockJobRecommendations
   })
   const [jobsError, setJobsError] = useState(null)
 
@@ -76,9 +94,6 @@ function Results({ navigate }) {
     const rawStored = loadStoredRawRecommendations()
 
     if (!profile) {
-      if (!stored?.length) {
-        setJobRecommendations(mockJobRecommendations)
-      }
       return () => {
         isMounted = false
       }
@@ -91,11 +106,12 @@ function Results({ navigate }) {
     }
 
     fetchRecommendations(profile)
-      .then((jobs) => {
+      .then((result) => {
         if (!isMounted) {
           return
         }
-        setJobRecommendations(jobs)
+        setJobRecommendations(result.jobs)
+        persistRecommendationSession(result.profile, result.jobs, result.rawRecs)
         setJobsError(null)
       })
       .catch((err) => {
@@ -118,24 +134,18 @@ function Results({ navigate }) {
     const sessionId = loadStoredSessionId()
 
     if (!profile || !rawRecs?.length) {
-      setIsAnalysisLoading(false)
       return () => {
         isMounted = false
       }
     }
 
     if (!sessionId) {
-      setAnalysisError('session_id required')
-      setIsAnalysisLoading(false)
       return () => {
         isMounted = false
       }
     }
 
-    setIsAnalysisLoading(true)
-    setAnalysisError(null)
-
-  fetchAnalysis(sessionId)
+    fetchAnalysis(sessionId)
       .then((payload) => {
         if (!isMounted) {
           return
@@ -166,7 +176,6 @@ function Results({ navigate }) {
     }
 
     if (!sessionId) {
-      setResumeTipsError('session_id required')
       return
     }
 
@@ -175,10 +184,7 @@ function Results({ navigate }) {
       return
     }
 
-    setIsResumeTipsLoading(true)
-    setResumeTipsError(null)
-
-  fetchResumeTips(sessionId)
+    fetchResumeTips(sessionId)
       .then((payload) => {
         if (!isMounted) {
           return
@@ -198,7 +204,7 @@ function Results({ navigate }) {
     return () => {
       isMounted = false
     }
-  }, [analysis?.gaps?.length])
+  }, [analysis?.gaps?.length, resumeTipsData])
 
   const categoryOptions = useMemo(() => {
     const fromJobs = [...new Set(jobRecommendations.map((j) => j.category).filter(Boolean))]

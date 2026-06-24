@@ -4,43 +4,29 @@ Flask API — adaptive quiz and semantic job recommendations.
 
 from __future__ import annotations
 
-import os
-import uuid
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from flask import Flask, jsonify, request
 
-from app.agent import AssessmentAgent, AgentState
 from app.ai_tips import GroqResumeCoach
 from app.answer_evaluator import evaluate, evaluate_mcq
-from app.gap_analyzer import GapAnalyzer, format_gaps_for_ui
-from app.learning_path import LearningPath
+from app.config import settings
+from app.gap_analyzer import format_gaps_for_ui
+from app.profile_service import ProfileService, ProfileValidationError
 from app.quiz_engine import QuizEngine
 from app.recommender import RecommendationEngine
 from app.resource_recommender import ResourceRecommender
-from app.resume_tips import ResumeCoach
 from app.skill_normalizer import SkillNormalizer
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", "dev-secret-change-me")
+app.config["SECRET_KEY"] = settings.secret_key
 
-_agent: Optional[AssessmentAgent] = None
 _recommender: Optional[RecommendationEngine] = None
-_gap_analyzer: Optional[GapAnalyzer] = None
-_learning_path: Optional[LearningPath] = None
-_resume_coach: Optional[ResumeCoach] = None
 _skill_normalizer: Optional[SkillNormalizer] = None
+_profile_service: Optional[ProfileService] = None
 _quiz_engine: Optional[QuizEngine] = None
 _resource_recommender: Optional[ResourceRecommender] = None
 _ai_resume_coach: Optional[GroqResumeCoach] = None
-_quiz_sessions: Dict[str, AgentState] = {}
-
-
-def _get_agent() -> AssessmentAgent:
-    global _agent
-    if _agent is None:
-        _agent = AssessmentAgent()
-    return _agent
 
 
 def _get_recommender() -> RecommendationEngine:
@@ -50,32 +36,18 @@ def _get_recommender() -> RecommendationEngine:
     return _recommender
 
 
-def _get_gap_analyzer() -> GapAnalyzer:
-    global _gap_analyzer
-    if _gap_analyzer is None:
-        _gap_analyzer = GapAnalyzer()
-    return _gap_analyzer
-
-
-def _get_learning_path() -> LearningPath:
-    global _learning_path
-    if _learning_path is None:
-        _learning_path = LearningPath()
-    return _learning_path
-
-
-def _get_resume_coach() -> ResumeCoach:
-    global _resume_coach
-    if _resume_coach is None:
-        _resume_coach = ResumeCoach()
-    return _resume_coach
-
-
 def _get_skill_normalizer() -> SkillNormalizer:
     global _skill_normalizer
     if _skill_normalizer is None:
         _skill_normalizer = SkillNormalizer()
     return _skill_normalizer
+
+
+def _get_profile_service() -> ProfileService:
+    global _profile_service
+    if _profile_service is None:
+        _profile_service = ProfileService(_get_skill_normalizer())
+    return _profile_service
 
 
 def _get_quiz_engine() -> QuizEngine:
@@ -100,8 +72,10 @@ def _get_ai_resume_coach() -> GroqResumeCoach:
 
 
 def _add_cors_headers(response):
-    origin = request.headers.get("Origin", "*")
-    response.headers["Access-Control-Allow-Origin"] = origin
+    origin = request.headers.get("Origin")
+    if origin and origin in settings.cors_origins:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Vary"] = "Origin"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Session-Id"
     response.headers["Access-Control-Expose-Headers"] = "X-Session-Id"
@@ -216,22 +190,6 @@ def _session_id() -> str:
     return request.headers.get("X-Session-Id") or request.args.get("session_id") or ""
 
 
-def _quiz_payload(state: AgentState, question: Optional[dict], done: bool = False,
-                  profile: Optional[dict] = None) -> dict:
-    payload: Dict[str, Any] = {"done": done}
-    if profile is not None:
-        payload["skill_profile"] = profile
-    if question is not None:
-        total = max(
-            AssessmentAgent.MIN_QUESTIONS,
-            min(AssessmentAgent.MAX_QUESTIONS, state.question_count + 3),
-        )
-        payload["question"] = _format_question(
-            question, state.question_count + 1, total
-        )
-    return payload
-
-
 @app.route("/quiz", methods=["GET", "OPTIONS"])
 def quiz_start():
     if request.method == "OPTIONS":
@@ -307,18 +265,17 @@ def quiz_answer():
                 "progress": progress,
             })
 
-        profile = result.get("profile") or {}
-        skill_scores = profile.get("skill_scores", {})
-        recommendations_profile = {
-            **profile,
-            "detected_skills": profile.get("detected_skills") or list(skill_scores.keys()),
-            "top_category": profile.get("top_category") or profile.get("detected_role") or profile.get("detected_domain"),
-            "experience_level": profile.get("experience_level") or "junior",
-        }
-        recommendations = _get_recommender().rank_jobs(recommendations_profile, top_n=10)
+        profile = _get_profile_service().from_payload(
+            result.get("profile") or {},
+            source_hint="quiz",
+        )
+        recommendations_profile = _get_profile_service().to_recommender_input(profile)
+        recommendations = _get_recommender().rank_jobs(
+            recommendations_profile, top_n=10
+        )
         return jsonify({
             "done": True,
-            "skill_profile": recommendations_profile,
+            "skill_profile": _get_profile_service().serialize(profile),
             "recommendations": recommendations,
             "progress": result.get("progress"),
         })
@@ -332,26 +289,41 @@ def recommend():
     if request.method == "OPTIONS":
         return "", 204
 
-    body = request.get_json(silent=True) or {}
-    profile = body.get("skill_profile") or body.get("profile") or body
-
-    if not isinstance(profile, dict):
-        return jsonify({"error": "JSON body must include a skill profile object"}), 400
-
-    top_n = int(body.get("top_n", 10))
-    top_n = max(1, min(top_n, 50))
-
     try:
-        results = _get_recommender().rank_jobs(profile, top_n=top_n)
+        body = request.get_json(silent=True) or {}
+        profile_payload = body.get("skill_profile") or body.get("profile") or body
+        profile = _get_profile_service().from_payload(profile_payload)
+        top_n = int(body.get("top_n", 10))
+        top_n = max(1, min(top_n, 50))
+        recommender_input = _get_profile_service().to_recommender_input(profile)
+        results = _get_recommender().rank_jobs(recommender_input, top_n=top_n)
         return jsonify({
+            "skill_profile": _get_profile_service().serialize(profile),
             "recommendations": results,
             "count": len(results),
             "engine": {
                 "semantic_search": _get_recommender().index is not None,
             },
         })
+    except (ProfileValidationError, TypeError, ValueError) as exc:
+        return jsonify({"error": str(exc)}), 400
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/profile/normalize", methods=["POST", "OPTIONS"])
+def normalize_profile():
+    """Convert manual or quiz-shaped input to the shared canonical profile."""
+    if request.method == "OPTIONS":
+        return "", 204
+
+    body = request.get_json(silent=True) or {}
+    profile_payload = body.get("skill_profile") or body.get("profile") or body
+    try:
+        profile = _get_profile_service().from_payload(profile_payload)
+        return jsonify({"skill_profile": _get_profile_service().serialize(profile)})
+    except ProfileValidationError as exc:
+        return jsonify({"error": str(exc)}), 400
 
 
 @app.route("/analysis", methods=["POST", "OPTIONS"])
@@ -471,5 +443,4 @@ def recommendations():
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="127.0.0.1", port=port, debug=os.environ.get("FLASK_DEBUG") == "1")
+    app.run(host=settings.host, port=settings.port, debug=settings.debug)

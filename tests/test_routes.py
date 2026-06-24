@@ -50,6 +50,74 @@ def test_recommend_with_profile(client):
     data = response.get_json()
     assert "recommendations" in data
     assert data["count"] <= 3
+    assert data["skill_profile"]["source"] == "manual"
+    assert "lang-py" in data["skill_profile"]["skill_ids"]
+
+
+def test_normalize_manual_profile(client):
+    response = client.post(
+        "/profile/normalize",
+        json={
+            "skills": ["Python", "SQL", "React"],
+            "experience": "junior",
+            "category": "backend-dev",
+            "location": "remote",
+        },
+    )
+
+    assert response.status_code == 200
+    profile = response.get_json()["skill_profile"]
+    assert profile["source"] == "manual"
+    assert profile["target_role"] == "backend-dev"
+    assert "lang-py" in profile["skill_ids"]
+    assert profile["detected_skills"] == profile["skill_ids"]
+
+
+def test_normalize_quiz_profile(client):
+    response = client.post(
+        "/profile/normalize",
+        json={
+            "source": "quiz",
+            "session_id": "quiz-test",
+            "detected_domain": "SOFTWARE",
+            "detected_role": "backend-dev",
+            "detected_skills": ["lang-py"],
+            "skill_scores": {"lang-py": 0.8},
+            "experience_level": "junior",
+            "confidence": 80,
+        },
+    )
+
+    assert response.status_code == 200
+    profile = response.get_json()["skill_profile"]
+    assert profile["source"] == "quiz"
+    assert profile["detected_role"] == "backend-dev"
+    assert profile["skill_scores"]["lang-py"] == 0.8
+    assert profile["confidence"] == 0.8
+
+
+def test_normalize_rejects_non_list_skills(client):
+    response = client.post(
+        "/profile/normalize",
+        json={"skills": "Python, SQL"},
+    )
+
+    assert response.status_code == 400
+    assert "skills must be a list" in response.get_json()["error"]
+
+
+def test_cors_only_allows_configured_frontend(client):
+    allowed = client.get(
+        "/health",
+        headers={"Origin": "http://localhost:5173"},
+    )
+    denied = client.get(
+        "/health",
+        headers={"Origin": "https://untrusted.example"},
+    )
+
+    assert allowed.headers["Access-Control-Allow-Origin"] == "http://localhost:5173"
+    assert "Access-Control-Allow-Origin" not in denied.headers
 
 
 def test_resume_tips_fallback(client):
