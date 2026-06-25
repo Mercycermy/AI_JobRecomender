@@ -40,6 +40,8 @@ function normalizeQuestion(payload, fallbackIndex) {
   const rawOpts = source?.options || source?.choices
   return {
     id: source?.id || source?.questionId || `q${fallbackIndex + 1}`,
+    gate: source?.gate,
+    difficulty: source?.difficulty || 'beginner',
     number: source.number || fallbackIndex + 1,
     total: source.total || fallbackQuestions.length,
     stem: source?.stem || source?.text || source?.question || fallback.stem || '',
@@ -179,10 +181,12 @@ function Quiz({ navigate }) {
     return null
   }
 
-  const progress = Math.round((question.number / question.total) * 100)
+  const progress = progressInfo?.percent ?? Math.round((question.number / question.total) * 100)
   const routingGate = question.gate ?? '—'
   const routingDomain = progressInfo?.detected_domain || '—'
   const routingRole = progressInfo?.detected_role || '—'
+  const difficulty = question.difficulty?.replace(/^\w/, (letter) => letter.toUpperCase())
+  const confidence = progressInfo?.confidence ?? 0
 
   return (
     <section className="quiz-page">
@@ -199,7 +203,7 @@ function Quiz({ navigate }) {
         </div>
 
         <div className="quiz-routing-badge">
-          Gate {routingGate} · Domain {routingDomain} · Role {routingRole}
+          {difficulty} · Confidence {confidence}% · Gate {routingGate} · Domain {routingDomain} · Role {routingRole}
         </div>
 
         <h1>{question.stem}</h1>

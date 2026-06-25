@@ -8,6 +8,7 @@ import glob
 import json
 import os
 import sqlite3
+import statistics
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Optional
@@ -23,6 +24,9 @@ STRONG_THRESHOLD = 0.75
 PARTIAL_THRESHOLD = 0.45
 TARGET_QUESTIONS = 12
 MIN_ROLE_INTERVIEW_QUESTIONS = 10
+TARGET_TECHNICAL_QUESTIONS = 10
+MAX_ASSESSMENT_QUESTIONS = 14
+DIFFICULTY_LEVELS = ("beginner", "intermediate", "advanced")
 ROLE_INTERVIEW_PATH = os.path.join(BASE_DIR, "data", "questions_role_interviews.json")
 TERMINAL_ROUTE_IDS = {"PASS", "FAIL", "DONE", "END", "STOP"}
 
@@ -1276,6 +1280,30 @@ class QuizEngine:
         finally:
             conn.close()
 
+    def get_role_difficulty_counts(self, role: str) -> Dict[str, int]:
+        """Return active technical-question coverage for a role."""
+        conn = self._conn()
+        try:
+            rows = conn.execute(
+                """
+                SELECT difficulty, COUNT(*) AS total
+                FROM questions, json_each(questions.role_targets)
+                WHERE questions.is_active = 1
+                  AND questions.gate IN (1, 2)
+                  AND json_each.value = ?
+                GROUP BY difficulty
+                """,
+                (role,),
+            ).fetchall()
+            counts = {level: 0 for level in DIFFICULTY_LEVELS}
+            for row in rows:
+                difficulty = str(row["difficulty"] or "beginner").lower()
+                if difficulty in counts:
+                    counts[difficulty] = int(row["total"])
+            return counts
+        finally:
+            conn.close()
+
     def _get_role_label(self, role: str) -> str:
         if role in ROLE_DISPLAY_LABELS:
             return ROLE_DISPLAY_LABELS[role]
@@ -1553,7 +1581,222 @@ class QuizEngine:
             return "partial"
         return "weak"
 
-    def next_question_id(self, question: dict, performance: str, session: dict, answer_key: Optional[str] = None) -> Optional[str]:
+    def _assessment_rows(self, session_id: str) -> List[dict]:
+        conn = self._conn()
+        try:
+            rows = conn.execute(
+                """
+                SELECT
+                    qr.ai_score,
+                    qr.ai_confidence,
+                    qr.performance,
+                    q.difficulty,
+                    q.gate
+                FROM quiz_responses qr
+                LEFT JOIN questions q ON q.id = qr.question_id
+                WHERE qr.session_id = ?
+                  AND COALESCE(q.gate, 0) IN (1, 2)
+                ORDER BY qr.id
+                """,
+                (session_id,),
+            ).fetchall()
+            return [dict(row) for row in rows]
+        finally:
+            conn.close()
+
+    def _history_with_current(
+        self,
+        session: dict,
+        question: Optional[dict] = None,
+        performance: Optional[str] = None,
+        ai_score: Optional[float] = None,
+        ai_confidence: Optional[float] = None,
+    ) -> List[dict]:
+        rows = self._assessment_rows(session["id"])
+        if question and int(question.get("gate") or 0) in (1, 2):
+            score = float(ai_score if ai_score is not None else 0.0)
+            rows.append(
+                {
+                    "ai_score": max(0.0, min(1.0, score)),
+                    "ai_confidence": ai_confidence,
+                    "performance": performance or self.classify_performance(score),
+                    "difficulty": str(question.get("difficulty") or "beginner").lower(),
+                    "gate": question.get("gate"),
+                }
+            )
+        return rows
+
+    def _target_difficulty(
+        self,
+        session: dict,
+        current_question: Optional[dict] = None,
+        performance: Optional[str] = None,
+        ai_score: Optional[float] = None,
+    ) -> str:
+        history = self._history_with_current(
+            session,
+            current_question,
+            performance,
+            ai_score,
+        )
+        if len(history) < 2:
+            return "beginner"
+
+        current = str(
+            (current_question or {}).get("difficulty")
+            or history[-1].get("difficulty")
+            or "beginner"
+        ).lower()
+        current_index = (
+            DIFFICULTY_LEVELS.index(current)
+            if current in DIFFICULTY_LEVELS
+            else 0
+        )
+        recent_scores = [
+            float(row.get("ai_score") or 0.0)
+            for row in history[-2:]
+        ]
+        recent_average = sum(recent_scores) / len(recent_scores)
+        overall_average = sum(
+            float(row.get("ai_score") or 0.0) for row in history
+        ) / len(history)
+
+        if recent_average >= STRONG_THRESHOLD:
+            target_index = min(current_index + 1, len(DIFFICULTY_LEVELS) - 1)
+        elif recent_average < PARTIAL_THRESHOLD:
+            target_index = max(current_index - 1, 0)
+        else:
+            target_index = current_index
+
+        # A steady partial performer should still receive an intermediate
+        # diagnostic question instead of remaining at beginner forever.
+        if len(history) >= 3 and overall_average >= PARTIAL_THRESHOLD:
+            target_index = max(target_index, 1)
+        if len(history) >= 5 and overall_average >= STRONG_THRESHOLD:
+            target_index = 2
+
+        return DIFFICULTY_LEVELS[target_index]
+
+    def _next_role_question(
+        self,
+        role: str,
+        difficulty: str,
+        excluded: Iterable[str],
+    ) -> Optional[str]:
+        excluded = list(dict.fromkeys(item for item in excluded if item))
+        conn = self._conn()
+        try:
+            clauses = [
+                "questions.is_active = 1",
+                "questions.gate IN (1, 2)",
+                "json_each.value = ?",
+                "questions.difficulty = ?",
+            ]
+            params: List[Any] = [role, difficulty]
+            if excluded:
+                clauses.append(
+                    f"questions.id NOT IN ({','.join('?' for _ in excluded)})"
+                )
+                params.extend(excluded)
+
+            row = conn.execute(
+                f"""
+                SELECT questions.id
+                FROM questions, json_each(questions.role_targets)
+                WHERE {' AND '.join(clauses)}
+                ORDER BY
+                  CASE
+                    WHEN questions.id LIKE 'Q_ROLE_INT_%' THEN 0
+                    WHEN questions.gate = 1 THEN 1
+                    ELSE 2
+                  END,
+                  questions.id
+                LIMIT 1
+                """,
+                params,
+            ).fetchone()
+            return row[0] if row else None
+        finally:
+            conn.close()
+
+    def _difficulty_preference(self, difficulty: str) -> tuple[str, ...]:
+        return {
+            "beginner": ("beginner", "intermediate", "advanced"),
+            "intermediate": ("intermediate", "beginner", "advanced"),
+            "advanced": ("advanced", "intermediate", "beginner"),
+        }.get(difficulty, DIFFICULTY_LEVELS)
+
+    def _next_adaptive_question(
+        self,
+        role: str,
+        session: dict,
+        difficulty: str,
+        excluded: Iterable[str],
+    ) -> Optional[str]:
+        excluded = list(dict.fromkeys(item for item in excluded if item))
+        scopes = self._domain_scopes(
+            session.get("detected_domain"),
+            session.get("detected_role"),
+        )
+        role_terms = self._role_search_terms(role)
+
+        conn = self._conn()
+        try:
+            for target in self._difficulty_preference(difficulty):
+                role_question = self._next_role_question(role, target, excluded)
+                if role_question:
+                    return role_question
+
+                scoped_role_question = self._select_question(
+                    conn,
+                    excluded,
+                    [1, 2],
+                    scopes,
+                    role_terms,
+                    difficulties=[target],
+                )
+                if scoped_role_question:
+                    return scoped_role_question
+
+                scoped_question = self._select_question(
+                    conn,
+                    excluded,
+                    [1, 2],
+                    scopes,
+                    difficulties=[target],
+                )
+                if scoped_question:
+                    return scoped_question
+            return None
+        finally:
+            conn.close()
+
+    def _technical_count_with_current(
+        self, session: dict, question: Optional[dict] = None
+    ) -> int:
+        count = len(self._assessment_rows(session["id"]))
+        if question and int(question.get("gate") or 0) in (1, 2):
+            count += 1
+        return count
+
+    def _should_finish(self, session: dict, current_question: dict) -> bool:
+        technical_count = self._technical_count_with_current(
+            session, current_question
+        )
+        total_after_current = len(session.get("questions_asked", [])) + 1
+        return (
+            technical_count >= TARGET_TECHNICAL_QUESTIONS
+            or total_after_current >= MAX_ASSESSMENT_QUESTIONS
+        )
+
+    def next_question_id(
+        self,
+        question: dict,
+        performance: str,
+        session: dict,
+        answer_key: Optional[str] = None,
+        ai_score: Optional[float] = None,
+    ) -> Optional[str]:
         if question["id"] in ("Q_G0_CATEGORY", "Q_G0_DOMAIN_001"):
             return f"Q_G0_ROLE_SELECT:{session['id']}"
 
@@ -1563,33 +1806,38 @@ class QuizEngine:
             
             role = session.get("detected_role")
             if role:
-                ordered_qids = self.get_ordered_questions_for_role(role)
                 asked = set(session.get("questions_asked", []))
-                for qid in ordered_qids:
-                    if qid not in asked:
-                        return qid
+                asked.add(question["id"])
+                return self._next_adaptive_question(
+                    role, session, "beginner", asked
+                )
             return None
 
         if question["id"].startswith("Q_G0_ROLE_OTHER:"):
             role = session.get("detected_role")
             if role:
-                ordered_qids = self.get_ordered_questions_for_role(role)
                 asked = set(session.get("questions_asked", []))
-                for qid in ordered_qids:
-                    if qid not in asked:
-                        return qid
+                asked.add(question["id"])
+                return self._next_adaptive_question(
+                    role, session, "beginner", asked
+                )
             return None
 
         role = session.get("detected_role")
         if role:
-            ordered_qids = self.get_ordered_questions_for_role(role)
+            if self._should_finish(session, question):
+                return None
             asked = set(session.get("questions_asked", []))
-            # Also exclude the current question because it hasn't been added to asked list yet
             asked.add(question["id"])
-            for qid in ordered_qids:
-                if qid not in asked:
-                    return qid
-            return None
+            target = self._target_difficulty(
+                session,
+                current_question=question,
+                performance=performance,
+                ai_score=ai_score,
+            )
+            return self._next_adaptive_question(
+                role, session, target, asked
+            )
 
         return self._fallback_next(question, session)
 
@@ -1600,11 +1848,13 @@ class QuizEngine:
         gates: Iterable[int],
         scopes: Optional[Iterable[str]] = None,
         role_terms: Optional[Iterable[str]] = None,
+        difficulties: Optional[Iterable[str]] = None,
     ) -> Optional[str]:
         excluded = list(dict.fromkeys(item for item in excluded if item))
         gates = list(dict.fromkeys(gates))
         scopes = list(dict.fromkeys(scopes or []))
         role_terms = list(dict.fromkeys(role_terms or []))
+        difficulties = list(dict.fromkeys(difficulties or []))
 
         clauses = ["is_active = 1"]
         params: List[Any] = []
@@ -1618,6 +1868,11 @@ class QuizEngine:
         if scopes:
             clauses.append(f"domain_scope IN ({','.join('?' for _ in scopes)})")
             params.extend(scopes)
+        if difficulties:
+            clauses.append(
+                f"difficulty IN ({','.join('?' for _ in difficulties)})"
+            )
+            params.extend(difficulties)
         if role_terms:
             role_clauses = []
             for term in role_terms:
@@ -1729,7 +1984,13 @@ class QuizEngine:
 
         self._merge_ai_evidence(session, question, chosen, ai_evaluation, ai_score)
 
-        next_id = self.next_question_id(question, performance, session, answer_key)
+        next_id = self.next_question_id(
+            question,
+            performance,
+            session,
+            answer_key,
+            ai_score=ai_score,
+        )
         next_q = None
         if next_id:
             if next_id.startswith("Q_G0_ROLE_SELECT:"):
@@ -1821,6 +2082,89 @@ class QuizEngine:
         skill_avgs = self._skill_averages(session)
         return round(sum(skill_avgs.values()) / len(skill_avgs), 3) if skill_avgs else 0
 
+    def _assessment_metrics(self, session: dict) -> dict:
+        rows = self._assessment_rows(session["id"])
+        scores = [
+            max(0.0, min(1.0, float(row.get("ai_score") or 0.0)))
+            for row in rows
+        ]
+        evaluator_confidences = [
+            max(0.0, min(1.0, float(row.get("ai_confidence"))))
+            for row in rows
+            if row.get("ai_confidence") is not None
+        ]
+        difficulty_counts = {level: 0 for level in DIFFICULTY_LEVELS}
+        performance_counts = {"strong": 0, "partial": 0, "weak": 0}
+        difficulty_scores = {level: [] for level in DIFFICULTY_LEVELS}
+
+        for row, score in zip(rows, scores):
+            difficulty = str(row.get("difficulty") or "beginner").lower()
+            if difficulty not in difficulty_counts:
+                difficulty = "beginner"
+            difficulty_counts[difficulty] += 1
+            difficulty_scores[difficulty].append(score)
+            performance = str(
+                row.get("performance") or self.classify_performance(score)
+            )
+            if performance in performance_counts:
+                performance_counts[performance] += 1
+
+        coverage = min(1.0, len(rows) / TARGET_TECHNICAL_QUESTIONS)
+        evaluator_confidence = (
+            sum(evaluator_confidences) / len(evaluator_confidences)
+            if evaluator_confidences
+            else 0.5
+        )
+        consistency = (
+            max(0.0, 1.0 - statistics.pstdev(scores))
+            if len(scores) > 1
+            else (0.5 if scores else 0.0)
+        )
+        skill_coverage = min(1.0, len(self._skill_averages(session)) / 4)
+        highest_difficulty = "beginner"
+        if difficulty_counts["advanced"]:
+            highest_difficulty = "advanced"
+        elif difficulty_counts["intermediate"]:
+            highest_difficulty = "intermediate"
+        depth = DIFFICULTY_LEVELS.index(highest_difficulty) / 2
+        confidence = round(
+            (
+                0.40 * coverage
+                + 0.20 * evaluator_confidence
+                + 0.15 * consistency
+                + 0.15 * skill_coverage
+                + 0.10 * depth
+            )
+            * 100
+        )
+
+        averages = {
+            difficulty: (
+                round(sum(values) / len(values), 3) if values else None
+            )
+            for difficulty, values in difficulty_scores.items()
+        }
+        return {
+            "technical_questions": len(rows),
+            "difficulty_counts": difficulty_counts,
+            "difficulty_scores": averages,
+            "performance_counts": performance_counts,
+            "highest_difficulty": highest_difficulty,
+            "assessment_confidence": confidence,
+        }
+
+    def _demonstrated_level(self, session: dict) -> str:
+        metrics = self._assessment_metrics(session)
+        counts = metrics["difficulty_counts"]
+        scores = metrics["difficulty_scores"]
+        if counts["advanced"] >= 2 and (scores["advanced"] or 0) >= 0.68:
+            return "senior"
+        if counts["intermediate"] >= 2 and (scores["intermediate"] or 0) >= 0.62:
+            return "mid"
+        if counts["beginner"] >= 2 and (scores["beginner"] or 0) >= PARTIAL_THRESHOLD:
+            return "junior"
+        return "intern"
+
     def _experience_level(self, overall: float) -> str:
         if overall >= 0.82:
             return "senior"
@@ -1842,15 +2186,14 @@ class QuizEngine:
 
     def _progress(self, session: dict) -> dict:
         asked = len(session["questions_asked"])
-        role = session.get("detected_role")
-        if role:
-            ordered_qids = self.get_ordered_questions_for_role(role)
-            role_count = len(ordered_qids)
-            total_estimate = role_count + 2
-            if role_count < MIN_ROLE_INTERVIEW_QUESTIONS:
-                total_estimate = max(total_estimate, MIN_ROLE_INTERVIEW_QUESTIONS + 2)
-        else:
-            total_estimate = TARGET_QUESTIONS
+        metrics = self._assessment_metrics(session)
+        remaining_technical = max(
+            0, TARGET_TECHNICAL_QUESTIONS - metrics["technical_questions"]
+        )
+        total_estimate = min(
+            MAX_ASSESSMENT_QUESTIONS,
+            max(TARGET_QUESTIONS, asked + remaining_technical),
+        )
         overall = self._overall_score(session)
         percent = min(100, round(asked / total_estimate * 100)) if total_estimate > 0 else 0
         return {
@@ -1860,14 +2203,20 @@ class QuizEngine:
             "detected_domain": session.get("detected_domain"),
             "detected_role": session.get("detected_role"),
             "detected_skills": len(session.get("skill_scores") or {}),
-            "skill_level": self._experience_level(overall),
-            "confidence": round(overall * 100),
+            "skill_level": self._demonstrated_level(session),
+            "skill_score": round(overall * 100),
+            "confidence": metrics["assessment_confidence"],
+            "difficulty_reached": metrics["highest_difficulty"],
+            "difficulty_counts": metrics["difficulty_counts"],
+            "performance_counts": metrics["performance_counts"],
         }
 
     def _build_profile(self, session: dict) -> dict:
         skill_avgs = self._skill_averages(session)
         overall = round(sum(skill_avgs.values()) / len(skill_avgs), 3) if skill_avgs else 0
         top_category = self._top_category(session)
+        metrics = self._assessment_metrics(session)
+        demonstrated_level = self._demonstrated_level(session)
 
         return {
             "source": "adaptive_quiz",
@@ -1876,13 +2225,17 @@ class QuizEngine:
             "detected_role": session.get("detected_role"),
             "detected_skills": list(skill_avgs.keys()),
             "top_category": top_category,
-            "experience_level": self._experience_level(overall),
-            "skill_level": self._experience_level(overall),
+            "experience_level": demonstrated_level,
+            "skill_level": demonstrated_level,
             "domain_scores": session["domain_scores"],
             "skill_scores": skill_avgs,
             "category_scores": session["category_scores"],
             "overall_score": overall,
-            "confidence": round(overall * 100),
+            "confidence": metrics["assessment_confidence"],
+            "difficulty_reached": metrics["highest_difficulty"],
+            "difficulty_counts": metrics["difficulty_counts"],
+            "difficulty_scores": metrics["difficulty_scores"],
+            "performance_counts": metrics["performance_counts"],
             "question_count": len(session["questions_asked"]),
             "profile_vector": None,
         }
