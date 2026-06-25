@@ -11,11 +11,13 @@ from flask import Flask, jsonify, request
 from app.ai_tips import GroqResumeCoach
 from app.answer_evaluator import evaluate, evaluate_mcq
 from app.config import settings
-from app.gap_analyzer import format_gaps_for_ui
+from app.gap_analyzer import GapAnalyzer, format_gaps_for_ui
+from app.learning_path import LearningPath
 from app.profile_service import ProfileService, ProfileValidationError
 from app.quiz_engine import QuizEngine
 from app.recommender import RecommendationEngine
 from app.resource_recommender import ResourceRecommender
+from app.resume_tips import ResumeCoach
 from app.skill_normalizer import SkillNormalizer
 
 app = Flask(__name__)
@@ -24,6 +26,9 @@ app.config["SECRET_KEY"] = settings.secret_key
 _recommender: Optional[RecommendationEngine] = None
 _skill_normalizer: Optional[SkillNormalizer] = None
 _profile_service: Optional[ProfileService] = None
+_gap_analyzer: Optional[GapAnalyzer] = None
+_learning_path: Optional[LearningPath] = None
+_resume_coach: Optional[ResumeCoach] = None
 _quiz_engine: Optional[QuizEngine] = None
 _resource_recommender: Optional[ResourceRecommender] = None
 _ai_resume_coach: Optional[GroqResumeCoach] = None
@@ -48,6 +53,27 @@ def _get_profile_service() -> ProfileService:
     if _profile_service is None:
         _profile_service = ProfileService(_get_skill_normalizer())
     return _profile_service
+
+
+def _get_gap_analyzer() -> GapAnalyzer:
+    global _gap_analyzer
+    if _gap_analyzer is None:
+        _gap_analyzer = GapAnalyzer(_get_skill_normalizer())
+    return _gap_analyzer
+
+
+def _get_learning_path() -> LearningPath:
+    global _learning_path
+    if _learning_path is None:
+        _learning_path = LearningPath(normalizer=_get_skill_normalizer())
+    return _learning_path
+
+
+def _get_resume_coach() -> ResumeCoach:
+    global _resume_coach
+    if _resume_coach is None:
+        _resume_coach = ResumeCoach()
+    return _resume_coach
 
 
 def _get_quiz_engine() -> QuizEngine:
@@ -339,6 +365,24 @@ def normalize_skills():
         return jsonify({"error": str(exc)}), 400
 
 
+@app.route("/skills/suggest", methods=["GET", "OPTIONS"])
+def suggest_skills():
+    """Return taxonomy-backed autocomplete suggestions."""
+    if request.method == "OPTIONS":
+        return "", 204
+
+    try:
+        limit = int(request.args.get("limit", 8))
+    except ValueError:
+        limit = 8
+    return jsonify(
+        _get_profile_service().suggest_skills(
+            request.args.get("q", ""),
+            limit=max(1, min(limit, 25)),
+        )
+    )
+
+
 @app.route("/analysis", methods=["POST", "OPTIONS"])
 def analysis():
     """Return skill gap analysis and learning resources for a profile or session."""
@@ -347,14 +391,26 @@ def analysis():
 
     body = request.get_json(silent=True) or {}
     session_id = body.get("session_id")
-    if not session_id:
-        return jsonify({"error": "session_id required"}), 400
 
     try:
-        session = _get_quiz_engine().load_session(session_id)
-        gaps = format_gaps_for_ui(session)
-        resources = _get_resource_recommender().recommend_grouped(session)
-        ai_payload = _get_ai_resume_coach().generate_analysis(session, gaps, resources)
+        if session_id:
+            session = _get_quiz_engine().load_session(session_id)
+            gaps = format_gaps_for_ui(session)
+            resources = _get_resource_recommender().recommend_grouped(session)
+            ai_payload = _get_ai_resume_coach().generate_analysis(
+                session, gaps, resources
+            )
+        else:
+            profile = _get_profile_service().from_payload(
+                body.get("skill_profile") or body.get("profile") or {}
+            )
+            recommendations = body.get("recommendations") or []
+            profile_data = _get_profile_service().serialize(profile)
+            gaps = _get_gap_analyzer().analyze(profile_data, recommendations)
+            resources = _get_learning_path().recommend_resources(
+                [gap["skill_id"] for gap in gaps]
+            )
+            ai_payload = {"summary": None, "is_ai": False}
         return jsonify({
             "gaps": gaps,
             "resources": resources,
@@ -373,20 +429,35 @@ def resume_tips():
 
     body = request.get_json(silent=True) or {}
     session_id = body.get("session_id")
-    if not session_id:
-        return jsonify({"error": "session_id required"}), 400
 
     try:
-        session = _get_quiz_engine().load_session(session_id)
-        gaps = format_gaps_for_ui(session)
-        resource_groups = _get_resource_recommender().recommend_grouped(session)
-        recs = _get_resource_recommender().recommend(session)
-        ai_payload = _get_ai_resume_coach().generate_coaching(
-            session,
-            gaps,
-            recommendations=recs,
-            resource_groups=resource_groups,
-        )
+        if session_id:
+            session = _get_quiz_engine().load_session(session_id)
+            gaps = format_gaps_for_ui(session)
+            resource_groups = _get_resource_recommender().recommend_grouped(session)
+            recs = _get_resource_recommender().recommend(session)
+            ai_payload = _get_ai_resume_coach().generate_coaching(
+                session,
+                gaps,
+                recommendations=recs,
+                resource_groups=resource_groups,
+            )
+        else:
+            profile = _get_profile_service().from_payload(
+                body.get("skill_profile") or body.get("profile") or {}
+            )
+            recommendations = body.get("recommendations") or []
+            profile_data = _get_profile_service().serialize(profile)
+            gaps = _get_gap_analyzer().analyze(profile_data, recommendations)
+            coaching = _get_resume_coach().get_coaching(profile_data, gaps)
+            ai_payload = {
+                "summary": "Use these recommendations to align your resume with your target role.",
+                "tips": coaching.get("tips", []),
+                "schedule": coaching.get("schedule", []),
+                "resume_tips": [],
+                "resource_explanations": {},
+                "is_ai": coaching.get("is_ai", False),
+            }
         return jsonify({
             "summary": ai_payload.get("summary"),
             "tips": ai_payload.get("tips", []),

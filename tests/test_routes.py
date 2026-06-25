@@ -126,6 +126,96 @@ def test_normalize_skill_phrases_reports_matches_and_unknowns(client):
     assert data["unresolved"] == ["Unknown Future Skill"]
 
 
+def test_skill_suggestions_endpoint(client):
+    response = client.get("/skills/suggest?q=react&limit=5")
+
+    assert response.status_code == 200
+    suggestions = response.get_json()["suggestions"]
+    assert suggestions
+    assert suggestions[0]["skill_id"] == "fe-react"
+
+
+def test_recommend_manual_profile_returns_evidence_aware_scores(client):
+    response = client.post(
+        "/recommend",
+        json={
+            "skills": ["Python", "React", "Unknown Future Skill"],
+            "skill_levels": {
+                "Python": "beginner",
+                "React": "advanced",
+            },
+            "experience": "junior",
+            "experience_years": 1.5,
+            "has_projects": True,
+            "portfolio_url": "https://example.com/work",
+            "category": "backend-dev",
+            "top_n": 1,
+        },
+    )
+
+    assert response.status_code == 200
+    profile = response.get_json()["skill_profile"]
+    assert profile["skill_scores"]["lang-py"] == 0.4
+    assert profile["skill_scores"]["fe-react"] == 0.82
+    assert profile["evidence"]["unresolved_skills"] == ["Unknown Future Skill"]
+    assert profile["evidence"]["has_projects"] is True
+
+
+def test_manual_profile_analysis_does_not_require_quiz_session(client):
+    response = client.post(
+        "/analysis",
+        json={
+            "skill_profile": {
+                "source": "manual",
+                "skills": ["Python"],
+                "skill_levels": {"Python": "advanced"},
+                "category": "backend-dev",
+            },
+            "recommendations": [
+                {
+                    "job_id": "job-test",
+                    "missing_skills": ["ops-docker", "lang-sql"],
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["gaps"]
+    assert {gap["skill_id"] for gap in data["gaps"]} == {
+        "ops-docker",
+        "lang-sql",
+    }
+    assert "resources" in data
+
+
+def test_manual_profile_resume_tips_do_not_require_quiz_session(client):
+    response = client.post(
+        "/resume-tips",
+        json={
+            "skill_profile": {
+                "source": "manual",
+                "skills": ["Python"],
+                "skill_levels": {"Python": "advanced"},
+                "category": "backend-dev",
+            },
+            "recommendations": [
+                {
+                    "job_id": "job-test",
+                    "missing_skills": ["ops-docker"],
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["tips"]
+    assert data["schedule"]
+    assert data["is_ai"] is False
+
+
 def test_cors_only_allows_configured_frontend(client):
     allowed = client.get(
         "/health",

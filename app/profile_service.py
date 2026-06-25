@@ -33,7 +33,9 @@ class ProfileService:
             raise ProfileValidationError("Profile must be a JSON object.")
 
         source = source_hint or payload.get("source")
-        if source == "quiz" or self._looks_like_quiz_profile(payload):
+        if source == "quiz" or (
+            not source and self._looks_like_quiz_profile(payload)
+        ):
             profile = profile_from_quiz_result(
                 payload,
                 user_id=user_id,
@@ -49,6 +51,23 @@ class ProfileService:
             if not isinstance(raw_skills, list):
                 raise ProfileValidationError("skills must be a list.")
 
+            supplied_evidence = dict(payload.get("evidence") or {})
+            supplied_evidence.update(
+                {
+                    "experience_years": payload.get(
+                        "experience_years",
+                        supplied_evidence.get("experience_years"),
+                    ),
+                    "has_projects": payload.get(
+                        "has_projects",
+                        supplied_evidence.get("has_projects", False),
+                    ),
+                    "portfolio_url": payload.get(
+                        "portfolio_url",
+                        supplied_evidence.get("portfolio_url"),
+                    ),
+                }
+            )
             profile = profile_from_manual_input(
                 skills=raw_skills,
                 experience_level=(
@@ -65,6 +84,8 @@ class ProfileService:
                 location=payload.get("location") or "remote",
                 user_id=user_id or payload.get("user_id"),
                 normalizer=self.normalizer,
+                skill_levels=payload.get("skill_levels") or {},
+                evidence=supplied_evidence,
             )
             if raw_skills and not profile.skill_ids:
                 raise ProfileValidationError(
@@ -74,6 +95,25 @@ class ProfileService:
             profile.detected_role = (
                 payload.get("detected_role") or profile.target_role
             )
+            supplied_scores = payload.get("skill_scores") or {}
+            if supplied_scores:
+                canonical_scores = {}
+                for raw_skill, score in supplied_scores.items():
+                    skill_id = self.normalizer.to_skill_id(str(raw_skill))
+                    try:
+                        score_value = float(score)
+                    except (TypeError, ValueError):
+                        continue
+                    if skill_id and 0 <= score_value <= 1:
+                        canonical_scores[skill_id] = score_value
+                if canonical_scores:
+                    profile.skill_scores = canonical_scores
+                    profile.overall_score = round(
+                        sum(canonical_scores.values()) / len(canonical_scores),
+                        3,
+                    )
+            if payload.get("confidence") is not None:
+                profile.confidence = float(payload["confidence"])
 
         if payload.get("profile_id"):
             profile.profile_id = str(payload["profile_id"])
@@ -133,6 +173,15 @@ class ProfileService:
                 for skill_id in skill_ids
             ],
             "unresolved": unresolved,
+        }
+
+    def suggest_skills(self, query: Any, limit: int = 8) -> Dict[str, Any]:
+        text = str(query or "").strip()
+        if len(text) < 1:
+            return {"query": text, "suggestions": []}
+        return {
+            "query": text,
+            "suggestions": self.normalizer.suggest(text, limit=limit),
         }
 
     @staticmethod

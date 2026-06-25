@@ -53,15 +53,9 @@ function Results({ navigate }) {
   const [isAnalysisLoading, setIsAnalysisLoading] = useState(() => {
     const profile = loadStoredProfile()
     const rawRecs = loadStoredRawRecommendations() || loadStoredRecommendations()
-    return Boolean(!loadStoredAnalysis() && profile && rawRecs?.length && loadStoredSessionId())
+    return Boolean(!loadStoredAnalysis() && profile && rawRecs?.length)
   })
-  const [analysisError, setAnalysisError] = useState(() => {
-    const profile = loadStoredProfile()
-    const rawRecs = loadStoredRawRecommendations() || loadStoredRecommendations()
-    return profile && rawRecs?.length && !loadStoredSessionId()
-      ? 'session_id required'
-      : null
-  })
+  const [analysisError, setAnalysisError] = useState(null)
 
   const [resumeTipsData, setResumeTipsData] = useState(() => {
     try {
@@ -72,11 +66,9 @@ function Results({ navigate }) {
     }
   })
   const [isResumeTipsLoading, setIsResumeTipsLoading] = useState(() =>
-    Boolean(loadStoredProfile() && loadStoredSessionId()),
+    Boolean(loadStoredProfile()),
   )
-  const [resumeTipsError, setResumeTipsError] = useState(() =>
-    loadStoredProfile() && !loadStoredSessionId() ? 'session_id required' : null,
-  )
+  const [resumeTipsError, setResumeTipsError] = useState(null)
 
   const [jobRecommendations, setJobRecommendations] = useState(() => {
     const stored = loadStoredRecommendations()
@@ -139,13 +131,7 @@ function Results({ navigate }) {
       }
     }
 
-    if (!sessionId) {
-      return () => {
-        isMounted = false
-      }
-    }
-
-    fetchAnalysis(sessionId)
+    fetchAnalysis(sessionId, profile, rawRecs)
       .then((payload) => {
         if (!isMounted) {
           return
@@ -171,11 +157,8 @@ function Results({ navigate }) {
     let isMounted = true
     const profile = loadStoredProfile()
     const sessionId = loadStoredSessionId()
+    const rawRecs = loadStoredRawRecommendations() || loadStoredRecommendations()
     if (!profile) {
-      return
-    }
-
-    if (!sessionId) {
       return
     }
 
@@ -184,7 +167,7 @@ function Results({ navigate }) {
       return
     }
 
-    fetchResumeTips(sessionId)
+    fetchResumeTips(sessionId, profile, rawRecs)
       .then((payload) => {
         if (!isMounted) {
           return

@@ -248,6 +248,56 @@ class SkillNormalizer:
                 unresolved.append(str(value).strip())
         return normalized, unresolved
 
+    def suggest(self, query: Optional[str], limit: int = 8) -> List[Dict[str, Any]]:
+        normalized_query = normalize_skill_text(query)
+        if not normalized_query:
+            return []
+
+        ranked: List[Tuple[int, float, str, str]] = []
+        for skill_id, item in self._id_to_item.items():
+            name = self._id_to_name[skill_id]
+            normalized_name = normalize_skill_text(name)
+            aliases = {
+                normalize_skill_text(alias)
+                for alias in [skill_id, name, *(item.get("aliases") or [])]
+                if normalize_skill_text(alias)
+            }
+
+            if normalized_query == normalized_name or normalized_query == normalize_skill_text(skill_id):
+                match_rank = 0
+            elif normalized_name.startswith(normalized_query):
+                match_rank = 1
+            elif any(alias.startswith(normalized_query) for alias in aliases):
+                match_rank = 2
+            elif normalized_query in normalized_name:
+                match_rank = 3
+            elif any(normalized_query in alias for alias in aliases):
+                match_rank = 4
+            else:
+                continue
+
+            ranked.append(
+                (
+                    match_rank,
+                    -float(item.get("weight") or 1.0),
+                    name.casefold(),
+                    skill_id,
+                )
+            )
+
+        suggestions = []
+        for _, _, _, skill_id in sorted(ranked)[: max(1, min(limit, 25))]:
+            item = self._id_to_item[skill_id]
+            suggestions.append(
+                {
+                    "skill_id": skill_id,
+                    "skill_name": self._id_to_name[skill_id],
+                    "domain": item.get("domain"),
+                    "category": item.get("category"),
+                }
+            )
+        return suggestions
+
     def alias_collisions(self) -> Dict[str, List[str]]:
         return {
             alias: list(ids)

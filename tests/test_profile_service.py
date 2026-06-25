@@ -51,3 +51,66 @@ def test_invalid_manual_skills_are_rejected():
 
     with pytest.raises(ProfileValidationError):
         service.from_payload({"skills": "Python, SQL"})
+
+
+def test_manual_skill_levels_create_realistic_scores():
+    service = ProfileService()
+    profile = service.from_payload(
+        {
+            "skills": ["Python", "React"],
+            "skill_levels": {
+                "Python": "beginner",
+                "React": "advanced",
+            },
+            "experience": "junior",
+            "experience_years": 2,
+            "has_projects": True,
+            "portfolio_url": "https://example.com/portfolio",
+        }
+    )
+
+    assert profile.skill_scores["lang-py"] == 0.4
+    assert profile.skill_scores["fe-react"] == 0.82
+    assert profile.overall_score == 0.61
+    assert profile.evidence["experience_years"] == 2.0
+    assert profile.evidence["has_projects"] is True
+    assert profile.confidence >= 0.75
+
+
+def test_manual_profile_preserves_unresolved_skill_feedback():
+    service = ProfileService()
+    profile = service.from_payload(
+        {
+            "skills": ["Python", "Unknown Future Skill"],
+            "skill_levels": {"Python": "intermediate"},
+        }
+    )
+
+    assert profile.skill_ids == ["lang-py"]
+    assert profile.evidence["unresolved_skills"] == ["Unknown Future Skill"]
+
+
+def test_skill_suggestions_return_taxonomy_metadata():
+    service = ProfileService()
+    result = service.suggest_skills("pyth")
+
+    assert result["suggestions"][0]["skill_id"] == "lang-py"
+    assert result["suggestions"][0]["skill_name"] == "Python"
+    assert result["suggestions"][0]["domain"]
+
+
+def test_serialized_manual_profile_stays_manual_when_reloaded():
+    service = ProfileService()
+    original = service.from_payload(
+        {
+            "skills": ["Python"],
+            "skill_levels": {"Python": "advanced"},
+            "experience_years": 2,
+            "has_projects": True,
+        }
+    )
+    reloaded = service.from_payload(service.serialize(original))
+
+    assert reloaded.source == "manual"
+    assert reloaded.skill_scores == original.skill_scores
+    assert reloaded.evidence["has_projects"] is True

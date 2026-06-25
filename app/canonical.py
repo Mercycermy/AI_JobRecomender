@@ -130,6 +130,7 @@ class CanonicalProfile:
     domain_scores: Dict[str, float] = field(default_factory=dict)
     overall_score: float = 0.0
     confidence: float = 0.0
+    evidence: Dict[str, Any] = field(default_factory=dict)
     created_at: str = field(default_factory=utc_now_iso)
     updated_at: str = field(default_factory=utc_now_iso)
 
@@ -527,11 +528,71 @@ def profile_from_manual_input(
     location: str = "remote",
     user_id: Optional[str] = None,
     normalizer: Optional[SkillNormalizer] = None,
+    skill_levels: Optional[Dict[str, str]] = None,
+    evidence: Optional[Dict[str, Any]] = None,
 ) -> CanonicalProfile:
     normalizer = normalizer or SkillNormalizer()
-    skill_ids = normalizer.normalize_list(skills)
-    skill_scores = {skill_id: 1.0 for skill_id in skill_ids}
-    overall = 1.0 if skill_scores else 0.0
+    raw_skills = list(skills)
+    skill_ids, unresolved = normalizer.normalize_with_unresolved(raw_skills)
+    skill_levels = skill_levels or {}
+    evidence = dict(evidence or {})
+
+    level_scores = {
+        "beginner": 0.40,
+        "intermediate": 0.65,
+        "advanced": 0.82,
+        "expert": 0.95,
+    }
+    experience_scores = {
+        "intern": 0.35,
+        "junior": 0.50,
+        "mid": 0.70,
+        "senior": 0.85,
+    }
+    default_score = experience_scores.get(str(experience_level).lower(), 0.50)
+    normalized_levels: Dict[str, str] = {}
+    for raw_skill, level in skill_levels.items():
+        skill_id = normalizer.to_skill_id(str(raw_skill))
+        level_name = str(level or "").strip().lower()
+        if skill_id and level_name in level_scores:
+            normalized_levels[skill_id] = level_name
+
+    skill_scores = {
+        skill_id: level_scores.get(normalized_levels.get(skill_id), default_score)
+        for skill_id in skill_ids
+    }
+    overall = (
+        round(sum(skill_scores.values()) / len(skill_scores), 3)
+        if skill_scores
+        else 0.0
+    )
+
+    years = evidence.get("experience_years")
+    try:
+        years_value = max(0.0, float(years)) if years is not None else None
+    except (TypeError, ValueError):
+        years_value = None
+    has_projects = bool(evidence.get("has_projects"))
+    has_portfolio = bool(str(evidence.get("portfolio_url") or "").strip())
+    explicit_levels = len(normalized_levels)
+    confidence = 0.40
+    confidence += min(0.20, len(skill_ids) * 0.025)
+    confidence += min(0.15, explicit_levels * 0.025)
+    confidence += 0.10 if years_value is not None else 0.0
+    confidence += 0.10 if has_projects else 0.0
+    confidence += 0.05 if has_portfolio else 0.0
+    confidence = round(min(0.95, confidence), 3)
+
+    evidence.update(
+        {
+            "experience_years": years_value,
+            "has_projects": has_projects,
+            "portfolio_url": str(evidence.get("portfolio_url") or "").strip() or None,
+            "skill_levels": normalized_levels,
+            "unresolved_skills": unresolved,
+            "evidence_completeness": confidence,
+        }
+    )
     return CanonicalProfile(
         profile_id=stable_id("profile", "manual", user_id, ",".join(skill_ids), target_role, location),
         user_id=user_id,
@@ -544,7 +605,8 @@ def profile_from_manual_input(
         skill_ids=skill_ids,
         skill_scores=skill_scores,
         overall_score=overall,
-        confidence=0.7 if skill_ids else 0.0,
+        confidence=confidence if skill_ids else 0.0,
+        evidence=evidence,
     )
 
 
