@@ -47,6 +47,10 @@ def main():
         FOREIGN KEY (job_id) REFERENCES jobs(job_id),
         FOREIGN KEY (skill_id) REFERENCES skill_taxonomy(skill_id)
     );
+    CREATE INDEX IF NOT EXISTS idx_job_skills_skill_id
+        ON job_skills(skill_id, job_id);
+    CREATE INDEX IF NOT EXISTS idx_jobs_category_date
+        ON jobs(category, date_added DESC);
     CREATE TABLE IF NOT EXISTS learning_resources (
         resource_id TEXT PRIMARY KEY,
         skill_id TEXT,

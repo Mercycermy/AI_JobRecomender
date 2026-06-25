@@ -5,6 +5,7 @@ Tests for the RecommendationEngine.
 import os
 import sys
 import time
+from datetime import date
 
 import pytest
 
@@ -65,10 +66,7 @@ def test_experience_weight():
 
 
 def test_rank_jobs_fallback():
-    engine = RecommendationEngine()
-    engine.index = None
-    engine.model = None
-    engine.job_ids = []
+    engine = RecommendationEngine(load_resources=False)
 
     profile = {
         "skills": ["python", "sql", "git"],
@@ -86,6 +84,92 @@ def test_rank_jobs_fallback():
         assert "job_title" in first
         assert "match_score" in first
         assert "breakdown" in first
+
+
+def test_explainable_hybrid_score_contains_all_factors():
+    engine = RecommendationEngine(
+        load_resources=False,
+        today=date(2026, 6, 26),
+    )
+    result = engine._score_job(
+        job={
+            "job_id": "job-score-test",
+            "job_title": "Backend Python Engineer",
+            "description": "Build REST APIs with Python, FastAPI, and Docker.",
+            "category": "backend-dev",
+            "source": "test",
+            "exp_level": "mid",
+            "job_type": "full-time",
+            "location": "Remote",
+            "date_added": "2026-06-20",
+        },
+        required_skills={"lang-py", "be-fastapi", "ops-docker"},
+        user_skills={"lang-py", "be-fastapi"},
+        skill_scores={"lang-py": 0.82, "be-fastapi": 0.65},
+        user_exp="mid",
+        target_role="backend-dev",
+        location_pref="remote",
+    )
+
+    assert {
+        "skill_fit",
+        "semantic_similarity",
+        "experience_match",
+        "role_match",
+        "location_match",
+        "freshness",
+    } <= set(result["breakdown"])
+    assert abs(
+        sum(result["weighted_contributions"].values())
+        - result["match_score"]
+    ) <= 0.2
+    assert result["matched_skill_names"] == ["Python", "FastAPI"]
+    assert result["missing_skill_names"] == ["Docker"]
+    assert "Main skills to develop: Docker." in result["explanation"]
+
+
+def test_location_and_freshness_are_real_scoring_signals():
+    engine = RecommendationEngine(
+        load_resources=False,
+        today=date(2026, 6, 26),
+    )
+
+    assert engine._location_score("Nairobi", "Nairobi, Kenya") == 1.0
+    assert engine._location_score("Nairobi", "Remote") == 0.75
+    assert engine._location_score("remote", "Addis Ababa") == 0.25
+    assert engine._freshness_score("2026-06-24") == 1.0
+    assert engine._freshness_score("2026-05-20") == 0.75
+    assert engine._freshness_score("2025-01-01") == 0.2
+
+
+def test_database_ranking_is_deterministic_and_explainable():
+    engine = RecommendationEngine(load_resources=False)
+    profile = {
+        "skill_ids": ["lang-py", "be-fastapi", "be-rest", "ops-docker"],
+        "skill_scores": {
+            "lang-py": 0.82,
+            "be-fastapi": 0.65,
+            "be-rest": 0.65,
+            "ops-docker": 0.65,
+        },
+        "experience_level": "mid",
+        "target_role": "backend-dev",
+        "location": "remote",
+    }
+
+    first = engine.rank_jobs(profile, top_n=5)
+    second = engine.rank_jobs(profile, top_n=5)
+
+    assert first
+    assert [item["job_id"] for item in first] == [
+        item["job_id"] for item in second
+    ]
+    assert [item["match_score"] for item in first] == sorted(
+        (item["match_score"] for item in first),
+        reverse=True,
+    )
+    assert all(item["explanation"] for item in first)
+    assert all(item["score_weights"] for item in first)
 
 
 def test_engine_loads_with_vectors():

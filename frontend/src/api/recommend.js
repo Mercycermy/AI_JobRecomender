@@ -76,20 +76,29 @@ export function mapJobToCard(job) {
   return {
     id: job.job_id,
     title: job.job_title,
-    company: job.category?.replace(/-/g, ' ') || 'Open role',
+    company: job.source || job.category?.replace(/-/g, ' ') || 'Open role',
     category: job.category,
     experience: job.exp_level,
     match: job.match_score,
     readiness: Math.round(
-      (job.breakdown?.skill_overlap ?? 0) * 0.6 +
-        (job.breakdown?.experience_match ?? 0) * 0.4,
+      (job.breakdown?.skill_fit ?? job.breakdown?.skill_overlap ?? 0) * 0.7 +
+        (job.breakdown?.experience_match ?? 0) * 0.3,
     ),
-    skills: job.matched_skills?.length
-      ? job.matched_skills
-      : (job.missing_skills || []).slice(0, 3),
+    skills: job.matched_skill_names?.length
+      ? job.matched_skill_names
+      : (job.missing_skill_names || job.missing_skills || []).slice(0, 3),
     breakdown: job.breakdown,
+    weightedContributions: job.weighted_contributions,
+    scoreWeights: job.score_weights,
     description: job.description,
     missing_skills: job.missing_skills,
+    missingSkillNames: job.missing_skill_names,
+    matchedSkillNames: job.matched_skill_names,
+    explanation: job.explanation,
+    explanationPoints: job.explanation_points,
+    location: job.location,
+    dateAdded: job.date_added,
+    requiredSkillCount: job.required_skill_count,
   }
 }
 
@@ -111,6 +120,7 @@ export async function fetchRecommendations(profile, topN = 10) {
     jobs: rawRecs.map(mapJobToCard),
     profile: data.skill_profile || profile,
     rawRecs,
+    engine: data.engine || null,
   }
 }
 

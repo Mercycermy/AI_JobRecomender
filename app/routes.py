@@ -322,14 +322,13 @@ def recommend():
         top_n = int(body.get("top_n", 10))
         top_n = max(1, min(top_n, 50))
         recommender_input = _get_profile_service().to_recommender_input(profile)
-        results = _get_recommender().rank_jobs(recommender_input, top_n=top_n)
+        engine = _get_recommender()
+        results = engine.rank_jobs(recommender_input, top_n=top_n)
         return jsonify({
             "skill_profile": _get_profile_service().serialize(profile),
             "recommendations": results,
             "count": len(results),
-            "engine": {
-                "semantic_search": _get_recommender().index is not None,
-            },
+            "engine": engine.info(),
         })
     except (ProfileValidationError, TypeError, ValueError) as exc:
         return jsonify({"error": str(exc)}), 400

@@ -21,6 +21,14 @@ import ResumeTips from './ResumeTips.jsx'
 import SkillGap from './SkillGap.jsx'
 
 const tabs = ['Skill Gap', 'Learning Resources', 'Resume Tips']
+const matchFactors = [
+  ['skill_fit', 'Skills'],
+  ['semantic_similarity', 'Semantic'],
+  ['experience_match', 'Experience'],
+  ['role_match', 'Role'],
+  ['location_match', 'Location'],
+  ['freshness', 'Freshness'],
+]
 
 function getBadgeClass(match) {
   if (match >= 75) {
@@ -56,6 +64,7 @@ function Results({ navigate }) {
     return Boolean(!loadStoredAnalysis() && profile && rawRecs?.length)
   })
   const [analysisError, setAnalysisError] = useState(null)
+  const [analysisTick, setAnalysisTick] = useState(0)
 
   const [resumeTipsData, setResumeTipsData] = useState(() => {
     try {
@@ -82,16 +91,8 @@ function Results({ navigate }) {
   useEffect(() => {
     let isMounted = true
     const profile = loadStoredProfile()
-    const stored = loadStoredRecommendations()
-    const rawStored = loadStoredRawRecommendations()
 
     if (!profile) {
-      return () => {
-        isMounted = false
-      }
-    }
-
-    if (stored?.length && rawStored?.length) {
       return () => {
         isMounted = false
       }
@@ -126,8 +127,14 @@ function Results({ navigate }) {
     const sessionId = loadStoredSessionId()
 
     if (!profile || !rawRecs?.length) {
+      const retry = window.setTimeout(() => {
+        if (isMounted) {
+          setAnalysisTick((value) => value + 1)
+        }
+      }, 200)
       return () => {
         isMounted = false
+        window.clearTimeout(retry)
       }
     }
 
@@ -151,7 +158,7 @@ function Results({ navigate }) {
     return () => {
       isMounted = false
     }
-  }, [jobRecommendations.length])
+  }, [jobRecommendations, analysisTick])
 
   useEffect(() => {
     let isMounted = true
@@ -312,6 +319,23 @@ function Results({ navigate }) {
                 </span>
               ))}
             </div>
+
+            {job.explanation && (
+              <p className="match-explanation">{job.explanation}</p>
+            )}
+
+            <details className="match-details">
+              <summary>Score breakdown</summary>
+              <div className="match-breakdown-grid">
+                {matchFactors.map(([key, label]) => (
+                  <div key={key}>
+                    <span>{label}</span>
+                    <strong>{Math.round(job.breakdown?.[key] ?? 0)}%</strong>
+                    <small>{job.scoreWeights?.[key] ?? 0}% weight</small>
+                  </div>
+                ))}
+              </div>
+            </details>
 
             <a className="details-link" href={`/results/gap/${job.id}`}>
               View Details -&gt;

@@ -52,6 +52,17 @@ def test_recommend_with_profile(client):
     assert data["count"] <= 3
     assert data["skill_profile"]["source"] == "manual"
     assert "lang-py" in data["skill_profile"]["skill_ids"]
+    assert data["engine"]["retrieval_mode"] in {
+        "database",
+        "semantic+database",
+    }
+    assert data["engine"]["weights"]["skill_fit"] == 40
+    if data["recommendations"]:
+        first = data["recommendations"][0]
+        assert "explanation" in first
+        assert "weighted_contributions" in first
+        assert "freshness" in first["breakdown"]
+        assert "role_match" in first["breakdown"]
 
 
 def test_normalize_manual_profile(client):

@@ -62,6 +62,8 @@ class SkillNormalizer:
         self.overrides_path = overrides_path
         self._id_to_name: Dict[str, str] = {}
         self._id_to_item: Dict[str, Dict[str, Any]] = {}
+        self._id_to_weight: Dict[str, float] = {}
+        self._id_to_tags: Dict[str, Tuple[str, ...]] = {}
         self._alias_to_ids: Dict[str, List[str]] = {}
         self._alias_to_id: Dict[str, str] = {}
         self._preferred_aliases: Dict[str, str] = {}
@@ -94,6 +96,18 @@ class SkillNormalizer:
 
             self._id_to_name[skill_id] = canonical
             self._id_to_item[skill_id] = item
+            try:
+                self._id_to_weight[skill_id] = max(
+                    0.1,
+                    float(item.get("weight") or 1.0),
+                )
+            except (TypeError, ValueError):
+                self._id_to_weight[skill_id] = 1.0
+            self._id_to_tags[skill_id] = tuple(
+                str(tag).strip()
+                for tag in item.get("differentiation_tags", [])
+                if str(tag).strip()
+            )
             self._add_alias(skill_id, skill_id)
             self._add_alias(canonical, skill_id)
             for alias in item.get("aliases", []):
@@ -186,6 +200,35 @@ class SkillNormalizer:
         return self._id_to_name.get(
             resolved, str(resolved).replace("-", " ").title()
         )
+
+    def metadata_for(self, skill_id: Optional[str]) -> Dict[str, Any]:
+        """Return a copy of the canonical taxonomy metadata for a skill."""
+        if not skill_id:
+            return {}
+        resolved = self.to_skill_id(skill_id) or skill_id
+        return dict(self._id_to_item.get(resolved, {}))
+
+    def weight_for(self, skill_id: Optional[str]) -> float:
+        """Return the taxonomy importance weight used by explainable matching."""
+        if not skill_id:
+            return 1.0
+        resolved = (
+            skill_id
+            if skill_id in self._id_to_weight
+            else self.to_skill_id(skill_id) or skill_id
+        )
+        return self._id_to_weight.get(resolved, 1.0)
+
+    def tags_for(self, skill_id: Optional[str]) -> List[str]:
+        """Return role/differentiation tags for lightweight semantic matching."""
+        if not skill_id:
+            return []
+        resolved = (
+            skill_id
+            if skill_id in self._id_to_tags
+            else self.to_skill_id(skill_id) or skill_id
+        )
+        return list(self._id_to_tags.get(resolved, ()))
 
     def extract_matches(self, text: Optional[str]) -> List[SkillMatch]:
         if not text or self._extract_pattern is None:

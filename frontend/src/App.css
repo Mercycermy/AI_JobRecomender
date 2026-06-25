@@ -1532,6 +1532,13 @@ button.chip {
   color: var(--muted);
 }
 
+.job-card .match-explanation {
+  margin: 0;
+  color: var(--slate);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
 .match-badge {
   border-radius: 999px;
   padding: 6px 10px;
@@ -1563,6 +1570,43 @@ button.chip {
 .details-link:hover,
 .resource-card a:hover {
   text-decoration: underline;
+}
+
+.match-details {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+
+.match-details summary {
+  cursor: pointer;
+  color: var(--navy);
+  font-weight: 800;
+}
+
+.match-breakdown-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.match-breakdown-grid div {
+  display: grid;
+  gap: 2px;
+  padding: 10px;
+  border-radius: 7px;
+  background: var(--surface-soft);
+}
+
+.match-breakdown-grid span,
+.match-breakdown-grid small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.match-breakdown-grid strong {
+  color: var(--ink);
+  font-family: var(--font-mono);
 }
 
 .empty-state {
