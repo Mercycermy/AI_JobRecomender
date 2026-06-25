@@ -4,6 +4,7 @@ export const PROFILE_STORAGE_KEY = 'skillProfile'
 export const RECOMMENDATIONS_STORAGE_KEY = 'jobRecommendations'
 export const RAW_RECOMMENDATIONS_STORAGE_KEY = 'rawJobRecommendations'
 export const ANALYSIS_STORAGE_KEY = 'recommendationAnalysis'
+export const QUIZ_SESSION_STORAGE_KEY = 'quizSessionId'
 
 const EXPERIENCE_MAP = {
   Internship: 'intern',
@@ -20,13 +21,55 @@ const CATEGORY_MAP = {
   Marketing: 'business-analyst',
 }
 
-export function toApiProfile({ skills, experience, category, location = 'remote' }) {
+export function toApiProfile({
+  skills,
+  skillLevels = {},
+  experience,
+  category,
+  location = 'remote',
+  experienceYears = '',
+  hasProjects = false,
+  portfolioUrl = '',
+}) {
+  const skillIds = skills.map((skill) =>
+    typeof skill === 'string' ? skill : skill.skill_id,
+  )
   return {
-    detected_skills: skills.map((s) => s.toLowerCase()),
+    detected_skills: skillIds,
+    skill_levels: skillLevels,
     experience_level: EXPERIENCE_MAP[experience] || 'junior',
     top_category: CATEGORY_MAP[category] || category?.toLowerCase?.() || '',
     location,
+    experience_years: experienceYears === '' ? null : Number(experienceYears),
+    has_projects: hasProjects,
+    portfolio_url: portfolioUrl.trim(),
   }
+}
+
+export async function fetchSkillSuggestions(query, limit = 8) {
+  if (!query.trim()) {
+    return []
+  }
+  const params = new URLSearchParams({ q: query.trim(), limit: String(limit) })
+  const response = await fetch(`${API_BASE}/skills/suggest?${params}`)
+  if (!response.ok) {
+    return []
+  }
+  const data = await response.json()
+  return data.suggestions || []
+}
+
+export async function normalizeSkillValues(skills) {
+  const response = await fetch(`${API_BASE}/skills/normalize`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ skills }),
+  })
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || 'Could not normalize skills.')
+  }
+  return response.json()
 }
 
 export function mapJobToCard(job) {
@@ -64,8 +107,11 @@ export async function fetchRecommendations(profile, topN = 10) {
 
   const data = await response.json()
   const rawRecs = data.recommendations || []
-  sessionStorage.setItem(RAW_RECOMMENDATIONS_STORAGE_KEY, JSON.stringify(rawRecs))
-  return rawRecs.map(mapJobToCard)
+  return {
+    jobs: rawRecs.map(mapJobToCard),
+    profile: data.skill_profile || profile,
+    rawRecs,
+  }
 }
 
 export function persistRecommendationSession(profile, jobs, rawRecs = null) {
@@ -73,6 +119,12 @@ export function persistRecommendationSession(profile, jobs, rawRecs = null) {
   sessionStorage.setItem(RECOMMENDATIONS_STORAGE_KEY, JSON.stringify(jobs))
   if (rawRecs) {
     sessionStorage.setItem(RAW_RECOMMENDATIONS_STORAGE_KEY, JSON.stringify(rawRecs))
+  }
+}
+
+export function persistQuizSessionId(sessionId) {
+  if (sessionId) {
+    sessionStorage.setItem(QUIZ_SESSION_STORAGE_KEY, sessionId)
   }
 }
 
@@ -107,6 +159,14 @@ export function loadStoredAnalysis() {
   }
 }
 
+export function loadStoredSessionId() {
+  try {
+    return sessionStorage.getItem(QUIZ_SESSION_STORAGE_KEY) || ''
+  } catch {
+    return ''
+  }
+}
+
 export function loadStoredRawRecommendations() {
   try {
     const raw = sessionStorage.getItem(RAW_RECOMMENDATIONS_STORAGE_KEY)
@@ -122,13 +182,18 @@ export function clearStoredRecommendations() {
   sessionStorage.removeItem(RAW_RECOMMENDATIONS_STORAGE_KEY)
   sessionStorage.removeItem(ANALYSIS_STORAGE_KEY)
   sessionStorage.removeItem('resumeTipsCoaching')
+  sessionStorage.removeItem(QUIZ_SESSION_STORAGE_KEY)
 }
 
-export async function fetchAnalysis(profile, recommendations) {
+export async function fetchAnalysis(sessionId, profile = null, recommendations = null) {
   const response = await fetch(`${API_BASE}/analysis`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ skill_profile: profile, recommendations }),
+    body: JSON.stringify(
+      sessionId
+        ? { session_id: sessionId }
+        : { skill_profile: profile, recommendations },
+    ),
   })
 
   if (!response.ok) {
@@ -139,11 +204,29 @@ export async function fetchAnalysis(profile, recommendations) {
   return response.json()
 }
 
-export async function fetchResumeTips(profile, gaps) {
+function mapFlatTipsToSections(flatTips) {
+  if (!Array.isArray(flatTips) || !flatTips.length) {
+    return []
+  }
+
+  return [
+    {
+      section: 'Coaching',
+      icon: '01',
+      tips: flatTips,
+    },
+  ]
+}
+
+export async function fetchResumeTips(sessionId, profile = null, recommendations = null) {
   const response = await fetch(`${API_BASE}/resume-tips`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ skill_profile: profile, gaps }),
+    body: JSON.stringify(
+      sessionId
+        ? { session_id: sessionId }
+        : { skill_profile: profile, recommendations },
+    ),
   })
 
   if (!response.ok) {
@@ -151,5 +234,17 @@ export async function fetchResumeTips(profile, gaps) {
     throw new Error(err.error || `Resume Tips API failed (${response.status})`)
   }
 
-  return response.json()
+  const data = await response.json()
+  const tips = data.tips?.length
+    ? data.tips
+    : mapFlatTipsToSections(data.resume_tips)
+
+  return {
+    summary: data.summary,
+    tips,
+    schedule: data.schedule || [],
+    is_ai: data.is_ai,
+    resume_tips: data.resume_tips,
+    resource_explanations: data.resource_explanations,
+  }
 }

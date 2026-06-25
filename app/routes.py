@@ -4,36 +4,34 @@ Flask API — adaptive quiz and semantic job recommendations.
 
 from __future__ import annotations
 
-import os
-import uuid
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from flask import Flask, jsonify, request
 
-from app.agent import AssessmentAgent, AgentState
-from app.gap_analyzer import GapAnalyzer
+from app.ai_tips import GroqResumeCoach
+from app.answer_evaluator import evaluate, evaluate_mcq
+from app.config import settings
+from app.gap_analyzer import GapAnalyzer, format_gaps_for_ui
 from app.learning_path import LearningPath
+from app.profile_service import ProfileService, ProfileValidationError
+from app.quiz_engine import QuizEngine
 from app.recommender import RecommendationEngine
+from app.resource_recommender import ResourceRecommender
 from app.resume_tips import ResumeCoach
 from app.skill_normalizer import SkillNormalizer
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", "dev-secret-change-me")
+app.config["SECRET_KEY"] = settings.secret_key
 
-_agent: Optional[AssessmentAgent] = None
 _recommender: Optional[RecommendationEngine] = None
+_skill_normalizer: Optional[SkillNormalizer] = None
+_profile_service: Optional[ProfileService] = None
 _gap_analyzer: Optional[GapAnalyzer] = None
 _learning_path: Optional[LearningPath] = None
 _resume_coach: Optional[ResumeCoach] = None
-_skill_normalizer: Optional[SkillNormalizer] = None
-_quiz_sessions: Dict[str, AgentState] = {}
-
-
-def _get_agent() -> AssessmentAgent:
-    global _agent
-    if _agent is None:
-        _agent = AssessmentAgent()
-    return _agent
+_quiz_engine: Optional[QuizEngine] = None
+_resource_recommender: Optional[ResourceRecommender] = None
+_ai_resume_coach: Optional[GroqResumeCoach] = None
 
 
 def _get_recommender() -> RecommendationEngine:
@@ -43,17 +41,31 @@ def _get_recommender() -> RecommendationEngine:
     return _recommender
 
 
+def _get_skill_normalizer() -> SkillNormalizer:
+    global _skill_normalizer
+    if _skill_normalizer is None:
+        _skill_normalizer = SkillNormalizer()
+    return _skill_normalizer
+
+
+def _get_profile_service() -> ProfileService:
+    global _profile_service
+    if _profile_service is None:
+        _profile_service = ProfileService(_get_skill_normalizer())
+    return _profile_service
+
+
 def _get_gap_analyzer() -> GapAnalyzer:
     global _gap_analyzer
     if _gap_analyzer is None:
-        _gap_analyzer = GapAnalyzer()
+        _gap_analyzer = GapAnalyzer(_get_skill_normalizer())
     return _gap_analyzer
 
 
 def _get_learning_path() -> LearningPath:
     global _learning_path
     if _learning_path is None:
-        _learning_path = LearningPath()
+        _learning_path = LearningPath(normalizer=_get_skill_normalizer())
     return _learning_path
 
 
@@ -64,16 +76,32 @@ def _get_resume_coach() -> ResumeCoach:
     return _resume_coach
 
 
-def _get_skill_normalizer() -> SkillNormalizer:
-    global _skill_normalizer
-    if _skill_normalizer is None:
-        _skill_normalizer = SkillNormalizer()
-    return _skill_normalizer
+def _get_quiz_engine() -> QuizEngine:
+    global _quiz_engine
+    if _quiz_engine is None:
+        _quiz_engine = QuizEngine()
+    return _quiz_engine
+
+
+def _get_resource_recommender() -> ResourceRecommender:
+    global _resource_recommender
+    if _resource_recommender is None:
+        _resource_recommender = ResourceRecommender()
+    return _resource_recommender
+
+
+def _get_ai_resume_coach() -> GroqResumeCoach:
+    global _ai_resume_coach
+    if _ai_resume_coach is None:
+        _ai_resume_coach = GroqResumeCoach()
+    return _ai_resume_coach
 
 
 def _add_cors_headers(response):
-    origin = request.headers.get("Origin", "*")
-    response.headers["Access-Control-Allow-Origin"] = origin
+    origin = request.headers.get("Origin")
+    if origin and origin in settings.cors_origins:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Vary"] = "Origin"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Session-Id"
     response.headers["Access-Control-Expose-Headers"] = "X-Session-Id"
@@ -105,6 +133,8 @@ _SIGNAL_LABELS = {
     "ACCOUNTING": "Accounting & Finance",
     "ADMIN": "Administration",
     "ENGINEERING": "Engineering & Construction",
+    "EDUCATION": "Education & Training",
+    "LOGISTICS": "Logistics & Transport",
 }
 
 
@@ -161,10 +191,15 @@ def _format_question(q: dict, number: int, total: int) -> dict:
 
     result = {
         "id": q["id"],
+        "gate": q.get("gate"),
         "stem": q.get("stem") or q.get("text", ""),
         "options": options,
         "number": number,
         "total": total,
+        "answer_mode": q.get("answer_mode"),
+        "question_type": q.get("question_type"),
+        "difficulty": q.get("difficulty"),
+        "estimated_minutes": q.get("estimated_minutes"),
     }
 
     # Include context and practical_task for open-ended questions
@@ -181,45 +216,30 @@ def _session_id() -> str:
     return request.headers.get("X-Session-Id") or request.args.get("session_id") or ""
 
 
-def _quiz_payload(state: AgentState, question: Optional[dict], done: bool = False,
-                  profile: Optional[dict] = None) -> dict:
-    payload: Dict[str, Any] = {"done": done}
-    if profile is not None:
-        payload["skill_profile"] = profile
-    if question is not None:
-        total = max(
-            AssessmentAgent.MIN_QUESTIONS,
-            min(AssessmentAgent.MAX_QUESTIONS, state.question_count + 3),
-        )
-        payload["question"] = _format_question(
-            question, state.question_count + 1, total
-        )
-    return payload
-
-
 @app.route("/quiz", methods=["GET", "OPTIONS"])
 def quiz_start():
     if request.method == "OPTIONS":
         return "", 204
 
     try:
-        agent = _get_agent()
+        engine = _get_quiz_engine()
     except Exception as exc:
         return jsonify({"error": f"Quiz unavailable: {exc}"}), 503
 
-    session_id = str(uuid.uuid4())
-    state = agent.init_state()
-    next_id = agent.get_next_question(state)
-    if not next_id:
-        return jsonify({"done": True, "skill_profile": agent.generate_skill_profile(state)})
+    session = engine.create_session()
+    session_state = engine.load_session(session["session_id"])
+    first_q = engine.get_question(session.get("first_question_id"))
+    if not first_q:
+        return jsonify({"error": "No quiz questions available."}), 500
 
-    question = agent.bank.get(next_id)
-    if not question:
-        return jsonify({"error": f"Question not found: {next_id}"}), 500
-
-    _quiz_sessions[session_id] = state
-    resp = jsonify(_quiz_payload(state, question))
-    resp.headers["X-Session-Id"] = session_id
+    progress = engine._progress(session_state)
+    total = progress.get("estimated_total", 12)
+    resp = jsonify({
+        "done": False,
+        "question": _format_question(first_q, 1, total),
+        "progress": progress,
+    })
+    resp.headers["X-Session-Id"] = session["session_id"]
     return resp
 
 
@@ -236,31 +256,55 @@ def quiz_answer():
         return jsonify({"error": "questionId and selectedOption are required"}), 400
 
     sid = _session_id()
-    state = _quiz_sessions.get(sid)
-    if state is None:
+    if not sid:
         return jsonify({"error": "Invalid or expired quiz session. Start with GET /quiz."}), 400
 
     try:
-        agent = _get_agent()
-        state = agent.score_answer(state, question_id, selected)
-        _quiz_sessions[sid] = state
+        engine = _get_quiz_engine()
+        question = engine.get_question(question_id)
+        if not question:
+            return jsonify({"error": f"Question not found: {question_id}"}), 404
 
-        next_id = agent.get_next_question(state)
-        if next_id is None:
-            profile = agent.generate_skill_profile(state)
-            _quiz_sessions.pop(sid, None)
-            recommendations = _get_recommender().rank_jobs(profile, top_n=10)
+        if question.get("answer_mode") == "single_choice":
+            ai_eval = evaluate_mcq(question, selected)
+            answer_key = selected
+        else:
+            ai_eval = evaluate(question, selected)
+            answer_key = None
+
+        result = engine.submit_answer(
+            session_id=sid,
+            question_id=question_id,
+            answer_raw=selected,
+            answer_key=answer_key,
+            ai_evaluation=ai_eval,
+        )
+
+        if result.get("status") == "continue":
+            next_q = result.get("next_question")
+            progress = result.get("progress") or {}
+            number = progress.get("questions_answered", 0) + 1
+            total = progress.get("estimated_total", 12)
             return jsonify({
-                "done": True,
-                "skill_profile": profile,
-                "recommendations": recommendations,
+                "done": False,
+                "question": _format_question(next_q, number, total),
+                "progress": progress,
             })
 
-        question = agent.bank.get(next_id)
-        if not question:
-            return jsonify({"error": f"Question not found: {next_id}"}), 500
-
-        return jsonify(_quiz_payload(state, question))
+        profile = _get_profile_service().from_payload(
+            result.get("profile") or {},
+            source_hint="quiz",
+        )
+        recommendations_profile = _get_profile_service().to_recommender_input(profile)
+        recommendations = _get_recommender().rank_jobs(
+            recommendations_profile, top_n=10
+        )
+        return jsonify({
+            "done": True,
+            "skill_profile": _get_profile_service().serialize(profile),
+            "recommendations": recommendations,
+            "progress": result.get("progress"),
+        })
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
@@ -271,46 +315,107 @@ def recommend():
     if request.method == "OPTIONS":
         return "", 204
 
-    body = request.get_json(silent=True) or {}
-    profile = body.get("skill_profile") or body.get("profile") or body
-
-    if not isinstance(profile, dict):
-        return jsonify({"error": "JSON body must include a skill profile object"}), 400
-
-    top_n = int(body.get("top_n", 10))
-    top_n = max(1, min(top_n, 50))
-
     try:
-        results = _get_recommender().rank_jobs(profile, top_n=top_n)
+        body = request.get_json(silent=True) or {}
+        profile_payload = body.get("skill_profile") or body.get("profile") or body
+        profile = _get_profile_service().from_payload(profile_payload)
+        top_n = int(body.get("top_n", 10))
+        top_n = max(1, min(top_n, 50))
+        recommender_input = _get_profile_service().to_recommender_input(profile)
+        results = _get_recommender().rank_jobs(recommender_input, top_n=top_n)
         return jsonify({
+            "skill_profile": _get_profile_service().serialize(profile),
             "recommendations": results,
             "count": len(results),
             "engine": {
                 "semantic_search": _get_recommender().index is not None,
             },
         })
+    except (ProfileValidationError, TypeError, ValueError) as exc:
+        return jsonify({"error": str(exc)}), 400
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
 
-@app.route("/analysis", methods=["POST", "OPTIONS"])
-def analysis():
-    """Return skill gap analysis and learning resources for a profile."""
+@app.route("/profile/normalize", methods=["POST", "OPTIONS"])
+def normalize_profile():
+    """Convert manual or quiz-shaped input to the shared canonical profile."""
     if request.method == "OPTIONS":
         return "", 204
 
     body = request.get_json(silent=True) or {}
-    profile = body.get("skill_profile") or body.get("profile") or body.get("profile") or {}
-    recommendations = body.get("recommendations") or []
+    profile_payload = body.get("skill_profile") or body.get("profile") or body
+    try:
+        profile = _get_profile_service().from_payload(profile_payload)
+        return jsonify({"skill_profile": _get_profile_service().serialize(profile)})
+    except ProfileValidationError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
+@app.route("/skills/normalize", methods=["POST", "OPTIONS"])
+def normalize_skills():
+    """Normalize skill labels or skill-containing phrases for UI feedback."""
+    if request.method == "OPTIONS":
+        return "", 204
+
+    body = request.get_json(silent=True) or {}
+    try:
+        return jsonify(_get_profile_service().normalize_skills(body.get("skills")))
+    except ProfileValidationError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
+@app.route("/skills/suggest", methods=["GET", "OPTIONS"])
+def suggest_skills():
+    """Return taxonomy-backed autocomplete suggestions."""
+    if request.method == "OPTIONS":
+        return "", 204
 
     try:
-        gaps = _get_gap_analyzer().analyze(profile, recommendations)
-        resources = _get_learning_path().recommend_resources(
-            [gap["skill_id"] for gap in gaps]
+        limit = int(request.args.get("limit", 8))
+    except ValueError:
+        limit = 8
+    return jsonify(
+        _get_profile_service().suggest_skills(
+            request.args.get("q", ""),
+            limit=max(1, min(limit, 25)),
         )
+    )
+
+
+@app.route("/analysis", methods=["POST", "OPTIONS"])
+def analysis():
+    """Return skill gap analysis and learning resources for a profile or session."""
+    if request.method == "OPTIONS":
+        return "", 204
+
+    body = request.get_json(silent=True) or {}
+    session_id = body.get("session_id")
+
+    try:
+        if session_id:
+            session = _get_quiz_engine().load_session(session_id)
+            gaps = format_gaps_for_ui(session)
+            resources = _get_resource_recommender().recommend_grouped(session)
+            ai_payload = _get_ai_resume_coach().generate_analysis(
+                session, gaps, resources
+            )
+        else:
+            profile = _get_profile_service().from_payload(
+                body.get("skill_profile") or body.get("profile") or {}
+            )
+            recommendations = body.get("recommendations") or []
+            profile_data = _get_profile_service().serialize(profile)
+            gaps = _get_gap_analyzer().analyze(profile_data, recommendations)
+            resources = _get_learning_path().recommend_resources(
+                [gap["skill_id"] for gap in gaps]
+            )
+            ai_payload = {"summary": None, "is_ai": False}
         return jsonify({
             "gaps": gaps,
             "resources": resources,
+            "summary": ai_payload.get("summary"),
+            "is_ai": ai_payload.get("is_ai", False),
         })
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
@@ -318,21 +423,108 @@ def analysis():
 
 @app.route("/resume-tips", methods=["POST", "OPTIONS"])
 def resume_tips():
-    """Return personalized resume tips and study schedule for a profile and gaps."""
+    """Return personalized resume tips and study schedule for a profile or session."""
     if request.method == "OPTIONS":
         return "", 204
 
     body = request.get_json(silent=True) or {}
-    profile = body.get("skill_profile") or body.get("profile") or {}
-    gaps = body.get("gaps") or []
+    session_id = body.get("session_id")
 
     try:
-        coaching = _get_resume_coach().get_coaching(profile, gaps)
-        return jsonify(coaching)
+        if session_id:
+            session = _get_quiz_engine().load_session(session_id)
+            gaps = format_gaps_for_ui(session)
+            resource_groups = _get_resource_recommender().recommend_grouped(session)
+            recs = _get_resource_recommender().recommend(session)
+            ai_payload = _get_ai_resume_coach().generate_coaching(
+                session,
+                gaps,
+                recommendations=recs,
+                resource_groups=resource_groups,
+            )
+        else:
+            profile = _get_profile_service().from_payload(
+                body.get("skill_profile") or body.get("profile") or {}
+            )
+            recommendations = body.get("recommendations") or []
+            profile_data = _get_profile_service().serialize(profile)
+            gaps = _get_gap_analyzer().analyze(profile_data, recommendations)
+            coaching = _get_resume_coach().get_coaching(profile_data, gaps)
+            ai_payload = {
+                "summary": "Use these recommendations to align your resume with your target role.",
+                "tips": coaching.get("tips", []),
+                "schedule": coaching.get("schedule", []),
+                "resume_tips": [],
+                "resource_explanations": {},
+                "is_ai": coaching.get("is_ai", False),
+            }
+        return jsonify({
+            "summary": ai_payload.get("summary"),
+            "tips": ai_payload.get("tips", []),
+            "schedule": ai_payload.get("schedule", []),
+            "resume_tips": ai_payload.get("resume_tips", []),
+            "resource_explanations": ai_payload.get("resource_explanations", {}),
+            "is_ai": ai_payload.get("is_ai", False),
+        })
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/recommendations", methods=["POST", "OPTIONS"])
+def recommendations():
+    """Return Groq AI analysis + FAISS learning resources for a completed quiz."""
+    if request.method == "OPTIONS":
+        return "", 204
+
+    body = request.get_json(silent=True) or {}
+    session_id = body.get("session_id")
+    if not session_id:
+        return jsonify({"error": "session_id required"}), 400
+
+    try:
+        session = _get_quiz_engine().load_session(session_id)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 404
+
+    if session.get("status") != "completed":
+        return jsonify({"error": "Quiz not yet completed"}), 400
+
+    try:
+        gaps = format_gaps_for_ui(session)
+        recs = _get_resource_recommender().recommend(session)
+        ai_payload = _get_ai_resume_coach().generate(session, recs, gaps=gaps)
+
+        resources_out = []
+        for rec in recs:
+            resource = rec.get("resource", {})
+            gap = rec.get("gap", {})
+            title = resource.get("title")
+            resources_out.append(
+                {
+                    "resource_id": resource.get("resource_id"),
+                    "title": title,
+                    "platform": resource.get("platform"),
+                    "url": resource.get("url"),
+                    "difficulty": resource.get("difficulty"),
+                    "is_free": resource.get("is_free"),
+                    "estimated_hours": resource.get("estimated_hours"),
+                    "covers": resource.get("covers"),
+                    "skill_gap": gap.get("skill_id"),
+                    "gap_score": gap.get("score"),
+                    "ai_explanation": ai_payload.get("resource_explanations", {}).get(title, ""),
+                }
+            )
+
+        return jsonify({
+            "summary": ai_payload.get("summary"),
+            "resources": resources_out,
+            "resume_tips": ai_payload.get("resume_tips"),
+            "detected_domain": session.get("detected_domain"),
+            "is_ai": ai_payload.get("is_ai", False),
+        })
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="127.0.0.1", port=port, debug=os.environ.get("FLASK_DEBUG") == "1")
+    app.run(host=settings.host, port=settings.port, debug=settings.debug)

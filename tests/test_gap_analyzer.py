@@ -5,7 +5,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from app.gap_analyzer import GapAnalyzer
+from app.gap_analyzer import GapAnalyzer, format_gaps_for_ui, get_session_gaps
 
 
 def test_gap_analyzer_basic():
@@ -47,3 +47,39 @@ def test_gap_analyzer_basic():
 	assert aws_gap["priority"] == 33
 	assert aws_gap["priority_label"] == "Low"
 	assert aws_gap["occurrences"] == 1
+
+
+def test_get_session_gaps_threshold_and_order():
+	session = {
+		"skill_scores": {
+			"marketing-digital": 0.32,
+			"finance-excel": 0.59,
+			"design-uiux": 0.75,
+			"sales-inbound": [0.2, 0.4],
+		}
+	}
+
+	gaps = get_session_gaps(session)
+	gap_ids = [gap["skill_id"] for gap in gaps]
+
+	assert "design-uiux" not in gap_ids
+	assert gap_ids[0] == "sales-inbound"
+	assert "finance-excel" in gap_ids
+
+
+def test_format_gaps_for_ui_shape():
+	session = {
+		"skill_scores": {
+			"marketing-digital": 0.32,
+			"design-uiux": 0.75,
+		}
+	}
+
+	formatted = format_gaps_for_ui(session)
+	assert len(formatted) == 1
+	gap = formatted[0]
+	assert gap["skill_id"] == "marketing-digital"
+	assert gap["skill"]
+	assert gap["current"] < gap["required"]
+	assert gap["priority"] >= 60
+	assert gap["priority_label"] in {"High", "Medium", "Low"}

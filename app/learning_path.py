@@ -29,7 +29,12 @@ class LearningPath:
 		with open(self.resources_path, "r", encoding="utf-8") as handle:
 			payload = json.load(handle)
 
-		self._resources = payload.get("resources", [])
+		self._resources = []
+		for resource in payload.get("resources", []):
+			item = dict(resource)
+			raw_skill_id = item.get("skill_id")
+			item["skill_id"] = self.normalizer.to_skill_id(raw_skill_id) or raw_skill_id
+			self._resources.append(item)
 
 	def recommend_resources(
 		self,
@@ -66,6 +71,7 @@ class LearningPath:
 					"resources": [
 						{
 							"resource_id": item.get("resource_id"),
+							"skill_id": item.get("skill_id"),
 							"title": item.get("title"),
 							"platform": item.get("platform"),
 							"level": item.get("difficulty"),
@@ -73,6 +79,9 @@ class LearningPath:
 							"url": item.get("url"),
 							"resource_type": item.get("resource_type"),
 							"gap_priority": item.get("job_gap_alignment", {}).get("gap_priority"),
+							"covers": item.get("covers", []),
+							"is_free": item.get("is_free"),
+							"best_for": item.get("best_for", []),
 						}
 						for item in trimmed
 					],

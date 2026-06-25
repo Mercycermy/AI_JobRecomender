@@ -3,6 +3,7 @@ import { fallbackQuestions } from '../data/mockData.js'
 import {
   clearStoredRecommendations,
   mapJobToCard,
+  persistQuizSessionId,
   persistRecommendationSession,
 } from '../api/recommend.js'
 
@@ -39,6 +40,8 @@ function normalizeQuestion(payload, fallbackIndex) {
   const rawOpts = source?.options || source?.choices
   return {
     id: source?.id || source?.questionId || `q${fallbackIndex + 1}`,
+    gate: source?.gate,
+    difficulty: source?.difficulty || 'beginner',
     number: source.number || fallbackIndex + 1,
     total: source.total || fallbackQuestions.length,
     stem: source?.stem || source?.text || source?.question || fallback.stem || '',
@@ -56,6 +59,7 @@ function Quiz({ navigate }) {
   const [isLoading, setIsLoading] = useState(true)
   const [isAdvancing, setIsAdvancing] = useState(false)
   const [apiError, setApiError] = useState('')
+  const [progressInfo, setProgressInfo] = useState(null)
   const sessionIdRef = useRef('')
 
   useEffect(() => {
@@ -66,10 +70,12 @@ function Quiz({ navigate }) {
         clearStoredRecommendations()
         const response = await fetch(`${API_BASE}/quiz`)
         const payload = await response.json()
-        sessionIdRef.current = response.headers.get('X-Session-Id') || ''
+  sessionIdRef.current = response.headers.get('X-Session-Id') || ''
+  persistQuizSessionId(sessionIdRef.current)
 
         if (isMounted) {
           setQuestion(normalizeQuestion(payload, 0))
+          setProgressInfo(payload.progress || null)
           setApiError('')
         }
       } catch {
@@ -128,6 +134,7 @@ function Quiz({ navigate }) {
         if (profile) {
           persistRecommendationSession(profile, jobs, rawRecs)
         }
+        persistQuizSessionId(sessionIdRef.current)
         navigate('/results')
         return
       }
@@ -135,6 +142,7 @@ function Quiz({ navigate }) {
       const nextIndex = currentIndex + 1
       setCurrentIndex(nextIndex)
       setQuestion(normalizeQuestion(payload, nextIndex))
+  setProgressInfo(payload.progress || null)
       setSelectedOption('')
       setTextAnswer('')
     } catch (err) {
@@ -173,7 +181,12 @@ function Quiz({ navigate }) {
     return null
   }
 
-  const progress = Math.round((question.number / question.total) * 100)
+  const progress = progressInfo?.percent ?? Math.round((question.number / question.total) * 100)
+  const routingGate = question.gate ?? '—'
+  const routingDomain = progressInfo?.detected_domain || '—'
+  const routingRole = progressInfo?.detected_role || '—'
+  const difficulty = question.difficulty?.replace(/^\w/, (letter) => letter.toUpperCase())
+  const confidence = progressInfo?.confidence ?? 0
 
   return (
     <section className="quiz-page">
@@ -187,6 +200,10 @@ function Quiz({ navigate }) {
             Question {question.number} / {question.total}
           </span>
           <span>{progress}% mapped</span>
+        </div>
+
+        <div className="quiz-routing-badge">
+          {difficulty} · Confidence {confidence}% · Gate {routingGate} · Domain {routingDomain} · Role {routingRole}
         </div>
 
         <h1>{question.stem}</h1>

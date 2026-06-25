@@ -44,12 +44,13 @@ An intelligent, full-stack application designed to match users with job postings
    ```bash
    pip install -r requirements.txt
    ```
-4. Configure your `.env` file with any required API keys (e.g., Anthropic, OpenAI).
+4. Configure your `.env` file with any required API keys (e.g., Groq, Anthropic, OpenAI).
 5. Seed the database, quiz bank, and FAISS index:
    ```bash
    python scripts/seed_db.py
    python scripts/build_quiz_bank.py
    python scripts/build_vectors.py
+   python scripts/build_faiss_index.py
    ```
    See `skills.md` for architecture details and `recommendation_phases.md` for the roadmap.
 6. Start the Flask API:
@@ -60,6 +61,17 @@ An intelligent, full-stack application designed to match users with job postings
    ```bash
    python -m pytest tests/ -q
    ```
+
+### Learning resources + resume tips (Groq + FAISS)
+Set `GROQ_API_KEY` in your environment to enable AI resume tips and summaries. Build the learning-resource FAISS index once with `scripts/build_faiss_index.py`. After a user completes the adaptive quiz, call:
+
+```bash
+curl -X POST http://127.0.0.1:5000/recommendations \
+   -H "Content-Type: application/json" \
+   -d '{"session_id": "<quiz-session-id>"}'
+```
+
+The API returns a summary, resource list (FAISS ranked), and resume tips powered by Groq.
 
 ### 2. Frontend Setup
 1. Open a new terminal instance and change into the frontend directory:

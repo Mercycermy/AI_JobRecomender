@@ -1094,6 +1094,117 @@
   background: var(--surface-strong);
 }
 
+.skill-search-wrap {
+  position: relative;
+}
+
+.skill-suggestions {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  display: grid;
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface-strong);
+  box-shadow: 0 18px 44px rgba(13, 35, 54, 0.16);
+}
+
+.skill-suggestions button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  background: transparent;
+  padding: 12px 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.skill-suggestions button:hover {
+  background: rgba(46, 134, 193, 0.08);
+}
+
+.skill-suggestions button span,
+.suggestion-status {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.suggestion-status {
+  padding: 13px 14px;
+}
+
+.selected-skill-list {
+  display: grid;
+  gap: 8px;
+}
+
+.selected-skill-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 160px auto;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(46, 134, 193, 0.05);
+  padding: 10px 12px;
+}
+
+.selected-skill-row > div {
+  display: grid;
+  gap: 3px;
+}
+
+.selected-skill-row > div span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.selected-skill-row select {
+  min-height: 40px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  padding: 0 10px;
+}
+
+.selected-skill-row > button {
+  border: 0;
+  color: var(--coral);
+  background: transparent;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.manual-evidence {
+  display: grid;
+  gap: 18px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(34, 168, 120, 0.05);
+  padding: 18px;
+}
+
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.checkbox-field input {
+  width: 18px;
+  height: 18px;
+}
+
 .chip-list,
 .skill-pills {
   display: flex;
@@ -1179,6 +1290,20 @@ button.chip {
   font-size: 13px;
   font-weight: 800;
   text-transform: uppercase;
+}
+
+.quiz-routing-badge {
+  margin-top: 14px;
+  width: fit-content;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(20, 72, 117, 0.12);
+  color: var(--navy);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .quiz-card h1 {
@@ -1935,6 +2060,15 @@ button.chip {
 
   .question-review-card {
     grid-template-columns: 1fr;
+  }
+
+  .selected-skill-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .selected-skill-row > button {
+    justify-self: start;
   }
 
   .question-review-actions {

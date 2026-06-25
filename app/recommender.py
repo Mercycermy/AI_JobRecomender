@@ -3,17 +3,19 @@ import json
 import sqlite3
 import numpy as np
 
-# Resolve paths relative to the project root
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DB_PATH = os.path.join(BASE_DIR, "data", "db.sqlite3")
-INDEX_PATH = os.path.join(BASE_DIR, "data", "jobs_faiss.index")
-MAPPER_PATH = os.path.join(BASE_DIR, "data", "jobs_id_map.json")
+from app.config import settings
+from app.skill_normalizer import SkillNormalizer
+
+DB_PATH = str(settings.recommender_db_path)
+INDEX_PATH = str(settings.jobs_index_path)
+MAPPER_PATH = str(settings.jobs_id_map_path)
 
 class RecommendationEngine:
     def __init__(self):
         self.model = None
         self.index = None
         self.job_ids = []
+        self.normalizer = SkillNormalizer()
         self._load_resources()
 
     def _load_resources(self):
@@ -21,7 +23,7 @@ class RecommendationEngine:
         # 1. Load Sentence Transformer
         try:
             from sentence_transformers import SentenceTransformer
-            self.model = SentenceTransformer('all-MiniLM-L6-v2')
+            self.model = SentenceTransformer(settings.embedding_model)
         except Exception as e:
             print(f"Warning: Failed to load SentenceTransformer model: {e}")
 
@@ -82,13 +84,23 @@ class RecommendationEngine:
         - 05% Location Match
         """
         # Parse skill profile
-        detected_skills = skill_profile.get("detected_skills") or skill_profile.get("skills") or []
+        detected_skills = (
+            skill_profile.get("skill_ids")
+            or skill_profile.get("detected_skills")
+            or skill_profile.get("skills")
+            or list((skill_profile.get("skill_scores") or {}).keys())
+        )
         user_exp = skill_profile.get("experience_level") or skill_profile.get("experience") or "junior"
         top_category = skill_profile.get("top_category") or skill_profile.get("category") or ""
         location_pref = skill_profile.get("location") or "remote"
 
         # Dedup and clean skills list
-        detected_skills = list(dict.fromkeys([s.strip().lower() for s in detected_skills if s]))
+        raw_skills = [str(skill).strip() for skill in detected_skills if skill]
+        detected_skills = self.normalizer.normalize_list(raw_skills)
+        if not detected_skills:
+            detected_skills = list(
+                dict.fromkeys(skill.lower() for skill in raw_skills)
+            )
 
         # Handle empty resources fallback
         if not self.model or not self.index or not self.job_ids:
@@ -97,7 +109,9 @@ class RecommendationEngine:
 
         # 1. RETRIEVAL PHASE (Vector search via FAISS)
         # Construct query string from skills and category
-        query_text = ", ".join(detected_skills)
+        query_text = ", ".join(
+            self.normalizer.name_for(skill_id) for skill_id in detected_skills
+        )
         if top_category:
             query_text = f"{top_category}. Skills: {query_text}"
 

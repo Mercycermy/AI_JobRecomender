@@ -12,7 +12,9 @@ import {
   loadStoredProfile,
   loadStoredRecommendations,
   loadStoredRawRecommendations,
+  loadStoredSessionId,
   persistAnalysis,
+  persistRecommendationSession,
 } from '../api/recommend.js'
 import LearningResources from './LearningResources.jsx'
 import ResumeTips from './ResumeTips.jsx'
@@ -46,9 +48,13 @@ function Results({ navigate }) {
   const [category, setCategory] = useState('All categories')
   const [experience, setExperience] = useState('All experience')
   const [activeTab, setActiveTab] = useState(tabs[0])
-  
+
   const [analysis, setAnalysis] = useState(() => loadStoredAnalysis())
-  const [isAnalysisLoading, setIsAnalysisLoading] = useState(!loadStoredAnalysis())
+  const [isAnalysisLoading, setIsAnalysisLoading] = useState(() => {
+    const profile = loadStoredProfile()
+    const rawRecs = loadStoredRawRecommendations() || loadStoredRecommendations()
+    return Boolean(!loadStoredAnalysis() && profile && rawRecs?.length)
+  })
   const [analysisError, setAnalysisError] = useState(null)
 
   const [resumeTipsData, setResumeTipsData] = useState(() => {
@@ -59,12 +65,17 @@ function Results({ navigate }) {
       return null
     }
   })
-  const [isResumeTipsLoading, setIsResumeTipsLoading] = useState(false)
+  const [isResumeTipsLoading, setIsResumeTipsLoading] = useState(() =>
+    Boolean(loadStoredProfile()),
+  )
   const [resumeTipsError, setResumeTipsError] = useState(null)
 
   const [jobRecommendations, setJobRecommendations] = useState(() => {
     const stored = loadStoredRecommendations()
-    return stored?.length ? stored : []
+    if (stored?.length) {
+      return stored
+    }
+    return loadStoredProfile() ? [] : mockJobRecommendations
   })
   const [jobsError, setJobsError] = useState(null)
 
@@ -75,9 +86,6 @@ function Results({ navigate }) {
     const rawStored = loadStoredRawRecommendations()
 
     if (!profile) {
-      if (!stored?.length) {
-        setJobRecommendations(mockJobRecommendations)
-      }
       return () => {
         isMounted = false
       }
@@ -90,11 +98,12 @@ function Results({ navigate }) {
     }
 
     fetchRecommendations(profile)
-      .then((jobs) => {
+      .then((result) => {
         if (!isMounted) {
           return
         }
-        setJobRecommendations(jobs)
+        setJobRecommendations(result.jobs)
+        persistRecommendationSession(result.profile, result.jobs, result.rawRecs)
         setJobsError(null)
       })
       .catch((err) => {
@@ -114,18 +123,15 @@ function Results({ navigate }) {
     let isMounted = true
     const profile = loadStoredProfile()
     const rawRecs = loadStoredRawRecommendations() || loadStoredRecommendations()
+    const sessionId = loadStoredSessionId()
 
     if (!profile || !rawRecs?.length) {
-      setIsAnalysisLoading(false)
       return () => {
         isMounted = false
       }
     }
 
-    setIsAnalysisLoading(true)
-    setAnalysisError(null)
-
-    fetchAnalysis(profile, rawRecs)
+    fetchAnalysis(sessionId, profile, rawRecs)
       .then((payload) => {
         if (!isMounted) {
           return
@@ -150,7 +156,9 @@ function Results({ navigate }) {
   useEffect(() => {
     let isMounted = true
     const profile = loadStoredProfile()
-    if (!profile || !analysis?.gaps?.length) {
+    const sessionId = loadStoredSessionId()
+    const rawRecs = loadStoredRawRecommendations() || loadStoredRecommendations()
+    if (!profile) {
       return
     }
 
@@ -159,10 +167,7 @@ function Results({ navigate }) {
       return
     }
 
-    setIsResumeTipsLoading(true)
-    setResumeTipsError(null)
-
-    fetchResumeTips(profile, analysis.gaps)
+    fetchResumeTips(sessionId, profile, rawRecs)
       .then((payload) => {
         if (!isMounted) {
           return
@@ -182,7 +187,7 @@ function Results({ navigate }) {
     return () => {
       isMounted = false
     }
-  }, [analysis?.gaps])
+  }, [analysis?.gaps?.length, resumeTipsData])
 
   const categoryOptions = useMemo(() => {
     const fromJobs = [...new Set(jobRecommendations.map((j) => j.category).filter(Boolean))]
@@ -335,6 +340,29 @@ function Results({ navigate }) {
           </button>
         ))}
       </div>
+
+      {analysis?.summary && (
+        <p
+          className="analysis-summary"
+          style={{
+            margin: '0 0 16px',
+            padding: '14px 18px',
+            borderRadius: '10px',
+            background: 'rgba(46, 134, 193, 0.08)',
+            border: '1px solid rgba(46, 134, 193, 0.2)',
+            color: 'var(--slate)',
+            fontSize: '14px',
+            lineHeight: 1.6,
+          }}
+        >
+          {analysis.is_ai && (
+            <strong style={{ display: 'block', marginBottom: '6px', color: 'var(--blue)' }}>
+              AI analysis
+            </strong>
+          )}
+          {analysis.summary}
+        </p>
+      )}
 
       <div className="tab-panel">{lowerPanel}</div>
     </section>

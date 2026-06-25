@@ -3326,6 +3326,267 @@
       "differentiation_tags": [
         "soft-skill"
       ]
+    },
+    {
+      "skill_id": "it-support",
+      "canonical_name": "IT Support",
+      "aliases": ["help desk", "technical support", "desktop support", "computer troubleshooting"],
+      "domain": "Software Engineering",
+      "category": "IT Operations",
+      "weight": 1.1,
+      "differentiation_tags": ["support", "operations"]
+    },
+    {
+      "skill_id": "design-uiux",
+      "canonical_name": "UI/UX Design",
+      "aliases": ["ui ux", "ui/ux", "interface design", "experience design"],
+      "domain": "Creative & Design",
+      "category": "UI/UX Design",
+      "weight": 1.2,
+      "differentiation_tags": ["design", "product"]
+    },
+    {
+      "skill_id": "admin-data-entry",
+      "canonical_name": "Data Entry",
+      "aliases": ["data entry", "typing accuracy", "data capture"],
+      "domain": "Business & Management",
+      "category": "Business & Administration",
+      "weight": 1.0,
+      "differentiation_tags": ["admin", "office"]
+    },
+    {
+      "skill_id": "admin-event-planning",
+      "canonical_name": "Event Planning",
+      "aliases": ["event planning", "event coordination", "event management"],
+      "domain": "Business & Management",
+      "category": "Business & Administration",
+      "weight": 1.0,
+      "differentiation_tags": ["admin", "events"]
+    },
+    {
+      "skill_id": "freelance-management",
+      "canonical_name": "Freelance Management",
+      "aliases": ["freelance management", "client proposals", "freelance client management"],
+      "domain": "Business & Management",
+      "category": "Business & Administration",
+      "weight": 1.0,
+      "differentiation_tags": ["freelance", "business"]
+    },
+    {
+      "skill_id": "supply-chain-mgmt",
+      "canonical_name": "Supply Chain Management",
+      "aliases": ["supply chain", "supply chain management", "warehouse operations"],
+      "domain": "Logistics & Transport",
+      "category": "Logistics",
+      "weight": 1.2,
+      "differentiation_tags": ["logistics", "operations"]
+    },
+    {
+      "skill_id": "logistics-safety",
+      "canonical_name": "Logistics Safety",
+      "aliases": ["warehouse safety", "workplace safety", "logistics safety", "osha"],
+      "domain": "Logistics & Transport",
+      "category": "Logistics",
+      "weight": 1.1,
+      "differentiation_tags": ["logistics", "safety"]
+    },
+    {
+      "skill_id": "wellness-fitness",
+      "canonical_name": "Fitness & Wellness",
+      "aliases": ["fitness", "personal training", "wellness coaching", "exercise training"],
+      "domain": "Healthcare",
+      "category": "Health & Wellness",
+      "weight": 1.0,
+      "differentiation_tags": ["health", "fitness"]
+    },
+    {
+      "skill_id": "med-health-science",
+      "canonical_name": "Health Sciences",
+      "aliases": ["health science", "health sciences", "anatomy and physiology"],
+      "domain": "Healthcare",
+      "category": "Health Sciences",
+      "weight": 1.1,
+      "differentiation_tags": ["health", "medical"]
+    },
+    {
+      "skill_id": "edu-instructional-design",
+      "canonical_name": "Instructional Design",
+      "aliases": ["instructional design", "learning design", "course design"],
+      "domain": "Education & Training",
+      "category": "Education",
+      "weight": 1.1,
+      "differentiation_tags": ["education", "curriculum"]
+    },
+    {
+      "skill_id": "prod-six-sigma",
+      "canonical_name": "Six Sigma",
+      "aliases": ["six sigma", "lean six sigma", "process improvement"],
+      "domain": "Business & Management",
+      "category": "Operations",
+      "weight": 1.1,
+      "differentiation_tags": ["quality", "operations"]
+    },
+    {
+      "skill_id": "hosp-management",
+      "canonical_name": "Hospitality Management",
+      "aliases": ["hospitality management", "hotel management", "guest experience"],
+      "domain": "Hospitality & Services",
+      "category": "Hospitality & Culinary",
+      "weight": 1.1,
+      "differentiation_tags": ["hospitality", "management"]
+    },
+    {
+      "skill_id": "hosp-food-safety",
+      "canonical_name": "Food Safety",
+      "aliases": ["food safety", "food sanitation", "servsafe", "haccp"],
+      "domain": "Hospitality & Services",
+      "category": "Hospitality & Culinary",
+      "weight": 1.1,
+      "differentiation_tags": ["hospitality", "safety"]
+    },
+    {
+      "skill_id": "fac-management",
+      "canonical_name": "Facility Management",
+      "aliases": ["facility management", "facilities management", "building operations"],
+      "domain": "Business & Management",
+      "category": "Operations",
+      "weight": 1.1,
+      "differentiation_tags": ["facilities", "operations"]
+    },
+    {
+      "skill_id": "sec-physical",
+      "canonical_name": "Physical Security",
+      "aliases": ["physical security", "security operations", "threat assessment"],
+      "domain": "Business & Management",
+      "category": "Security",
+      "weight": 1.1,
+      "differentiation_tags": ["security", "safety"]
+    },
+    {
+      "skill_id": "trade-electrical",
+      "canonical_name": "Electrical Trade",
+      "aliases": ["electrical work", "electrical installation", "electrician", "electrical maintenance"],
+      "domain": "Engineering & Architecture",
+      "category": "Skilled Trades",
+      "weight": 1.2,
+      "differentiation_tags": ["trade", "electrical"]
+    },
+    {
+      "skill_id": "trade-mechanical",
+      "canonical_name": "Mechanical Trade",
+      "aliases": ["mechanical work", "mechanical maintenance", "mechanic", "equipment maintenance"],
+      "domain": "Engineering & Architecture",
+      "category": "Skilled Trades",
+      "weight": 1.2,
+      "differentiation_tags": ["trade", "mechanical"]
+    },
+    {
+      "skill_id": "eng-construction-mgmt",
+      "canonical_name": "Construction Management",
+      "aliases": ["construction management", "site management", "construction scheduling"],
+      "domain": "Engineering & Architecture",
+      "category": "Construction",
+      "weight": 1.2,
+      "differentiation_tags": ["construction", "management"]
+    },
+    {
+      "skill_id": "ml-general",
+      "canonical_name": "Machine Learning",
+      "aliases": ["machine learning", "ml modeling", "predictive modeling"],
+      "domain": "Machine Learning & AI",
+      "category": "Machine Learning",
+      "weight": 1.3,
+      "differentiation_tags": ["ml", "ai"]
+    },
+    {
+      "skill_id": "soft-self-assessment",
+      "canonical_name": "Self-Assessment",
+      "aliases": ["self assessment", "self-awareness", "reflective practice"],
+      "domain": "Soft Skills",
+      "category": "Soft Skills",
+      "weight": 0.8,
+      "differentiation_tags": ["soft-skill"]
+    },
+    {
+      "skill_id": "soft-accountability",
+      "canonical_name": "Accountability",
+      "aliases": ["accountability", "ownership", "personal responsibility"],
+      "domain": "Soft Skills",
+      "category": "Soft Skills",
+      "weight": 0.9,
+      "differentiation_tags": ["soft-skill"]
+    },
+    {
+      "skill_id": "soft-resilience",
+      "canonical_name": "Resilience",
+      "aliases": ["resilience", "adaptability under pressure", "persistence"],
+      "domain": "Soft Skills",
+      "category": "Soft Skills",
+      "weight": 0.9,
+      "differentiation_tags": ["soft-skill"]
+    },
+    {
+      "skill_id": "web-http",
+      "canonical_name": "HTTP",
+      "aliases": ["http", "http protocol", "web protocols"],
+      "domain": "Software Engineering",
+      "category": "Backend Development",
+      "weight": 1.0,
+      "differentiation_tags": ["web", "backend"]
+    },
+    {
+      "skill_id": "web-json",
+      "canonical_name": "JSON",
+      "aliases": ["json", "json data", "json serialization"],
+      "domain": "Software Engineering",
+      "category": "Backend Development",
+      "weight": 1.0,
+      "differentiation_tags": ["web", "data"]
+    },
+    {
+      "skill_id": "da-analytics",
+      "canonical_name": "Data Analytics",
+      "aliases": ["analytics", "data analytics", "analytical reporting"],
+      "domain": "Data & Analytics",
+      "category": "Data Analytics",
+      "weight": 1.1,
+      "differentiation_tags": ["data", "analytics"]
+    },
+    {
+      "skill_id": "ml-ops",
+      "canonical_name": "MLOps",
+      "aliases": ["mlops", "ml ops", "machine learning operations"],
+      "domain": "Machine Learning & AI",
+      "category": "Machine Learning",
+      "weight": 1.3,
+      "differentiation_tags": ["ml", "operations"]
+    },
+    {
+      "skill_id": "dev-debugging",
+      "canonical_name": "Debugging",
+      "aliases": ["debugging", "software debugging", "bug diagnosis"],
+      "domain": "Software Engineering",
+      "category": "Software Engineering",
+      "weight": 1.1,
+      "differentiation_tags": ["development", "problem-solving"]
+    },
+    {
+      "skill_id": "des-design-system",
+      "canonical_name": "Design Systems",
+      "aliases": ["design system", "design systems", "component library design"],
+      "domain": "Creative & Design",
+      "category": "UI/UX Design",
+      "weight": 1.1,
+      "differentiation_tags": ["design", "product"]
+    },
+    {
+      "skill_id": "soft-ethics",
+      "canonical_name": "Professional Ethics",
+      "aliases": ["ethics", "professional ethics", "integrity"],
+      "domain": "Soft Skills",
+      "category": "Soft Skills",
+      "weight": 0.9,
+      "differentiation_tags": ["soft-skill"]
     }
   ]
 }
