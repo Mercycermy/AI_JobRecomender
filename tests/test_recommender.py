@@ -123,6 +123,7 @@ def test_explainable_hybrid_score_contains_all_factors():
         sum(result["weighted_contributions"].values())
         - result["match_score"]
     ) <= 0.2
+    assert result["match_percent"] == result["match_score"]
     assert result["matched_skill_names"] == ["Python", "FastAPI"]
     assert result["missing_skill_names"] == ["Docker"]
     assert "Main skills to develop: Docker." in result["explanation"]

@@ -7,3 +7,4 @@ anthropic
 sentence-transformers
 faiss-cpu
 python-dotenv
+pytest

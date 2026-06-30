@@ -844,9 +844,11 @@ class RecommendationEngine:
             factor_scores,
         )
 
+        match_percent = round(final_score, 1)
         return {
             **job,
-            "match_score": round(final_score, 1),
+            "match_score": match_percent,
+            "match_percent": match_percent,
             "match_label": (
                 "strong"
                 if final_score >= 75
