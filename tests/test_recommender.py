@@ -3,6 +3,7 @@ Tests for the RecommendationEngine.
 """
 
 import os
+import sqlite3
 import sys
 import time
 from datetime import date
@@ -48,7 +49,7 @@ def warm_recommendation_engine():
 
 
 def test_experience_weight():
-    engine = RecommendationEngine()
+    engine = RecommendationEngine(load_resources=False)
 
     assert engine._get_experience_weight("senior", "mid") == 1.0
     assert engine._get_experience_weight("mid", "mid") == 1.0
@@ -171,6 +172,142 @@ def test_database_ranking_is_deterministic_and_explainable():
     )
     assert all(item["explanation"] for item in first)
     assert all(item["score_weights"] for item in first)
+
+
+def test_rank_jobs_exposes_two_stage_retrieval_metadata():
+    engine = RecommendationEngine(load_resources=False)
+    profile = {
+        "skill_ids": ["lang-py", "be-fastapi", "be-rest", "ops-docker"],
+        "skill_scores": {
+            "lang-py": 0.82,
+            "be-fastapi": 0.65,
+            "be-rest": 0.65,
+            "ops-docker": 0.65,
+        },
+        "experience_level": "mid",
+        "target_role": "backend-dev",
+        "location": "remote",
+    }
+
+    results = engine.rank_jobs(profile, top_n=5)
+    info = engine.info()
+
+    assert results
+    assert info["candidate_count"] >= len(results)
+    assert info["retrieval_sources"]["exact_skill_overlap"] > 0
+    first = results[0]
+    assert first["job_validated"] is True
+    assert first["validation_errors"] == []
+    assert first["retrieval_sources"]
+    assert {
+        "exact_skill_overlap",
+        "seniority_fit",
+        "location_fit",
+        "semantic_similarity",
+    } <= set(first["rerank_factors"])
+
+
+def test_retrieval_includes_telegram_jobs_and_filters_invalid_jobs(tmp_path):
+    db_path = tmp_path / "jobs.db"
+    conn = sqlite3.connect(db_path)
+    conn.executescript(
+        """
+        CREATE TABLE jobs (
+            job_id TEXT PRIMARY KEY,
+            job_title TEXT,
+            description TEXT,
+            category TEXT,
+            source TEXT,
+            exp_level TEXT,
+            job_type TEXT,
+            location TEXT,
+            date_added TEXT
+        );
+        CREATE TABLE job_skills (
+            job_id TEXT,
+            skill_id TEXT,
+            is_required INTEGER DEFAULT 1
+        );
+        """
+    )
+    conn.executemany(
+        """
+        INSERT INTO jobs (
+            job_id, job_title, description, category, source,
+            exp_level, job_type, location, date_added
+        ) VALUES (?,?,?,?,?,?,?,?,?)
+        """,
+        [
+            (
+                "telegram-backend",
+                "Backend Developer",
+                "Build Python APIs from Telegram job feed.",
+                "backend-dev",
+                "Telegram",
+                "mid",
+                "full-time",
+                "Remote",
+                "2026-06-29",
+            ),
+            (
+                "board-backend",
+                "Backend Developer",
+                "Build Python APIs from job board data.",
+                "backend-dev",
+                "Job Board",
+                "mid",
+                "full-time",
+                "Remote",
+                "2026-06-28",
+            ),
+            (
+                "invalid-job",
+                "",
+                "This row has skills but no display title.",
+                "backend-dev",
+                "Job Board",
+                "mid",
+                "full-time",
+                "Remote",
+                "2026-06-28",
+            ),
+        ],
+    )
+    conn.executemany(
+        "INSERT INTO job_skills (job_id, skill_id, is_required) VALUES (?,?,1)",
+        [
+            ("telegram-backend", "lang-py"),
+            ("telegram-backend", "be-rest"),
+            ("board-backend", "lang-py"),
+            ("invalid-job", "lang-py"),
+            ("invalid-job", "be-rest"),
+        ],
+    )
+    conn.commit()
+    conn.close()
+
+    engine = RecommendationEngine(
+        load_resources=False,
+        db_path=str(db_path),
+        today=date(2026, 6, 30),
+    )
+    results = engine.rank_jobs(
+        {
+            "skill_ids": ["lang-py", "be-rest"],
+            "skill_scores": {"lang-py": 0.8, "be-rest": 0.7},
+            "experience_level": "mid",
+            "target_role": "backend-dev",
+            "location": "remote",
+        },
+        top_n=5,
+    )
+
+    result_ids = {item["job_id"] for item in results}
+    assert "telegram-backend" in result_ids
+    assert "invalid-job" not in result_ids
+    assert engine.info()["retrieval_sources"]["telegram_feed"] == 1
+    telegram = next(item for item in results if item["job_id"] == "telegram-backend")
+    assert "telegram_feed" in telegram["retrieval_sources"]
 
 
 def test_engine_loads_with_vectors():

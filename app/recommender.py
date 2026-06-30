@@ -7,7 +7,7 @@ import os
 import re
 import sqlite3
 from datetime import date, datetime
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
 import numpy as np
 
@@ -278,22 +278,31 @@ class RecommendationEngine:
         self.normalizer = SkillNormalizer()
         self.last_retrieval_mode = "database"
         self.last_candidate_count = 0
+        self.last_retrieval_sources: Dict[str, int] = {}
+        self.last_rejected_candidate_count = 0
         if load_resources:
             self._load_resources()
 
     def _load_resources(self) -> None:
         print("Initializing Recommendation Engine resources...")
-        try:
-            from sentence_transformers import SentenceTransformer
+        vector_artifacts_ready = (
+            os.path.exists(self.index_path)
+            and os.path.exists(self.mapper_path)
+        )
+        if vector_artifacts_ready:
+            try:
+                from sentence_transformers import SentenceTransformer
 
-            # Runtime recommendation should work offline. The dedicated vector
-            # build script remains responsible for downloading model assets.
-            self.model = SentenceTransformer(
-                settings.embedding_model,
-                local_files_only=True,
-            )
-        except Exception as exc:
-            print(f"Warning: Failed to load local SentenceTransformer model: {exc}")
+                # Runtime recommendation should work offline. The dedicated vector
+                # build script remains responsible for downloading model assets.
+                self.model = SentenceTransformer(
+                    settings.embedding_model,
+                    local_files_only=True,
+                )
+            except Exception as exc:
+                print(f"Warning: Failed to load local SentenceTransformer model: {exc}")
+        else:
+            print("Skipping semantic model load; vector artifacts are missing.")
 
         try:
             import faiss
@@ -325,6 +334,8 @@ class RecommendationEngine:
             "semantic_search": bool(self.model is not None and self.index is not None),
             "retrieval_mode": self.last_retrieval_mode,
             "candidate_count": self.last_candidate_count,
+            "retrieval_sources": dict(self.last_retrieval_sources),
+            "rejected_candidate_count": self.last_rejected_candidate_count,
             "weights": {
                 key: round(value * 100)
                 for key, value in MATCH_WEIGHTS.items()
@@ -595,24 +606,128 @@ class RecommendationEngine:
             if 0 <= index < len(self.job_ids)
         }
 
-    def _database_candidate_ids(
+    def _add_candidate(
+        self,
+        candidates: Dict[str, Dict[str, Any]],
+        job_id: Any,
+        source: str,
+        retrieval_score: float = 0.0,
+        skill_overlap_count: Optional[int] = None,
+        vector_similarity: Optional[float] = None,
+    ) -> None:
+        job_key = str(job_id or "").strip()
+        if not job_key:
+            return
+        meta = candidates.setdefault(
+            job_key,
+            {
+                "sources": [],
+                "retrieval_score": 0.0,
+                "skill_overlap_count": 0,
+            },
+        )
+        if source and source not in meta["sources"]:
+            meta["sources"].append(source)
+        meta["retrieval_score"] = max(
+            float(meta.get("retrieval_score", 0.0)),
+            max(0.0, min(1.0, float(retrieval_score or 0.0))),
+        )
+        if skill_overlap_count is not None:
+            meta["skill_overlap_count"] = max(
+                int(meta.get("skill_overlap_count", 0)),
+                int(skill_overlap_count),
+            )
+        if vector_similarity is not None:
+            meta["vector_similarity"] = max(
+                float(meta.get("vector_similarity", 0.0)),
+                max(0.0, min(1.0, float(vector_similarity))),
+            )
+
+    def _merge_candidate_metadata(
+        self,
+        candidates: Dict[str, Dict[str, Any]],
+        incoming: Dict[str, Dict[str, Any]],
+    ) -> None:
+        for job_id, meta in incoming.items():
+            for source in meta.get("sources", []):
+                self._add_candidate(
+                    candidates,
+                    job_id,
+                    source,
+                    retrieval_score=meta.get("retrieval_score", 0.0),
+                    skill_overlap_count=meta.get("skill_overlap_count"),
+                    vector_similarity=meta.get("vector_similarity"),
+                )
+
+    def _source_counts(
+        self,
+        candidates: Dict[str, Dict[str, Any]],
+    ) -> Dict[str, int]:
+        counts: Dict[str, int] = {}
+        for meta in candidates.values():
+            for source in meta.get("sources", []):
+                counts[source] = counts.get(source, 0) + 1
+        return dict(sorted(counts.items()))
+
+    def _add_telegram_candidates(
+        self,
+        cursor: sqlite3.Cursor,
+        candidates: Dict[str, Dict[str, Any]],
+        target_role: str,
+        limit: int,
+    ) -> None:
+        """Include normalized Telegram jobs when the feed is present."""
+        family = self._role_family(target_role)
+        categories = [
+            str(value).strip()
+            for value in family.get("categories", ())
+            if value
+        ]
+        phrases = [
+            normalize_skill_text(value)
+            for value in family.get("phrases", ())
+            if value
+        ][:8]
+        filters: List[str] = []
+        params: List[str] = []
+        if categories:
+            filters.append(
+                "category IN ({})".format(",".join("?" for _ in categories))
+            )
+            params.extend(categories)
+        if phrases:
+            filters.extend("LOWER(job_title) LIKE ?" for _ in phrases)
+            params.extend(f"%{phrase}%" for phrase in phrases)
+        role_filter = f"AND ({' OR '.join(filters)})" if filters else ""
+        rows = cursor.execute(
+            f"""
+            SELECT job_id
+            FROM jobs
+            WHERE LOWER(COALESCE(source, '')) LIKE '%telegram%'
+            {role_filter}
+            ORDER BY date_added DESC, job_id
+            LIMIT ?
+            """,
+            [*params, limit],
+        ).fetchall()
+        for row in rows:
+            self._add_candidate(
+                candidates,
+                row["job_id"],
+                "telegram_feed",
+                retrieval_score=0.75,
+            )
+
+    def _database_candidate_metadata(
         self,
         user_skills: Sequence[str],
         target_role: str,
         limit: int = 120,
-    ) -> List[str]:
+    ) -> Dict[str, Dict[str, Any]]:
         if not os.path.exists(self.db_path):
-            return []
+            return {}
 
-        candidate_ids: List[str] = []
-        seen: Set[str] = set()
-
-        def add(rows: Iterable[sqlite3.Row]) -> None:
-            for row in rows:
-                job_id = str(row["job_id"])
-                if job_id not in seen:
-                    seen.add(job_id)
-                    candidate_ids.append(job_id)
+        candidates: Dict[str, Dict[str, Any]] = {}
 
         conn = sqlite3.connect(self.db_path, timeout=30.0)
         try:
@@ -620,19 +735,26 @@ class RecommendationEngine:
             cursor = conn.cursor()
             if user_skills:
                 placeholders = ",".join("?" for _ in user_skills)
-                add(
-                    cursor.execute(
-                        f"""
-                        SELECT job_id, COUNT(*) AS overlap
-                        FROM job_skills
-                        WHERE skill_id IN ({placeholders})
-                        GROUP BY job_id
-                        ORDER BY overlap DESC, job_id
-                        LIMIT ?
-                        """,
-                        [*user_skills, limit],
-                    ).fetchall()
-                )
+                rows = cursor.execute(
+                    f"""
+                    SELECT job_id, COUNT(*) AS overlap
+                    FROM job_skills
+                    WHERE skill_id IN ({placeholders})
+                    GROUP BY job_id
+                    ORDER BY overlap DESC, job_id
+                    LIMIT ?
+                    """,
+                    [*user_skills, limit],
+                ).fetchall()
+                for row in rows:
+                    overlap = int(row["overlap"])
+                    self._add_candidate(
+                        candidates,
+                        row["job_id"],
+                        "exact_skill_overlap",
+                        retrieval_score=overlap / max(1, len(user_skills)),
+                        skill_overlap_count=overlap,
+                    )
 
             family = self._role_family(target_role)
             categories = [
@@ -645,51 +767,131 @@ class RecommendationEngine:
                 for value in family.get("phrases", ())
                 if value
             ][:8]
-            if categories and len(candidate_ids) < limit:
-                add(
-                    cursor.execute(
-                        """
-                        SELECT job_id
-                        FROM jobs
-                        WHERE category IN ({})
-                        ORDER BY date_added DESC, job_id
-                        LIMIT ?
-                        """.format(",".join("?" for _ in categories)),
-                        [*categories, limit],
-                    ).fetchall()
-                )
+            if categories:
+                rows = cursor.execute(
+                    """
+                    SELECT job_id
+                    FROM jobs
+                    WHERE category IN ({})
+                    ORDER BY date_added DESC, job_id
+                    LIMIT ?
+                    """.format(",".join("?" for _ in categories)),
+                    [*categories, limit],
+                ).fetchall()
+                for row in rows:
+                    self._add_candidate(
+                        candidates,
+                        row["job_id"],
+                        "role_category",
+                        retrieval_score=0.65,
+                    )
 
-            if phrases and len(candidate_ids) < min(100, limit):
+            if phrases:
                 clauses = ["LOWER(job_title) LIKE ?" for _ in phrases]
                 params = [f"%{phrase}%" for phrase in phrases]
-                add(
-                    cursor.execute(
-                        f"""
-                        SELECT job_id
-                        FROM jobs
-                        WHERE {" OR ".join(clauses)}
-                        ORDER BY date_added DESC, job_id
-                        LIMIT ?
-                        """,
-                        [*params, limit],
-                    ).fetchall()
-                )
+                rows = cursor.execute(
+                    f"""
+                    SELECT job_id
+                    FROM jobs
+                    WHERE {" OR ".join(clauses)}
+                    ORDER BY date_added DESC, job_id
+                    LIMIT ?
+                    """,
+                    [*params, limit],
+                ).fetchall()
+                for row in rows:
+                    self._add_candidate(
+                        candidates,
+                        row["job_id"],
+                        "role_title",
+                        retrieval_score=0.7,
+                    )
 
-            if len(candidate_ids) < min(100, limit):
-                add(
-                    cursor.execute(
-                        """
-                        SELECT job_id
-                        FROM jobs
-                        ORDER BY date_added DESC, job_id
-                        LIMIT ?
-                        """,
-                        (limit,),
-                    ).fetchall()
-                )
+            self._add_telegram_candidates(
+                cursor,
+                candidates,
+                target_role,
+                limit=max(20, min(limit, 80)),
+            )
+
+            if len(candidates) < min(100, limit):
+                rows = cursor.execute(
+                    """
+                    SELECT job_id
+                    FROM jobs
+                    ORDER BY date_added DESC, job_id
+                    LIMIT ?
+                    """,
+                    (limit,),
+                ).fetchall()
+                for row in rows:
+                    self._add_candidate(
+                        candidates,
+                        row["job_id"],
+                        "freshness_pool",
+                        retrieval_score=0.25,
+                    )
         finally:
             conn.close()
-        return candidate_ids[:limit]
+        return dict(list(candidates.items())[:limit])
+
+    def _database_candidate_ids(
+        self,
+        user_skills: Sequence[str],
+        target_role: str,
+        limit: int = 120,
+    ) -> List[str]:
+        return list(
+            self._database_candidate_metadata(
+                user_skills,
+                target_role,
+                limit=limit,
+            )
+        )
+
+    def _retrieve_candidates(
+        self,
+        user_skills: Sequence[str],
+        target_role: str,
+        limit: int = 160,
+    ) -> Tuple[List[str], Dict[str, Dict[str, Any]], Dict[str, float]]:
+        candidates: Dict[str, Dict[str, Any]] = {}
+        vector_similarities = self._semantic_candidates(
+            user_skills,
+            target_role,
+        )
+        for job_id, similarity in vector_similarities.items():
+            self._add_candidate(
+                candidates,
+                job_id,
+                "semantic_embedding",
+                retrieval_score=similarity,
+                vector_similarity=similarity,
+            )
+
+        self._merge_candidate_metadata(
+            candidates,
+            self._database_candidate_metadata(
+                user_skills,
+                target_role,
+            ),
+        )
+
+        candidate_ids = list(candidates)[:limit]
+        sources = self._source_counts(candidates)
+        has_database_source = any(
+            source != "semantic_embedding"
+            for source in sources
+        )
+        modes = []
+        if vector_similarities:
+            modes.append("semantic")
+        if has_database_source:
+            modes.append("database")
+        self.last_retrieval_mode = "+".join(modes) if modes else "none"
+        self.last_candidate_count = len(candidate_ids)
+        self.last_retrieval_sources = sources
+        return candidate_ids, candidates, vector_similarities
 
     def _load_candidates(
         self,
@@ -731,6 +933,16 @@ class RecommendationEngine:
             return jobs, skills
         finally:
             conn.close()
+
+    def _validate_job_for_display(self, job: Dict[str, Any]) -> List[str]:
+        errors: List[str] = []
+        if not str(job.get("job_id") or "").strip():
+            errors.append("missing job_id")
+        if not str(job.get("job_title") or "").strip():
+            errors.append("missing job_title")
+        if not str(job.get("description") or "").strip():
+            errors.append("missing description")
+        return errors
 
     def _build_explanation(
         self,
@@ -784,6 +996,7 @@ class RecommendationEngine:
         location_pref: str,
         vector_similarity: Optional[float] = None,
         semantic_context: Optional[Dict[str, Any]] = None,
+        candidate_meta: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         skill_fit, skill_overlap, skill_proficiency = self._skill_fit(
             user_skills,
@@ -845,6 +1058,19 @@ class RecommendationEngine:
         )
 
         match_percent = round(final_score, 1)
+        rerank_factors = {
+            "exact_skill_overlap": round(skill_overlap * 100, 1),
+            "seniority_fit": round(
+                factor_scores["experience_match"] * 100,
+                1,
+            ),
+            "location_fit": round(
+                factor_scores["location_match"] * 100,
+                1,
+            ),
+            "semantic_similarity": round(semantic_score * 100, 1),
+        }
+        candidate_meta = candidate_meta or {}
         return {
             **job,
             "match_score": match_percent,
@@ -882,6 +1108,25 @@ class RecommendationEngine:
                 key: round(value * 100)
                 for key, value in MATCH_WEIGHTS.items()
             },
+            "retrieval_sources": list(candidate_meta.get("sources", [])),
+            "retrieval_score": round(
+                float(candidate_meta.get("retrieval_score", 0.0)) * 100,
+                1,
+            ),
+            "candidate_stage": {
+                "retrieved": True,
+                "skill_overlap_count": int(
+                    candidate_meta.get("skill_overlap_count", 0)
+                ),
+                "vector_similarity": (
+                    round(float(candidate_meta["vector_similarity"]) * 100, 1)
+                    if candidate_meta.get("vector_similarity") is not None
+                    else None
+                ),
+            },
+            "rerank_factors": rerank_factors,
+            "job_validated": True,
+            "validation_errors": [],
             "matched_skills": matched_skills,
             "matched_skill_count": len(matched_skills),
             "matched_skill_names": [
@@ -940,46 +1185,50 @@ class RecommendationEngine:
         )
         location_pref = skill_profile.get("location") or "remote"
 
-        vector_similarities = self._semantic_candidates(
+        candidate_ids, candidate_metadata, vector_similarities = self._retrieve_candidates(
             normalized_skills,
             target_role,
+            limit=160,
         )
-        database_ids = self._database_candidate_ids(
-            normalized_skills,
-            target_role,
-        )
-        candidate_ids = list(
-            dict.fromkeys([*vector_similarities.keys(), *database_ids])
-        )[:160]
-        self.last_retrieval_mode = (
-            "semantic+database" if vector_similarities else "database"
-        )
-        self.last_candidate_count = len(candidate_ids)
         jobs, job_skills = self._load_candidates(candidate_ids)
         semantic_context = self._semantic_context(
             normalized_skills,
             str(target_role),
         )
 
-        ranked = [
-            self._score_job(
-                job=job,
-                required_skills=job_skills.get(job_id, set()),
-                user_skills=user_skills,
-                skill_scores=skill_scores,
-                user_exp=str(user_exp),
-                target_role=str(target_role),
-                location_pref=str(location_pref),
-                vector_similarity=vector_similarities.get(job_id),
-                semantic_context=semantic_context,
+        ranked = []
+        rejected_count = 0
+        for job_id in candidate_ids:
+            job = jobs.get(job_id)
+            if not job:
+                rejected_count += 1
+                continue
+            validation_errors = self._validate_job_for_display(job)
+            if validation_errors:
+                rejected_count += 1
+                continue
+            ranked.append(
+                self._score_job(
+                    job=job,
+                    required_skills=job_skills.get(job_id, set()),
+                    user_skills=user_skills,
+                    skill_scores=skill_scores,
+                    user_exp=str(user_exp),
+                    target_role=str(target_role),
+                    location_pref=str(location_pref),
+                    vector_similarity=vector_similarities.get(job_id),
+                    semantic_context=semantic_context,
+                    candidate_meta=candidate_metadata.get(job_id, {}),
+                )
             )
-            for job_id, job in jobs.items()
-        ]
+        self.last_rejected_candidate_count = rejected_count
         ranked.sort(
             key=lambda item: (
                 -item["match_score"],
-                -item["breakdown"]["skill_overlap"],
-                -item["breakdown"]["role_match"],
+                -item["rerank_factors"]["exact_skill_overlap"],
+                -item["rerank_factors"]["seniority_fit"],
+                -item["rerank_factors"]["location_fit"],
+                -item["rerank_factors"]["semantic_similarity"],
                 item["job_id"],
             )
         )
