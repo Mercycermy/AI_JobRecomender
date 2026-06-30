@@ -258,3 +258,30 @@ export async function fetchResumeTips(sessionId, profile = null, recommendations
     resource_explanations: data.resource_explanations,
   }
 }
+
+export async function uploadResumeForTips(file, profile = null, recommendations = null) {
+  const formData = new FormData()
+  formData.append('resume', file)
+  if (profile) {
+    formData.append('profile', JSON.stringify(profile))
+  }
+  if (recommendations) {
+    formData.append('recommendations', JSON.stringify(recommendations))
+  }
+  const targetRole = profile?.target_role || profile?.top_category || profile?.category
+  if (targetRole) {
+    formData.append('target_role', targetRole)
+  }
+
+  const response = await fetch(`${API_BASE}/resume/upload`, {
+    method: 'POST',
+    body: formData,
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || `Resume upload failed (${response.status})`)
+  }
+
+  return response.json()
+}

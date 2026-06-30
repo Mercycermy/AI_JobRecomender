@@ -246,3 +246,58 @@ Return ONLY valid JSON:
 			"schedule": payload.get("schedule") or [],
 			"is_ai": True,
 		}
+
+	def generate_resume_upload_analysis(
+		self,
+		resume_text: str,
+		target_role: str,
+		detected_skills: List[Dict[str, Any]],
+		missing_keywords: List[Dict[str, Any]],
+		weak_sections: List[Dict[str, Any]],
+	) -> Optional[Dict[str, Any]]:
+		"""Structured tips for an uploaded resume."""
+		if not self.is_available():
+			return None
+
+		skills = ", ".join(
+			item.get("skill_name") or item.get("skill") or item.get("skill_id", "")
+			for item in detected_skills[:15]
+		)
+		keywords = ", ".join(item.get("skill", "") for item in missing_keywords[:12])
+		weak = ", ".join(item.get("section", "") for item in weak_sections[:8])
+		prompt = f"""You are an ATS-focused resume coach. Use only the supplied resume text and analysis.
+
+Target role: {target_role}
+Detected skills: {skills or "none"}
+Missing keywords: {keywords or "none"}
+Weak sections: {weak or "none"}
+
+Resume text:
+{resume_text}
+
+Return ONLY valid JSON:
+{{
+  "summary": "1-2 sentence resume diagnosis",
+  "tips": [
+    {{"section": "Summary", "icon": "01", "tips": ["...", "..."]}},
+    {{"section": "Experience", "icon": "02", "tips": ["...", "..."]}},
+    {{"section": "Skills", "icon": "03", "tips": ["...", "..."]}},
+    {{"section": "Keywords", "icon": "04", "tips": ["...", "..."]}},
+    {{"section": "Projects", "icon": "05", "tips": ["...", "..."]}},
+    {{"section": "Formatting", "icon": "06", "tips": ["...", "..."]}}
+  ],
+  "ats_improvements": ["...", "...", "..."]
+}}
+"""
+		payload = self._chat_json(
+			"You are a professional resume writer. Return ONLY valid JSON.",
+			prompt,
+			max_tokens=1800,
+		)
+		if not payload or not isinstance(payload.get("tips"), list):
+			return None
+		return {
+			"summary": payload.get("summary"),
+			"tips": payload["tips"],
+			"ats_improvements": payload.get("ats_improvements") or [],
+		}

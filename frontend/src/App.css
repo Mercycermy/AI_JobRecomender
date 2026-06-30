@@ -1825,6 +1825,80 @@ button.chip {
   text-decoration: none;
 }
 
+.resume-upload-panel,
+.resume-upload-result {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 22px;
+  border: 1px solid rgba(46, 134, 193, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.resume-upload-panel h2,
+.resume-upload-result h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.resume-upload-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.resume-upload-controls input {
+  max-width: 100%;
+  color: var(--slate);
+}
+
+.resume-upload-controls button {
+  border: 0;
+  border-radius: 6px;
+  padding: 10px 14px;
+  background: var(--navy);
+  color: white;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.resume-upload-controls button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.upload-error {
+  color: var(--coral);
+  font-weight: 800;
+}
+
+.resume-upload-summary,
+.resume-keyword-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.resume-upload-summary span,
+.resume-keyword-list span {
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: rgba(46, 134, 193, 0.1);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.resume-upload-result ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
 .tips-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

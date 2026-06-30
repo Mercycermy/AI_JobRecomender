@@ -18,6 +18,7 @@ from app.quiz_engine import QuizEngine
 from app.recommender import RecommendationEngine
 from app.resource_recommender import ResourceRecommender
 from app.resume_tips import ResumeCoach
+from app.resume_upload import ResumeUploadError, ResumeUploadService, loads_json_field
 from app.skill_normalizer import SkillNormalizer
 
 app = Flask(__name__)
@@ -29,6 +30,7 @@ _profile_service: Optional[ProfileService] = None
 _gap_analyzer: Optional[GapAnalyzer] = None
 _learning_path: Optional[LearningPath] = None
 _resume_coach: Optional[ResumeCoach] = None
+_resume_upload_service: Optional[ResumeUploadService] = None
 _quiz_engine: Optional[QuizEngine] = None
 _resource_recommender: Optional[ResourceRecommender] = None
 _ai_resume_coach: Optional[GroqResumeCoach] = None
@@ -74,6 +76,16 @@ def _get_resume_coach() -> ResumeCoach:
     if _resume_coach is None:
         _resume_coach = ResumeCoach()
     return _resume_coach
+
+
+def _get_resume_upload_service() -> ResumeUploadService:
+    global _resume_upload_service
+    if _resume_upload_service is None:
+        _resume_upload_service = ResumeUploadService(
+            normalizer=_get_skill_normalizer(),
+            ai_coach=_get_ai_resume_coach(),
+        )
+    return _resume_upload_service
 
 
 def _get_quiz_engine() -> QuizEngine:
@@ -465,6 +477,37 @@ def resume_tips():
             "resource_explanations": ai_payload.get("resource_explanations", {}),
             "is_ai": ai_payload.get("is_ai", False),
         })
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/resume/upload", methods=["POST", "OPTIONS"])
+def resume_upload():
+    """Extract an uploaded resume and return ATS-focused improvement tips."""
+    if request.method == "OPTIONS":
+        return "", 204
+
+    upload = request.files.get("resume") or request.files.get("file")
+    if upload is None or not upload.filename:
+        return jsonify({"error": "Upload a resume file named resume or file."}), 400
+
+    profile_payload = loads_json_field(request.form.get("profile"), {})
+    recommendations = loads_json_field(request.form.get("recommendations"), [])
+    target_role = request.form.get("target_role") or request.form.get("targetRole")
+
+    try:
+        profile = _get_profile_service().from_payload(profile_payload)
+        profile_data = _get_profile_service().serialize(profile)
+        result = _get_resume_upload_service().process_upload(
+            filename=upload.filename,
+            content=upload.read(),
+            profile=profile_data,
+            recommendations=recommendations,
+            target_role=target_role,
+        )
+        return jsonify(result)
+    except (ProfileValidationError, ResumeUploadError, TypeError, ValueError) as exc:
+        return jsonify({"error": str(exc)}), 400
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
