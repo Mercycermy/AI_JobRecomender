@@ -2346,6 +2346,7 @@ button.chip {
 }
 
 .telegram-summary,
+.telegram-channel-list,
 .telegram-meta {
   display: flex;
   flex-wrap: wrap;
@@ -2353,6 +2354,7 @@ button.chip {
 }
 
 .telegram-summary span,
+.telegram-channel-list span,
 .telegram-meta span {
   border-radius: 6px;
   background: rgba(46, 134, 193, 0.1);
@@ -2360,6 +2362,16 @@ button.chip {
   padding: 6px 8px;
   font-size: 12px;
   font-weight: 800;
+}
+
+.telegram-channel-list span {
+  color: var(--navy);
+  background: rgba(34, 168, 120, 0.1);
+}
+
+.telegram-divider {
+  height: 1px;
+  background: var(--line);
 }
 
 .telegram-search {
@@ -2415,9 +2427,7 @@ button.chip {
 
 .telegram-apply-link {
   justify-self: start;
-  color: var(--navy);
-  font-weight: 800;
-  text-decoration: none;
+  width: auto;
 }
 
 .tips-grid {

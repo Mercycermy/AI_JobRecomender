@@ -6,6 +6,7 @@ import {
   loadStoredRawRecommendations,
   uploadResumeForTips,
 } from '../api/recommend.js'
+import { resumeTips as fallbackResumeTips } from '../data/mockData.js'
 
 const emphasisTerms = [
   'measurable',
@@ -72,7 +73,11 @@ function ResumeTips({ standalone = false, coaching = null, isLoading = false, er
     )
   }
 
-  const resolvedTips = coaching?.tips?.length ? coaching.tips : []
+  const resolvedTips = coaching?.tips?.length
+    ? coaching.tips
+    : error
+      ? []
+      : fallbackResumeTips
   const emptyTipsMessage = error
     ? error
     : coaching?.is_ai === false

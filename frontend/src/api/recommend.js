@@ -330,3 +330,21 @@ export async function ingestTelegramJobs(posts) {
 
   return response.json()
 }
+
+export async function refreshTelegramJobs(channels = null, perChannelLimit = 12) {
+  const response = await fetch(`${API_BASE}/telegram/jobs/refresh`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      channels,
+      per_channel_limit: perChannelLimit,
+    }),
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || `Telegram refresh failed (${response.status})`)
+  }
+
+  return response.json()
+}

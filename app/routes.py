@@ -442,7 +442,9 @@ def analysis():
             resources = _get_learning_path().recommend_resources(
                 gaps
             )
-            ai_payload = {"summary": None, "is_ai": False}
+            ai_payload = _get_ai_resume_coach().generate_analysis(
+                profile_data, gaps, resources
+            )
         return jsonify({
             "gaps": gaps,
             "resources": resources,
@@ -482,14 +484,20 @@ def resume_tips():
             profile_data = _get_profile_service().serialize(profile)
             gaps = _get_gap_analyzer().analyze(profile_data, recommendations)
             coaching = _get_resume_coach().get_coaching(profile_data, gaps)
-            ai_payload = {
+            ai_payload = _get_ai_resume_coach().generate_coaching(
+                profile_data,
+                gaps,
+                resource_groups=_get_learning_path().recommend_resources(gaps),
+            )
+            if not ai_payload.get("tips"):
+                ai_payload = {
                 "summary": "Use these recommendations to align your resume with your target role.",
                 "tips": coaching.get("tips", []),
                 "schedule": coaching.get("schedule", []),
                 "resume_tips": [],
                 "resource_explanations": {},
                 "is_ai": coaching.get("is_ai", False),
-            }
+                }
         return jsonify({
             "summary": ai_payload.get("summary"),
             "tips": ai_payload.get("tips", []),
@@ -575,6 +583,28 @@ def telegram_jobs_ingest():
             posts = [payload]
         result = _get_telegram_job_service().ingest_posts(posts or [])
         return jsonify(result)
+    except TelegramJobIngestionError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/telegram/jobs/refresh", methods=["POST", "OPTIONS"])
+def telegram_jobs_refresh():
+    """Fetch configured public Telegram channels and ingest active jobs."""
+    if request.method == "OPTIONS":
+        return "", 204
+
+    try:
+        payload = request.get_json(silent=True) or {}
+        channels = payload.get("channels")
+        per_channel_limit = int(payload.get("per_channel_limit", 12))
+        return jsonify(
+            _get_telegram_job_service().refresh_channels(
+                channels=channels,
+                per_channel_limit=per_channel_limit,
+            )
+        )
     except TelegramJobIngestionError as exc:
         return jsonify({"error": str(exc)}), 400
     except Exception as exc:

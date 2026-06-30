@@ -227,11 +227,17 @@ class TelegramJobIngestionService:
             errors.append("missing source_channel")
         if not job.get("posted_at"):
             errors.append("missing posted_at")
+        if self._is_expired(job):
+            errors.append("deadline passed")
         return errors
 
     def list_jobs(self, query: str = "", limit: int = 50) -> Dict[str, Any]:
         feed = self._read_feed()
-        jobs = list(feed.get("jobs", []))
+        jobs = [
+            self._ensure_apply_target(job)
+            for job in feed.get("jobs", [])
+            if not self._is_expired(job)
+        ]
         query_text = self._clean(query).casefold()
         if query_text:
             jobs = [
@@ -280,6 +286,7 @@ class TelegramJobIngestionService:
             "location",
             "salary",
             "apply_link",
+            "deadline",
             "exp_level",
             "job_type",
         ):
@@ -304,6 +311,20 @@ class TelegramJobIngestionService:
         location = self._field_value(lines, ("location", "loc", "work location"))
         salary = self._field_value(lines, ("salary", "compensation", "pay"))
         apply_link = self._field_value(lines, ("apply", "apply link", "link"))
+        deadline = (
+            self._field_value(
+                lines,
+                (
+                    "deadline",
+                    "closing date",
+                    "application deadline",
+                    "apply before",
+                    "apply by",
+                    "due date",
+                ),
+            )
+            or self._extract_deadline_date(raw_text)
+        )
         required_raw = self._skills_from_labels(lines, ("skills", "requirements", "required", "tech stack", "stack"))
         optional_raw = self._skills_from_labels(lines, ("nice to have", "preferred", "bonus"))
         if not apply_link:
@@ -320,6 +341,7 @@ class TelegramJobIngestionService:
             "location": location,
             "salary": salary,
             "apply_link": apply_link,
+            "deadline": deadline,
             "exp_level": self._infer_seniority(text_for_inference),
             "job_type": self._infer_job_type(raw_text),
             "required_skills": required_raw,
@@ -346,6 +368,10 @@ class TelegramJobIngestionService:
         ]
         category = self._clean(extracted.get("category")) or self._infer_category(f"{title} {raw_text}")
         posted_at = self._date_only(post.get("posted_at")) or self.today.isoformat()
+        deadline = (
+            self._date_only(extracted.get("deadline"))
+            or self._extract_deadline_date(raw_text)
+        )
         apply_link = self._clean(extracted.get("apply_link"), max_length=500)
         key_parts = [title.casefold(), company.casefold(), apply_link.casefold()]
         if not (title and (company or apply_link)):
@@ -355,6 +381,7 @@ class TelegramJobIngestionService:
         confidence = self._confidence(title, category, required_skills, extracted)
         channel = post["channel_name"]
         source_ref = self._clean(post.get("source_ref") or extracted.get("apply_link"), max_length=500)
+        application_url = apply_link or source_ref
 
         return {
             "job_id": job_id,
@@ -379,8 +406,11 @@ class TelegramJobIngestionService:
             "job_type": self._clean(extracted.get("job_type")) or "full-time",
             "location": self._clean(extracted.get("location")) or "Not specified",
             "salary": self._clean(extracted.get("salary")),
-            "apply_link": apply_link,
-            "url": apply_link,
+            "apply_link": application_url,
+            "direct_apply_link": apply_link,
+            "url": application_url,
+            "deadline": deadline,
+            "deadline_date": deadline,
             "posted_at": posted_at,
             "date_added": posted_at,
             "processed_at": self._now_iso(),
@@ -576,8 +606,13 @@ class TelegramJobIngestionService:
 
     def _write_feed(self, jobs: Iterable[Dict[str, Any]]) -> None:
         self.feed_path.parent.mkdir(parents=True, exist_ok=True)
+        active_jobs = [
+            self._ensure_apply_target(job)
+            for job in jobs
+            if not self._is_expired(job)
+        ]
         sorted_jobs = sorted(
-            jobs,
+            active_jobs,
             key=lambda job: (
                 str(job.get("posted_at") or job.get("date_added") or ""),
                 str(job.get("job_id") or ""),
@@ -615,6 +650,65 @@ class TelegramJobIngestionService:
             if title_words.search(clean):
                 return clean[:140]
         return self._clean(lines[0] if lines else "", max_length=140)
+
+    def _posts_from_channel_html(
+        self,
+        handle: str,
+        body: str,
+        limit: int,
+    ) -> List[Dict[str, Any]]:
+        posts: List[Dict[str, Any]] = []
+        pattern = re.compile(
+            r'<div class="tgme_widget_message[^"]*"[^>]*data-post="([^"]+)"[^>]*>'
+            r"(.*?)(?=<div class=\"tgme_widget_message_wrap|</section>|</body>)",
+            re.IGNORECASE | re.DOTALL,
+        )
+
+        for match in pattern.finditer(body):
+            data_post = html.unescape(match.group(1))
+            block = match.group(2)
+            text = self._message_text_from_html(block)
+            if len(text) < 20:
+                continue
+            post_handle, message_id = self._split_data_post(data_post, handle)
+            posts.append({
+                "channel_name": f"@{post_handle}",
+                "message_id": message_id,
+                "posted_at": self._message_datetime(block) or self.today.isoformat(),
+                "raw_text": text,
+                "source_ref": f"https://t.me/{post_handle}/{message_id}",
+            })
+
+        return posts[-max(1, limit):]
+
+    def _message_text_from_html(self, block: str) -> str:
+        match = re.search(
+            r'<div class="tgme_widget_message_text[^"]*"[^>]*>(.*?)</div>',
+            block,
+            re.IGNORECASE | re.DOTALL,
+        )
+        if not match:
+            return ""
+        text_html = re.sub(r"<br\s*/?>", "\n", match.group(1), flags=re.IGNORECASE)
+        text_html = re.sub(r"</p\s*>", "\n", text_html, flags=re.IGNORECASE)
+        text_html = re.sub(r"<[^>]+>", "", text_html)
+        return self._clean_multiline(html.unescape(text_html), max_length=5000)
+
+    def _message_datetime(self, block: str) -> str:
+        match = re.search(r'<time[^>]+datetime="([^"]+)"', block, re.IGNORECASE)
+        return self._date_only(html.unescape(match.group(1))) if match else ""
+
+    def _split_data_post(self, data_post: str, fallback_handle: str) -> Tuple[str, str]:
+        if "/" not in data_post:
+            return fallback_handle, self._fingerprint_text(data_post)
+        channel, message_id = data_post.split("/", 1)
+        return self._channel_handle(channel) or fallback_handle, self._clean(message_id, max_length=80)
+
+    def _channel_handle(self, channel: Any) -> str:
+        text = str(channel or "").strip()
+        text = text.replace("https://t.me/s/", "").replace("https://t.me/", "")
+        text = text.lstrip("@").split("/", 1)[0]
+        return re.sub(r"[^A-Za-z0-9_]", "", text)
 
     def _infer_role(self, text: str) -> str:
         category = self._infer_category(text)
@@ -694,7 +788,64 @@ class TelegramJobIngestionService:
             normalized = text.replace("Z", "+00:00")
             return datetime.fromisoformat(normalized).date().isoformat()
         except ValueError:
-            return ""
+            pass
+
+        clean = re.sub(r"(?i)(\d)(st|nd|rd|th)\b", r"\1", text)
+        clean = re.sub(r"\s+", " ", clean).strip(" .,:;-")
+        formats = (
+            "%B %d, %Y",
+            "%b %d, %Y",
+            "%d %B %Y",
+            "%d %b %Y",
+            "%Y/%m/%d",
+            "%d/%m/%Y",
+            "%m/%d/%Y",
+            "%d-%m-%Y",
+            "%m-%d-%Y",
+            "%B %d",
+            "%b %d",
+            "%d %B",
+            "%d %b",
+        )
+        for fmt in formats:
+            try:
+                parsed = datetime.strptime(clean, fmt).date()
+                if "%Y" not in fmt:
+                    parsed = parsed.replace(year=self.today.year)
+                return parsed.isoformat()
+            except ValueError:
+                continue
+        return ""
+
+    def _extract_deadline_date(self, text: str) -> str:
+        date_pattern = (
+            r"(\d{4}-\d{1,2}-\d{1,2}|"
+            r"\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|"
+            r"[A-Za-z]{3,9}\s+\d{1,2}(?:st|nd|rd|th)?(?:,\s*\d{4})?|"
+            r"\d{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]{3,9}(?:\s+\d{4})?)"
+        )
+        label_pattern = (
+            r"(?:deadline|closing date|application deadline|apply before|"
+            r"apply by|due date|until|before)"
+        )
+        for match in re.finditer(
+            rf"{label_pattern}\s*[:\-]?\s*{date_pattern}",
+            text,
+            re.IGNORECASE,
+        ):
+            parsed = self._date_only(match.group(1))
+            if parsed:
+                return parsed
+        return ""
+
+    def _is_expired(self, job: Dict[str, Any]) -> bool:
+        deadline = self._date_only(job.get("deadline_date") or job.get("deadline"))
+        if not deadline:
+            return False
+        try:
+            return date.fromisoformat(deadline) < self.today
+        except ValueError:
+            return False
 
     def _lines(self, value: str) -> List[str]:
         return [
@@ -732,6 +883,15 @@ class TelegramJobIngestionService:
             job.get("raw_text"),
         ]
         return " ".join(str(value or "") for value in values).casefold()
+
+    def _ensure_apply_target(self, job: Dict[str, Any]) -> Dict[str, Any]:
+        output = dict(job)
+        fallback = output.get("source_ref") or output.get("url")
+        if not output.get("apply_link") and fallback:
+            output["apply_link"] = fallback
+        if not output.get("url") and output.get("apply_link"):
+            output["url"] = output["apply_link"]
+        return output
 
     def _now_iso(self) -> str:
         return datetime.now(timezone.utc).replace(microsecond=0).isoformat()

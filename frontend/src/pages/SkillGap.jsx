@@ -1,5 +1,6 @@
 import FlowProgress from '../components/FlowProgress.jsx'
 import { loadStoredAnalysis } from '../api/recommend.js'
+import { skillGaps as fallbackSkillGaps } from '../data/mockData.js'
 
 function SkillGap({ gaps: providedGaps, job, standalone = false, isLoading = false, error = null }) {
   const stored = loadStoredAnalysis()
@@ -45,7 +46,7 @@ function SkillGap({ gaps: providedGaps, job, standalone = false, isLoading = fal
     ? providedGaps
     : stored?.gaps?.length
       ? stored.gaps
-      : []
+      : fallbackSkillGaps
 
   if (!sourceGaps.length) {
     return (

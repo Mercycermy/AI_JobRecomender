@@ -323,6 +323,7 @@ Return ONLY valid JSON:
   "location": "location or Remote/Hybrid/Onsite",
   "salary": "salary text if present",
   "apply_link": "application URL if present",
+  "deadline": "application deadline date if present",
   "exp_level": "intern, junior, mid, or senior",
   "job_type": "full-time, part-time, contract, or internship"
 }}

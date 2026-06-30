@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import FlowProgress from '../components/FlowProgress.jsx'
-import { fetchTelegramJobs, ingestTelegramJobs } from '../api/recommend.js'
+import { fetchTelegramJobs, ingestTelegramJobs, refreshTelegramJobs } from '../api/recommend.js'
+
+const defaultChannels = [
+  '@freelance_ethio',
+  '@effoyjobs',
+  '@josad_software',
+  '@ethiojobsofficial',
+  '@geezjobs_ethiopia',
+  '@Maroset',
+]
 
 function splitPosts(rawText, channel) {
   return rawText
@@ -24,6 +33,7 @@ function TelegramJobs() {
   const [error, setError] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isIngesting, setIsIngesting] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   const loadJobs = useCallback(async (search = '') => {
     setIsLoading(true)
@@ -88,6 +98,20 @@ function TelegramJobs() {
     }
   }
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    setError(null)
+    try {
+      const payload = await refreshTelegramJobs(defaultChannels, 12)
+      setSummary(payload)
+      await loadJobs(query)
+    } catch (err) {
+      setError(err.message || 'Could not refresh Telegram channels.')
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
   return (
     <section className="detail-page telegram-page">
       <div className="page-heading">
@@ -100,6 +124,23 @@ function TelegramJobs() {
 
       <div className="telegram-layout">
         <form className="telegram-import-panel" onSubmit={handleIngest}>
+          <div className="resume-builder-section-title">
+            <h2>Current channels</h2>
+          </div>
+          <div className="telegram-channel-list" aria-label="Tracked Telegram channels">
+            {defaultChannels.map((item) => (
+              <span key={item}>{item}</span>
+            ))}
+          </div>
+          <button
+            className="button button-primary manual-submit"
+            type="button"
+            disabled={isRefreshing}
+            onClick={handleRefresh}
+          >
+            {isRefreshing ? 'Refreshing...' : 'Refresh Current Jobs'}
+          </button>
+          <div className="telegram-divider"></div>
           <div className="resume-builder-section-title">
             <h2>Import posts</h2>
           </div>
@@ -117,10 +158,12 @@ function TelegramJobs() {
           </label>
           {summary && (
             <div className="telegram-summary">
+              {summary.fetched_posts !== undefined && <span>{summary.fetched_posts} fetched</span>}
               <span>{summary.inserted} inserted</span>
               <span>{summary.updated} updated</span>
               <span>{summary.deduped} deduped</span>
               <span>{summary.skipped} skipped</span>
+              {summary.active_total !== undefined && <span>{summary.active_total} active</span>}
             </div>
           )}
           {error && <p className="form-error">{error}</p>}
@@ -156,6 +199,7 @@ function TelegramJobs() {
                   <div className="telegram-meta">
                     <span>{job.location}</span>
                     {job.salary && <span>{job.salary}</span>}
+                    {job.deadline_date && <span>Deadline {job.deadline_date}</span>}
                     <span>{job.exp_level}</span>
                     <span>{Math.round((job.confidence || 0) * 100)}% confidence</span>
                   </div>
@@ -169,8 +213,8 @@ function TelegramJobs() {
                   <p>{job.description}</p>
 
                   {job.apply_link && (
-                    <a className="telegram-apply-link" href={job.apply_link} target="_blank" rel="noreferrer">
-                      Apply
+                    <a className="button button-primary telegram-apply-link" href={job.apply_link} target="_blank" rel="noreferrer">
+                      Apply / View Post
                     </a>
                   )}
                 </article>

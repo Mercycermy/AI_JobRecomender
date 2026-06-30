@@ -39,6 +39,7 @@ def sample_post(message_id="42"):
 			"Skills: Python, SQL, Docker, REST API\n"
 			"Location: Remote\n"
 			"Salary: $90k-$110k\n"
+			"Deadline: July 5, 2026\n"
 			"Apply: https://example.com/apply"
 		),
 	}
@@ -60,6 +61,7 @@ def test_telegram_ingestion_stores_valid_jobs_and_feed(tmp_path):
 	assert job["job_title"] == "Backend Developer"
 	assert job["source"] == "Telegram: python_jobs"
 	assert job["posted_at"] == "2026-06-30"
+	assert job["deadline_date"] == "2026-07-05"
 	assert {"lang-py", "lang-sql", "ops-docker", "be-rest"} <= set(job["required_skills"])
 	assert job["is_valid"] is True
 
@@ -76,6 +78,56 @@ def test_telegram_ingestion_stores_valid_jobs_and_feed(tmp_path):
 	assert stored == ("Backend Developer", "Telegram: python_jobs")
 	assert {"lang-py", "lang-sql", "ops-docker", "be-rest"} <= skills
 	assert service.list_jobs(query="docker")["count"] == 1
+
+
+def test_telegram_ingestion_skips_expired_deadline(tmp_path):
+	service = TelegramJobIngestionService(
+		db_path=tmp_path / "jobs.db",
+		feed_path=tmp_path / "telegram_jobs.json",
+		today=date(2026, 6, 30),
+	)
+	expired = sample_post()
+	expired["message_id"] = "expired"
+	expired["raw_text"] = expired["raw_text"].replace("July 5, 2026", "June 29, 2026")
+
+	result = service.ingest_posts([expired])
+
+	assert result["inserted"] == 0
+	assert result["skipped"] == 1
+	assert "deadline passed" in result["errors"][0]["errors"]
+	assert service.list_jobs()["count"] == 0
+
+
+def test_telegram_public_html_posts_are_parsed(tmp_path):
+	service = TelegramJobIngestionService(
+		db_path=tmp_path / "jobs.db",
+		feed_path=tmp_path / "telegram_jobs.json",
+		today=date(2026, 6, 30),
+	)
+	html = """
+	<section>
+	  <div class="tgme_widget_message_wrap js-widget_message_wrap">
+	    <div class="tgme_widget_message text_not_supported_wrap js-widget_message" data-post="freelance_ethio/123">
+	      <div class="tgme_widget_message_text js-message_text" dir="auto">
+	        Title: Frontend Developer<br/>
+	        Company: Web Studio<br/>
+	        Skills: React, JavaScript, CSS<br/>
+	        Deadline: July 10, 2026<br/>
+	        Apply: https://example.com/frontend
+	      </div>
+	      <time datetime="2026-06-29T12:00:00+00:00"></time>
+	    </div>
+	  </div>
+	</section>
+	"""
+
+	posts = service._posts_from_channel_html("freelance_ethio", html, limit=10)
+
+	assert len(posts) == 1
+	assert posts[0]["channel_name"] == "@freelance_ethio"
+	assert posts[0]["message_id"] == "123"
+	assert posts[0]["posted_at"] == "2026-06-29"
+	assert "Frontend Developer" in posts[0]["raw_text"]
 
 
 def test_telegram_ingestion_skips_invalid_posts(tmp_path):
@@ -141,6 +193,25 @@ def test_telegram_jobs_routes_ingest_and_list(client):
 	list_data = list_response.get_json()
 	assert list_data["count"] == 1
 	assert list_data["jobs"][0]["source_channel"] == "python_jobs"
+
+
+def test_telegram_jobs_refresh_route_uses_public_channels(client):
+	service = routes._telegram_job_service
+
+	def fake_fetch_channel_posts(channel, limit=12):
+		return [sample_post(message_id=f"{channel}-1")]
+
+	service.fetch_channel_posts = fake_fetch_channel_posts
+	response = client.post(
+		"/telegram/jobs/refresh",
+		json={"channels": ["@freelance_ethio"], "per_channel_limit": 1},
+	)
+
+	assert response.status_code == 200
+	data = response.get_json()
+	assert data["fetched_posts"] == 1
+	assert data["inserted"] == 1
+	assert data["channels"][0]["channel"] == "@freelance_ethio"
 
 
 def test_telegram_jobs_route_rejects_non_list_posts(client):
