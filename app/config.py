@@ -28,6 +28,7 @@ class AppConfig:
     quiz_db_path: Path = BASE_DIR / "data" / "jobs.db"
     jobs_index_path: Path = BASE_DIR / "data" / "jobs_faiss.index"
     jobs_id_map_path: Path = BASE_DIR / "data" / "jobs_id_map.json"
+    telegram_jobs_feed_path: Path = BASE_DIR / "data" / "telegram_jobs.json"
     taxonomy_path: Path = BASE_DIR / "data" / "skills_taxonomy.json"
     resources_path: Path = BASE_DIR / "data" / "learning_resources.json"
     embedding_model: str = field(

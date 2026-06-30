@@ -300,3 +300,33 @@ export async function generateResumeDocument(payload) {
 
   return response.json()
 }
+
+export async function fetchTelegramJobs({ query = '', limit = 50 } = {}) {
+  const params = new URLSearchParams({ limit: String(limit) })
+  if (query.trim()) {
+    params.set('q', query.trim())
+  }
+  const response = await fetch(`${API_BASE}/telegram/jobs?${params}`)
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || `Telegram jobs failed (${response.status})`)
+  }
+
+  return response.json()
+}
+
+export async function ingestTelegramJobs(posts) {
+  const response = await fetch(`${API_BASE}/telegram/jobs/ingest`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ posts }),
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || `Telegram ingest failed (${response.status})`)
+  }
+
+  return response.json()
+}

@@ -9,6 +9,7 @@ import Results from './pages/Results.jsx'
 import ResumeBuilder from './pages/ResumeBuilder.jsx'
 import ResumeTips from './pages/ResumeTips.jsx'
 import SkillGap from './pages/SkillGap.jsx'
+import TelegramJobs from './pages/TelegramJobs.jsx'
 import { jobRecommendations as mockJobRecommendations } from './data/mockData.js'
 import { loadStoredRecommendations } from './api/recommend.js'
 import './App.css'
@@ -69,6 +70,10 @@ function App() {
 
     if (path === '/resume-builder') {
       return <ResumeBuilder />
+    }
+
+    if (path === '/telegram-jobs') {
+      return <TelegramJobs />
     }
 
     if (path.startsWith('/results/gap/')) {

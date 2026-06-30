@@ -21,6 +21,7 @@ from app.resume_generator import ResumeGeneratorError, ResumeGeneratorService
 from app.resume_tips import ResumeCoach
 from app.resume_upload import ResumeUploadError, ResumeUploadService, loads_json_field
 from app.skill_normalizer import SkillNormalizer
+from app.telegram_jobs import TelegramJobIngestionError, TelegramJobIngestionService
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = settings.secret_key
@@ -36,6 +37,7 @@ _resume_generator_service: Optional[ResumeGeneratorService] = None
 _quiz_engine: Optional[QuizEngine] = None
 _resource_recommender: Optional[ResourceRecommender] = None
 _ai_resume_coach: Optional[GroqResumeCoach] = None
+_telegram_job_service: Optional[TelegramJobIngestionService] = None
 
 
 def _get_recommender() -> RecommendationEngine:
@@ -116,6 +118,16 @@ def _get_ai_resume_coach() -> GroqResumeCoach:
     if _ai_resume_coach is None:
         _ai_resume_coach = GroqResumeCoach()
     return _ai_resume_coach
+
+
+def _get_telegram_job_service() -> TelegramJobIngestionService:
+    global _telegram_job_service
+    if _telegram_job_service is None:
+        _telegram_job_service = TelegramJobIngestionService(
+            normalizer=_get_skill_normalizer(),
+            ai_extractor=_get_ai_resume_coach(),
+        )
+    return _telegram_job_service
 
 
 def _add_cors_headers(response):
@@ -531,6 +543,39 @@ def resume_generate():
         payload = request.get_json(silent=True) or {}
         return jsonify(_get_resume_generator_service().generate(payload))
     except ResumeGeneratorError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/telegram/jobs", methods=["GET", "OPTIONS"])
+def telegram_jobs():
+    """Return normalized Telegram jobs from the local feed."""
+    if request.method == "OPTIONS":
+        return "", 204
+
+    query = request.args.get("q", "")
+    try:
+        limit = int(request.args.get("limit", 50))
+    except (TypeError, ValueError):
+        limit = 50
+    return jsonify(_get_telegram_job_service().list_jobs(query=query, limit=limit))
+
+
+@app.route("/telegram/jobs/ingest", methods=["POST", "OPTIONS"])
+def telegram_jobs_ingest():
+    """Extract, validate, dedupe, and store raw Telegram job posts."""
+    if request.method == "OPTIONS":
+        return "", 204
+
+    try:
+        payload = request.get_json(silent=True) or {}
+        posts = payload.get("posts")
+        if posts is None and any(key in payload for key in ("raw_text", "text", "message")):
+            posts = [payload]
+        result = _get_telegram_job_service().ingest_posts(posts or [])
+        return jsonify(result)
+    except TelegramJobIngestionError as exc:
         return jsonify({"error": str(exc)}), 400
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500

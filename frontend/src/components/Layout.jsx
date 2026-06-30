@@ -86,6 +86,13 @@ function Layout({ children, currentPath }) {
               Builder
             </a>
             <a
+              href="/telegram-jobs"
+              aria-current={isCurrent('/telegram-jobs') ? 'page' : undefined}
+              onClick={closeMenu}
+            >
+              Telegram
+            </a>
+            <a
               href="/admin"
               aria-current={isCurrent('/admin') ? 'page' : undefined}
               onClick={closeMenu}

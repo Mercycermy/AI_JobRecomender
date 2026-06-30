@@ -301,3 +301,34 @@ Return ONLY valid JSON:
 			"tips": payload["tips"],
 			"ats_improvements": payload.get("ats_improvements") or [],
 		}
+
+	def extract_telegram_job(self, raw_text: str) -> Optional[Dict[str, Any]]:
+		"""Extract structured job fields from a raw Telegram job post."""
+		if not self.is_available():
+			return None
+
+		prompt = f"""You extract job postings from Telegram messages. Use only the supplied text.
+
+Raw Telegram post:
+{raw_text[:5000]}
+
+Return ONLY valid JSON:
+{{
+  "job_title": "role title",
+  "company": "company if present",
+  "role": "short role family",
+  "category": "backend-dev, frontend-dev, fullstack-dev, mobile-dev, devops-engineer, data-analyst, data-scientist, ml-engineer, ui-ux-designer, Information Technology (IT), or Other",
+  "required_skills": ["skill names from the post"],
+  "optional_skills": ["nice-to-have skills"],
+  "location": "location or Remote/Hybrid/Onsite",
+  "salary": "salary text if present",
+  "apply_link": "application URL if present",
+  "exp_level": "intern, junior, mid, or senior",
+  "job_type": "full-time, part-time, contract, or internship"
+}}
+"""
+		return self._chat_json(
+			"You extract jobs from Telegram posts. Return ONLY valid JSON.",
+			prompt,
+			max_tokens=700,
+		)

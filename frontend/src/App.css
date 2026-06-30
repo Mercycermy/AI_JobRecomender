@@ -2128,6 +2128,117 @@ button.chip {
   gap: 5px;
 }
 
+.telegram-page {
+  overflow: visible;
+}
+
+.telegram-layout {
+  position: relative;
+  z-index: 1;
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(300px, 0.82fr) minmax(0, 1.18fr);
+  align-items: start;
+  gap: 22px;
+}
+
+.telegram-import-panel,
+.telegram-feed-panel,
+.telegram-job-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  box-shadow: var(--shadow);
+}
+
+.telegram-import-panel,
+.telegram-feed-panel {
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+}
+
+.telegram-import-panel {
+  position: sticky;
+  top: 96px;
+}
+
+.telegram-summary,
+.telegram-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.telegram-summary span,
+.telegram-meta span {
+  border-radius: 6px;
+  background: rgba(46, 134, 193, 0.1);
+  color: var(--ink);
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.telegram-search {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+}
+
+.telegram-search .button {
+  min-height: 50px;
+}
+
+.telegram-job-list {
+  display: grid;
+  gap: 14px;
+}
+
+.telegram-job-card {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+}
+
+.telegram-job-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.telegram-job-top h2 {
+  margin: 10px 0 5px;
+  color: var(--navy);
+  font-family: var(--font-display);
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.telegram-job-top p,
+.telegram-job-card > p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.telegram-job-top strong {
+  flex: 0 0 auto;
+  color: var(--navy);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.telegram-apply-link {
+  justify-self: start;
+  color: var(--navy);
+  font-weight: 800;
+  text-decoration: none;
+}
+
 .tips-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2424,6 +2535,8 @@ button.chip {
   .hero-actions,
   .manual-form-grid,
   .resume-builder-layout,
+  .telegram-layout,
+  .telegram-search,
   .dashboard-summary,
   .filter-bar,
   .option-grid,
@@ -2499,6 +2612,10 @@ button.chip {
     position: static;
   }
 
+  .telegram-import-panel {
+    position: static;
+  }
+
   .resume-date-grid {
     grid-template-columns: 1fr;
   }
@@ -2556,6 +2673,7 @@ button.chip {
   .panel-topline,
   .match-row,
   .job-card-top,
+  .telegram-job-top,
   .gap-row-header,
   .gap-values,
   .resource-card-footer,
