@@ -285,3 +285,18 @@ export async function uploadResumeForTips(file, profile = null, recommendations 
 
   return response.json()
 }
+
+export async function generateResumeDocument(payload) {
+  const response = await fetch(`${API_BASE}/resume/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || `Resume generator failed (${response.status})`)
+  }
+
+  return response.json()
+}

@@ -79,6 +79,13 @@ function Layout({ children, currentPath }) {
               Manual
             </a>
             <a
+              href="/resume-builder"
+              aria-current={isCurrent('/resume-builder') ? 'page' : undefined}
+              onClick={closeMenu}
+            >
+              Builder
+            </a>
+            <a
               href="/admin"
               aria-current={isCurrent('/admin') ? 'page' : undefined}
               onClick={closeMenu}

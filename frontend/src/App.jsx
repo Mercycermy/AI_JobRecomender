@@ -6,6 +6,7 @@ import LearningResources from './pages/LearningResources.jsx'
 import ManualInput from './pages/ManualInput.jsx'
 import Quiz from './pages/Quiz.jsx'
 import Results from './pages/Results.jsx'
+import ResumeBuilder from './pages/ResumeBuilder.jsx'
 import ResumeTips from './pages/ResumeTips.jsx'
 import SkillGap from './pages/SkillGap.jsx'
 import { jobRecommendations as mockJobRecommendations } from './data/mockData.js'
@@ -64,6 +65,10 @@ function App() {
 
     if (path === '/results/resume') {
       return <ResumeTips standalone />
+    }
+
+    if (path === '/resume-builder') {
+      return <ResumeBuilder />
     }
 
     if (path.startsWith('/results/gap/')) {
