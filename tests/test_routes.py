@@ -204,6 +204,14 @@ def test_manual_profile_analysis_does_not_require_quiz_session(client):
     assert first_gap["affected_jobs"]
     assert first_gap["learning_path"]
     assert "resources" in data
+    assert data["resources"]
+    first_resource = data["resources"][0]["resources"][0]
+    assert first_resource["title"]
+    assert first_resource["platform"]
+    assert first_resource["hours"] is not None
+    assert first_resource["link"]
+    assert first_resource["cost"] in {"free", "paid"}
+    assert first_resource["explanation"]
 
 
 def test_manual_profile_resume_tips_do_not_require_quiz_session(client):

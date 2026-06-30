@@ -133,7 +133,7 @@ class ResourceRecommender:
 
 		if self._learning_path_ready():
 			groups = self._learning_path.recommend_resources(
-				[gap.get("skill_id") for gap in gaps],
+				gaps,
 				limit_per_skill=2,
 			)
 			return self._pairs_from_groups(gaps, groups)
@@ -154,7 +154,7 @@ class ResourceRecommender:
 
 		if self._learning_path_ready():
 			return self._learning_path.recommend_resources(
-				[gap.get("skill_id") for gap in gaps],
+				gaps,
 				limit_per_skill=3,
 			)
 

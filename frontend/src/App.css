@@ -1806,6 +1806,13 @@ button.chip {
   font-size: 19px;
 }
 
+.resource-explanation {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .resource-card-footer span {
   color: var(--navy);
   font-family: var(--font-mono);

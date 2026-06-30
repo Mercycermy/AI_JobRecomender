@@ -407,7 +407,7 @@ def analysis():
             profile_data = _get_profile_service().serialize(profile)
             gaps = _get_gap_analyzer().analyze(profile_data, recommendations)
             resources = _get_learning_path().recommend_resources(
-                [gap["skill_id"] for gap in gaps]
+                gaps
             )
             ai_payload = {"summary": None, "is_ai": False}
         return jsonify({

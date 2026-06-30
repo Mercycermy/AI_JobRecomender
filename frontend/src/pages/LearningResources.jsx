@@ -79,10 +79,17 @@ function LearningResources({ standalone = false, resources: providedResources, i
                     </div>
                     <h3>{resource.title}</h3>
                     <p>{resource.platform}</p>
+                    {resource.explanation && (
+                      <p className="resource-explanation">{resource.explanation}</p>
+                    )}
                   </div>
 
                   <div className="resource-card-footer">
-                    <span>{resource.hours}h</span>
+                    <span>
+                      {resource.hours}h
+                      {resource.cost && ` / ${resource.cost}`}
+                      {resource.recommendation_score !== undefined && ` / ${resource.recommendation_score}%`}
+                    </span>
                     <a href={resource.url} target="_blank" rel="noreferrer">
                       Open
                     </a>
