@@ -11,12 +11,26 @@ function Layout({ children, currentPath }) {
   const closeMenu = () => setMenuOpen(false)
   const isDark = theme === 'dark'
   const nextTheme = isDark ? 'light' : 'dark'
-  const isCurrent = (href) => {
-    if (href === '/') {
-      return currentPath === '/'
+  const navItems = [
+    { href: '/', label: 'Home', exact: true },
+    { href: '/quiz', label: 'Quiz' },
+    { href: '/manual', label: 'Manual' },
+    { href: '/results', label: 'Results', match: (path) => path === '/results' || path.startsWith('/results/gap') },
+    { href: '/results/resources', label: 'Learn' },
+    { href: '/results/resume', label: 'Resume', match: (path) => path === '/results/resume' || path.startsWith('/resume-builder') },
+    { href: '/telegram-jobs', label: 'Telegram' },
+    { href: '/admin', label: 'Admin' },
+  ]
+  const isCurrent = (item) => {
+    if (item.match) {
+      return item.match(currentPath)
     }
 
-    return currentPath.startsWith(href)
+    if (item.exact) {
+      return currentPath === item.href
+    }
+
+    return currentPath.startsWith(item.href)
   }
 
   useEffect(() => {
@@ -61,44 +75,16 @@ function Layout({ children, currentPath }) {
           </div>
 
           <div className={`nav-links ${menuOpen ? 'is-open' : ''}`}>
-            <a href="/" aria-current={isCurrent('/') ? 'page' : undefined} onClick={closeMenu}>
-              Home
-            </a>
-            <a
-              href="/quiz"
-              aria-current={isCurrent('/quiz') ? 'page' : undefined}
-              onClick={closeMenu}
-            >
-              Quiz
-            </a>
-            <a
-              href="/manual"
-              aria-current={isCurrent('/manual') ? 'page' : undefined}
-              onClick={closeMenu}
-            >
-              Manual
-            </a>
-            <a
-              href="/resume-builder"
-              aria-current={isCurrent('/resume-builder') ? 'page' : undefined}
-              onClick={closeMenu}
-            >
-              Builder
-            </a>
-            <a
-              href="/telegram-jobs"
-              aria-current={isCurrent('/telegram-jobs') ? 'page' : undefined}
-              onClick={closeMenu}
-            >
-              Telegram
-            </a>
-            <a
-              href="/admin"
-              aria-current={isCurrent('/admin') ? 'page' : undefined}
-              onClick={closeMenu}
-            >
-              Admin
-            </a>
+            {navItems.map((item) => (
+              <a
+                href={item.href}
+                aria-current={isCurrent(item) ? 'page' : undefined}
+                onClick={closeMenu}
+                key={item.href}
+              >
+                {item.label}
+              </a>
+            ))}
           </div>
         </nav>
       </header>

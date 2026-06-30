@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import hashlib
+import html
 import json
 import os
 import re
 import sqlite3
+import urllib.error
+import urllib.request
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
@@ -34,6 +37,15 @@ SENIORITY_RULES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
     ("junior", ("junior", "jr", "entry level", "0-2", "0 to 2")),
     ("senior", ("senior", "sr", "lead", "principal", "staff", "6+")),
     ("mid", ("mid", "middle", "intermediate", "2+", "3+", "3-5")),
+)
+
+DEFAULT_TELEGRAM_CHANNELS: Tuple[str, ...] = (
+    "@freelance_ethio",
+    "@effoyjobs",
+    "@josad_software",
+    "@ethiojobsofficial",
+    "@geezjobs_ethiopia",
+    "@Maroset",
 )
 
 
@@ -111,6 +123,85 @@ class TelegramJobIngestionService:
 
         self._write_feed(feed_jobs.values())
         return result
+
+    def refresh_channels(
+        self,
+        channels: Optional[Sequence[str]] = None,
+        per_channel_limit: int = 12,
+    ) -> Dict[str, Any]:
+        """Fetch recent public Telegram channel posts and ingest active jobs."""
+        selected_channels = channels or DEFAULT_TELEGRAM_CHANNELS
+        safe_limit = max(1, min(30, int(per_channel_limit or 12)))
+        posts: List[Dict[str, Any]] = []
+        channel_results: List[Dict[str, Any]] = []
+
+        for channel in selected_channels:
+            handle = self._channel_handle(channel)
+            if not handle:
+                channel_results.append({
+                    "channel": str(channel),
+                    "fetched": 0,
+                    "error": "invalid channel",
+                })
+                continue
+
+            try:
+                channel_posts = self.fetch_channel_posts(handle, limit=safe_limit)
+                posts.extend(channel_posts)
+                channel_results.append({
+                    "channel": f"@{handle}",
+                    "fetched": len(channel_posts),
+                    "error": None,
+                })
+            except Exception as exc:
+                channel_results.append({
+                    "channel": f"@{handle}",
+                    "fetched": 0,
+                    "error": str(exc),
+                })
+
+        if posts:
+            result = self.ingest_posts(posts)
+        else:
+            result = {
+                "received": 0,
+                "inserted": 0,
+                "updated": 0,
+                "deduped": 0,
+                "skipped": 0,
+                "jobs": [],
+                "errors": [],
+            }
+        result["channels"] = channel_results
+        result["fetched_posts"] = len(posts)
+        result["active_total"] = self.list_jobs(limit=1)["total"]
+        return result
+
+    def fetch_channel_posts(self, channel: str, limit: int = 12) -> List[Dict[str, Any]]:
+        """Read a Telegram public /s page without requiring Telegram credentials."""
+        handle = self._channel_handle(channel)
+        if not handle:
+            raise TelegramJobIngestionError("invalid Telegram channel")
+
+        request = urllib.request.Request(
+            f"https://t.me/s/{handle}",
+            headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/124.0 Safari/537.36"
+                )
+            },
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=20) as response:
+                body = response.read().decode("utf-8", errors="replace")
+        except urllib.error.HTTPError as exc:
+            raise TelegramJobIngestionError(f"Telegram returned HTTP {exc.code}") from exc
+        except urllib.error.URLError as exc:
+            raise TelegramJobIngestionError(f"Telegram fetch failed: {exc.reason}") from exc
+
+        return self._posts_from_channel_html(handle, body, limit=limit)
 
     def extract_job(self, post: Dict[str, Any]) -> Dict[str, Any]:
         local = self._extract_locally(post)

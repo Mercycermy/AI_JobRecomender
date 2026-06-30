@@ -1,0 +1,123 @@
+AI JOB RECOMMENDER - STEP 14: CONNECTED FRONTEND FLOW
+Date completed: June 30, 2026
+
+Goal
+Build the frontend around the full product journey so the user can move from profile input to matches, gaps, learning resources, resume actions, Telegram jobs, and admin views without the experience feeling fragmented.
+
+What was built
+
+1. Full-flow navigation
+Files:
+- frontend/src/components/Layout.jsx
+
+The primary nav now links to:
+- Home
+- Quiz
+- Manual
+- Results
+- Learn
+- Resume
+- Telegram
+- Admin
+
+Route matching was tightened so Results, Learn, and Resume show the correct active state.
+
+2. Product flow status strip
+File:
+- frontend/src/components/FlowProgress.jsx
+
+Added a reusable flow component with these stages:
+- Profile
+- Matches
+- Gaps
+- Learning
+- Resume
+- Jobs
+
+The strip reads session state where available and shows status counts such as mapped skills, roles, gaps, and learning paths.
+
+3. Flow strip integration
+Files:
+- frontend/src/pages/Home.jsx
+- frontend/src/pages/ManualInput.jsx
+- frontend/src/pages/Quiz.jsx
+- frontend/src/pages/Results.jsx
+- frontend/src/pages/SkillGap.jsx
+- frontend/src/pages/LearningResources.jsx
+- frontend/src/pages/ResumeTips.jsx
+- frontend/src/pages/ResumeBuilder.jsx
+- frontend/src/pages/TelegramJobs.jsx
+
+The main user-facing routes now show the same product flow, including empty states on standalone gap and resource pages.
+
+4. Results page product summary
+File:
+- frontend/src/pages/Results.jsx
+
+The Results page now shows:
+- skill level or mapped skill count,
+- target role and location,
+- next learning action,
+- resume action,
+- current Telegram jobs action,
+- matched jobs,
+- missing skills,
+- gap, learning, and resume actions per job.
+
+5. Resume workflow connection
+File:
+- frontend/src/pages/ResumeTips.jsx
+
+Resume tips now link directly to the resume builder, connecting upload/review and resume generation.
+
+6. Fallback UI data
+File:
+- frontend/src/data/mockData.js
+
+The fallback recommendations now include missing-skill examples so a clean /results visit still shows the full Step 14 UI surface.
+
+7. Styling and responsive layout
+Files:
+- frontend/src/App.css
+- frontend/src/index.css
+
+Added responsive styles for:
+- the flow progress strip,
+- summary cards,
+- missing-skill panels,
+- job action buttons.
+
+Also added the missing --slate color token used by existing panels.
+
+8. Step 14 validator
+File:
+- scripts/validate_frontend_flow.py
+
+The validator checks:
+- all Step 14 routes exist,
+- nav links are wired,
+- flow steps exist,
+- flow strip is present on required pages,
+- Results page exposes skill level, next learning action, resume action, current jobs, missing skills, and job actions,
+- required CSS classes and responsive breakpoints exist.
+
+Validation results
+- Step 14 validator passed.
+- Frontend lint passed.
+- Frontend production build passed.
+- Focused backend/API flow tests passed: 26 passed.
+- Full backend suite passed: 74 passed, 2 skipped.
+- Browser smoke test passed for Home, Manual, Quiz, Results, Learning Resources, Resume Tips, Resume Builder, Telegram Jobs, Admin, and a Skill Gap detail route.
+
+Commands run
+.venv\Scripts\python -B scripts\validate_frontend_flow.py
+npm run lint
+npm run build
+.venv\Scripts\python -B -m pytest -p no:cacheprovider tests\test_routes.py tests\test_resume_upload.py tests\test_resume_generator.py tests\test_telegram_jobs.py -q
+.venv\Scripts\python -B -m pytest -p no:cacheprovider tests -q --tb=short
+
+Step 14 status
+Completed.
+
+Next implementation step
+Move to step 15: add validation and quality checks across quiz routing, manual mapping, matching accuracy, resource selection, resume export, Telegram extraction, duplicate handling, API tests, frontend checks, and sample fixtures.

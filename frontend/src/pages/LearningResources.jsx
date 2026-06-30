@@ -1,11 +1,23 @@
+import FlowProgress from '../components/FlowProgress.jsx'
 import { loadStoredAnalysis } from '../api/recommend.js'
 
 function LearningResources({ standalone = false, resources: providedResources, isLoading = false, error = null }) {
   const stored = loadStoredAnalysis()
+  const standaloneHeader = standalone ? (
+    <>
+      <div className="page-heading">
+        <p className="eyebrow">Learning resources</p>
+        <h1>Your focused study map</h1>
+        <p>Resources are grouped around the gaps with the strongest career signal.</p>
+      </div>
+      <FlowProgress currentPath="/results/resources" />
+    </>
+  ) : null
 
   if (isLoading) {
     return (
       <section className={standalone ? 'detail-page' : 'panel-section'}>
+        {standaloneHeader}
         <div className="loading-container" style={{ textAlign: 'center', padding: '40px 20px' }}>
           <p className="loading-text" style={{ fontStyle: 'italic', color: 'var(--slate)' }}>
             Curating high-alignment learning resources...
@@ -18,6 +30,7 @@ function LearningResources({ standalone = false, resources: providedResources, i
   if (error && !providedResources?.length && !stored?.resources?.length) {
     return (
       <section className={standalone ? 'detail-page' : 'panel-section'}>
+        {standaloneHeader}
         <div className="error-container" style={{ textAlign: 'center', padding: '30px 20px', background: 'rgba(232, 93, 117, 0.08)', borderRadius: '8px', border: '1px solid var(--coral)' }}>
           <p style={{ color: 'var(--coral)', fontWeight: 'bold' }}>{error}</p>
         </div>
@@ -34,6 +47,7 @@ function LearningResources({ standalone = false, resources: providedResources, i
   if (!resolvedResources.length) {
     return (
       <section className={standalone ? 'detail-page' : 'panel-section'}>
+        {standaloneHeader}
         <div className="empty-state" style={{ textAlign: 'center', padding: '32px 20px' }}>
           <p>
             {error
@@ -49,13 +63,7 @@ function LearningResources({ standalone = false, resources: providedResources, i
 
   return (
     <section className={standalone ? 'detail-page' : 'panel-section'}>
-      {standalone && (
-        <div className="page-heading">
-          <p className="eyebrow">Learning resources</p>
-          <h1>Your focused study map</h1>
-          <p>Resources are grouped around the gaps with the strongest career signal.</p>
-        </div>
-      )}
+      {standaloneHeader}
 
       <div className="resource-groups">
         {groupedResources.map((group) => (

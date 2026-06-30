@@ -4,6 +4,7 @@ import {
   experienceLevels,
   jobRecommendations as mockJobRecommendations,
 } from '../data/mockData.js'
+import FlowProgress from '../components/FlowProgress.jsx'
 import {
   fetchAnalysis,
   fetchRecommendations,
@@ -52,10 +53,59 @@ function formatCategoryLabel(slug) {
     .join(' ')
 }
 
+function loadCachedResumeTips() {
+  try {
+    const raw = sessionStorage.getItem('resumeTipsCoaching')
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+function uniqueItems(values = []) {
+  return [...new Set(values.filter(Boolean).map((value) => String(value)))]
+}
+
+function getProfileSkills(profile) {
+  return uniqueItems(
+    profile?.skill_ids ||
+      profile?.detected_skills ||
+      profile?.skills ||
+      Object.keys(profile?.skill_scores || {}),
+  )
+}
+
+function getAverageSkillScore(profile) {
+  const scores = Object.values(profile?.skill_scores || {})
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value))
+
+  if (!scores.length) {
+    return null
+  }
+
+  const normalizedScores = scores.map((value) => (value <= 1 ? value * 100 : value))
+  const average =
+    normalizedScores.reduce((total, value) => total + value, 0) / normalizedScores.length
+
+  return Math.round(average)
+}
+
+function getTargetRole(profile) {
+  return formatCategoryLabel(
+    profile?.target_role ||
+      profile?.top_category ||
+      profile?.category ||
+      profile?.detected_role ||
+      '',
+  )
+}
+
 function Results({ navigate }) {
   const [category, setCategory] = useState('All categories')
   const [experience, setExperience] = useState('All experience')
   const [activeTab, setActiveTab] = useState(tabs[0])
+  const [profile, setProfile] = useState(() => loadStoredProfile())
 
   const [analysis, setAnalysis] = useState(() => loadStoredAnalysis())
   const [isAnalysisLoading, setIsAnalysisLoading] = useState(() => {
@@ -66,16 +116,9 @@ function Results({ navigate }) {
   const [analysisError, setAnalysisError] = useState(null)
   const [analysisTick, setAnalysisTick] = useState(0)
 
-  const [resumeTipsData, setResumeTipsData] = useState(() => {
-    try {
-      const raw = sessionStorage.getItem('resumeTipsCoaching')
-      return raw ? JSON.parse(raw) : null
-    } catch {
-      return null
-    }
-  })
+  const [resumeTipsData, setResumeTipsData] = useState(() => loadCachedResumeTips())
   const [isResumeTipsLoading, setIsResumeTipsLoading] = useState(() =>
-    Boolean(loadStoredProfile()),
+    Boolean(loadStoredProfile() && !loadCachedResumeTips()),
   )
   const [resumeTipsError, setResumeTipsError] = useState(null)
 
@@ -104,6 +147,7 @@ function Results({ navigate }) {
           return
         }
         setJobRecommendations(result.jobs)
+        setProfile(result.profile)
         persistRecommendationSession(result.profile, result.jobs, result.rawRecs)
         setJobsError(null)
       })
@@ -219,6 +263,22 @@ function Results({ navigate }) {
     jobRecommendations.reduce((total, job) => total + (job.readiness ?? job.match ?? 0), 0) /
       Math.max(jobRecommendations.length, 1),
   )
+  const profileSkills = useMemo(() => getProfileSkills(profile), [profile])
+  const averageSkillScore = useMemo(() => getAverageSkillScore(profile), [profile])
+  const sortedGaps = useMemo(
+    () => [...(analysis?.gaps || [])].sort((left, right) => right.priority - left.priority),
+    [analysis?.gaps],
+  )
+  const topGap = sortedGaps[0]
+  const topJob = jobRecommendations[0]
+  const skillLevelLabel = averageSkillScore !== null
+    ? `${averageSkillScore}%`
+    : profileSkills.length
+      ? `${profileSkills.length} skills`
+      : 'Not mapped'
+  const nextLearningAction =
+    topGap?.skill || topJob?.missingSkillNames?.[0] || topJob?.missing_skills?.[0] || 'Review gaps'
+  const resumeAction = resumeTipsData?.tips?.length ? 'Tips ready' : profile ? 'Review resume' : 'Add profile'
 
   const lowerPanel = {
     'Skill Gap': (
@@ -260,6 +320,13 @@ function Results({ navigate }) {
         </button>
       </div>
 
+      <FlowProgress
+        currentPath="/results"
+        profile={profile}
+        recommendations={jobRecommendations}
+        analysis={analysis}
+      />
+
       <div className="dashboard-summary">
         <div
           className="readiness-ring"
@@ -293,6 +360,35 @@ function Results({ navigate }) {
         </div>
       </div>
 
+      <div className="profile-summary-grid" aria-label="Recommendation summary">
+        <article>
+          <span>Skill level</span>
+          <strong>{skillLevelLabel}</strong>
+          <p>{profileSkills.length ? `${profileSkills.length} mapped skills` : 'Complete an assessment'}</p>
+        </article>
+        <article>
+          <span>Target role</span>
+          <strong>{getTargetRole(profile)}</strong>
+          <p>{profile?.location || 'Remote-friendly'}</p>
+        </article>
+        <article>
+          <span>Next learning action</span>
+          <strong>{nextLearningAction}</strong>
+          <a href="/results/resources">Open resources</a>
+        </article>
+        <article>
+          <span>Resume action</span>
+          <strong>{resumeAction}</strong>
+          <a href="/results/resume">Review resume</a>
+          <a href="/resume-builder">Build resume</a>
+        </article>
+        <article>
+          <span>Current jobs</span>
+          <strong>Telegram feed</strong>
+          <a href="/telegram-jobs">Open feed</a>
+        </article>
+      </div>
+
       {jobsError && (
         <div className="error-container" style={{ textAlign: 'center', padding: '16px 20px', marginBottom: '16px', background: 'rgba(232, 93, 117, 0.08)', borderRadius: '8px', border: '1px solid var(--coral)' }}>
           <p style={{ color: 'var(--coral)', fontWeight: 'bold' }}>{jobsError}</p>
@@ -300,8 +396,11 @@ function Results({ navigate }) {
       )}
 
       <div className="job-grid">
-        {filteredJobs.map((job) => (
-          <article className="job-card" key={job.id}>
+        {filteredJobs.map((job) => {
+          const missingSkills = job.missingSkillNames || job.missing_skills || []
+
+          return (
+            <article className="job-card" key={job.id}>
             <div className="job-card-top">
               <div>
                 <h2>{job.title}</h2>
@@ -315,10 +414,23 @@ function Results({ navigate }) {
             <div className="skill-pills">
               {job.skills.slice(0, 3).map((skill) => (
                 <span className="chip chip-blue" key={skill}>
-                  {skill}
+                {skill}
                 </span>
               ))}
             </div>
+
+            {missingSkills.length > 0 && (
+              <div className="missing-skill-strip">
+                <span>Missing skills</span>
+                <div className="skill-pills">
+                  {missingSkills.slice(0, 4).map((skill) => (
+                    <span className="chip chip-coral" key={`${job.id}-${skill}`}>
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {job.explanation && (
               <p className="match-explanation">{job.explanation}</p>
@@ -337,11 +449,20 @@ function Results({ navigate }) {
               </div>
             </details>
 
-            <a className="details-link" href={`/results/gap/${job.id}`}>
-              View Details -&gt;
-            </a>
+            <div className="job-card-actions">
+              <a className="details-link" href={`/results/gap/${job.id}`}>
+                Gap details
+              </a>
+              <a className="details-link" href="/results/resources">
+                Learning
+              </a>
+              <a className="details-link" href="/results/resume">
+                Resume
+              </a>
+            </div>
           </article>
-        ))}
+          )
+        })}
       </div>
 
       {filteredJobs.length === 0 && (

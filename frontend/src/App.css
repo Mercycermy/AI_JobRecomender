@@ -647,9 +647,105 @@
   text-transform: uppercase;
 }
 
+.flow-progress {
+  position: relative;
+  z-index: 1;
+  width: min(1180px, 100%);
+  margin: 0 auto 24px;
+}
+
+.home-page .flow-progress {
+  margin-top: 36px;
+  margin-bottom: 0;
+}
+
+.flow-steps {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.flow-step {
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: var(--surface-soft);
+  box-shadow: 0 12px 28px rgba(13, 34, 51, 0.06);
+  text-decoration: none;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease;
+}
+
+.flow-step:hover,
+.flow-step:focus-visible {
+  transform: translateY(-2px);
+  border-color: var(--line-strong);
+  background: var(--surface-strong);
+}
+
+.flow-step.is-active {
+  border-color: rgba(27, 79, 114, 0.5);
+  color: var(--navy);
+  background: rgba(46, 134, 193, 0.12);
+}
+
+.flow-step.is-complete .flow-index {
+  border-color: rgba(34, 168, 120, 0.4);
+  color: #07251a;
+  background: var(--mint);
+}
+
+.flow-index {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  color: var(--navy);
+  background: var(--surface-strong);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.flow-step-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.flow-step-copy strong,
+.flow-step-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flow-step-copy strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.flow-step-copy small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
 .page-heading,
 .results-header,
 .dashboard-summary,
+.profile-summary-grid,
 .manual-form,
 .job-grid,
 .bottom-tabs,
@@ -1261,6 +1357,9 @@ button.chip {
 .quiz-page {
   min-height: calc(100svh - 141px);
   display: grid;
+  align-content: center;
+  gap: 18px;
+  justify-items: center;
   place-items: center;
   padding: 28px 20px;
 }
@@ -1498,6 +1597,61 @@ button.chip {
   gap: 10px;
 }
 
+.profile-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.profile-summary-grid article {
+  min-height: 142px;
+  display: grid;
+  align-content: start;
+  gap: 9px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  box-shadow: 0 14px 32px rgba(13, 34, 51, 0.06);
+}
+
+.profile-summary-grid span,
+.missing-skill-strip > span {
+  color: var(--navy);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.profile-summary-grid strong {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 22px;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.profile-summary-grid p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.profile-summary-grid a {
+  align-self: end;
+  color: var(--navy);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.profile-summary-grid a:hover,
+.profile-summary-grid a:focus-visible {
+  text-decoration: underline;
+}
+
 .job-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1554,6 +1708,15 @@ button.chip {
   line-height: 1.6;
 }
 
+.missing-skill-strip {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(232, 93, 117, 0.16);
+  border-radius: 8px;
+  background: rgba(232, 93, 117, 0.06);
+}
+
 .match-badge {
   border-radius: 999px;
   padding: 6px 10px;
@@ -1585,6 +1748,24 @@ button.chip {
 .details-link:hover,
 .resource-card a:hover {
   text-decoration: underline;
+}
+
+.job-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.job-card-actions .details-link {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface-strong);
+  font-size: 13px;
 }
 
 .match-details {
@@ -2439,6 +2620,11 @@ button.chip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .flow-steps,
+  .profile-summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .admin-header,
   .admin-grid {
     grid-template-columns: 1fr;
@@ -2533,6 +2719,8 @@ button.chip {
   }
 
   .hero-actions,
+  .flow-steps,
+  .profile-summary-grid,
   .manual-form-grid,
   .resume-builder-layout,
   .telegram-layout,

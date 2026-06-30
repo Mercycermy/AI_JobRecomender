@@ -1,11 +1,26 @@
+import FlowProgress from '../components/FlowProgress.jsx'
 import { loadStoredAnalysis } from '../api/recommend.js'
 
 function SkillGap({ gaps: providedGaps, job, standalone = false, isLoading = false, error = null }) {
   const stored = loadStoredAnalysis()
+  const standaloneHeader = standalone ? (
+    <>
+      <div className="page-heading">
+        <p className="eyebrow">Prioritized gap list</p>
+        <h1>{job ? `${job.title} Skill Gap` : 'Skill Gap'}</h1>
+        <p>
+          Compare your current readiness with the level this path expects, then
+          start with the biggest leverage point.
+        </p>
+      </div>
+      <FlowProgress currentPath="/results/gap" />
+    </>
+  ) : null
   
   if (isLoading) {
     return (
       <section className={standalone ? 'detail-page' : 'panel-section'}>
+        {standaloneHeader}
         <div className="loading-container" style={{ textAlign: 'center', padding: '40px 20px' }}>
           <p className="loading-text" style={{ fontStyle: 'italic', color: 'var(--slate)' }}>
             Calibrating skill gap analysis...
@@ -18,6 +33,7 @@ function SkillGap({ gaps: providedGaps, job, standalone = false, isLoading = fal
   if (error && !providedGaps?.length && !stored?.gaps?.length) {
     return (
       <section className={standalone ? 'detail-page' : 'panel-section'}>
+        {standaloneHeader}
         <div className="error-container" style={{ textAlign: 'center', padding: '30px 20px', background: 'rgba(232, 93, 117, 0.08)', borderRadius: '8px', border: '1px solid var(--coral)' }}>
           <p style={{ color: 'var(--coral)', fontWeight: 'bold' }}>{error}</p>
         </div>
@@ -34,6 +50,7 @@ function SkillGap({ gaps: providedGaps, job, standalone = false, isLoading = fal
   if (!sourceGaps.length) {
     return (
       <section className={standalone ? 'detail-page' : 'panel-section'}>
+        {standaloneHeader}
         <div className="empty-state" style={{ textAlign: 'center', padding: '32px 20px' }}>
           <p>
             {error
@@ -49,16 +66,7 @@ function SkillGap({ gaps: providedGaps, job, standalone = false, isLoading = fal
 
   return (
     <section className={standalone ? 'detail-page' : 'panel-section'}>
-      {standalone && (
-        <div className="page-heading">
-          <p className="eyebrow">Prioritized gap list</p>
-          <h1>{job ? `${job.title} Skill Gap` : 'Skill Gap'}</h1>
-          <p>
-            Compare your current readiness with the level this path expects, then
-            start with the biggest leverage point.
-          </p>
-        </div>
-      )}
+      {standaloneHeader}
 
       <div className="gap-list">
         {gaps.map((gap) => {

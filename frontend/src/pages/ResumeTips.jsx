@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+import FlowProgress from '../components/FlowProgress.jsx'
 import {
   loadStoredProfile,
   loadStoredRawRecommendations,
@@ -81,11 +82,14 @@ function ResumeTips({ standalone = false, coaching = null, isLoading = false, er
   return (
     <section className={standalone ? 'detail-page' : 'panel-section'}>
       {standalone && (
-        <div className="page-heading">
-          <p className="eyebrow">Resume tips</p>
-          <h1>Sharpen the story your profile already tells.</h1>
-          <p>Use these sections to turn raw experience into a stronger match signal.</p>
-        </div>
+        <>
+          <div className="page-heading">
+            <p className="eyebrow">Resume tips</p>
+            <h1>Sharpen the story your profile already tells.</h1>
+            <p>Use these sections to turn raw experience into a stronger match signal.</p>
+          </div>
+          <FlowProgress currentPath="/results/resume" />
+        </>
       )}
 
       {coaching?.is_ai && (
@@ -111,6 +115,9 @@ function ResumeTips({ standalone = false, coaching = null, isLoading = false, er
           <button type="submit" disabled={isUploading}>
             {isUploading ? 'Reviewing...' : 'Review Resume'}
           </button>
+          <a className="button button-ghost" href="/resume-builder">
+            Open Builder
+          </a>
         </div>
         {uploadError && <p className="upload-error">{uploadError}</p>}
       </form>

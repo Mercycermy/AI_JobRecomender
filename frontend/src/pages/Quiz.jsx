@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { fallbackQuestions } from '../data/mockData.js'
+import FlowProgress from '../components/FlowProgress.jsx'
 import {
   clearStoredRecommendations,
   mapJobToCard,
@@ -182,14 +183,15 @@ function Quiz({ navigate }) {
   }
 
   const progress = progressInfo?.percent ?? Math.round((question.number / question.total) * 100)
-  const routingGate = question.gate ?? '—'
-  const routingDomain = progressInfo?.detected_domain || '—'
-  const routingRole = progressInfo?.detected_role || '—'
+  const routingGate = question.gate ?? 'N/A'
+  const routingDomain = progressInfo?.detected_domain || 'N/A'
+  const routingRole = progressInfo?.detected_role || 'N/A'
   const difficulty = question.difficulty?.replace(/^\w/, (letter) => letter.toUpperCase())
   const confidence = progressInfo?.confidence ?? 0
 
   return (
     <section className="quiz-page">
+      <FlowProgress currentPath="/quiz" />
       <div className="quiz-card" key={question.id}>
         <div className="quiz-progress" aria-label={`Question progress ${progress}%`}>
           <span style={{ width: `${progress}%` }}></span>
@@ -203,7 +205,7 @@ function Quiz({ navigate }) {
         </div>
 
         <div className="quiz-routing-badge">
-          {difficulty} · Confidence {confidence}% · Gate {routingGate} · Domain {routingDomain} · Role {routingRole}
+          {difficulty} | Confidence {confidence}% | Gate {routingGate} | Domain {routingDomain} | Role {routingRole}
         </div>
 
         <h1>{question.stem}</h1>

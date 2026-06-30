@@ -1,3 +1,5 @@
+import FlowProgress from '../components/FlowProgress.jsx'
+
 function Home() {
   const updatePointer = (event) => {
     const rect = event.currentTarget.getBoundingClientRect()
@@ -97,6 +99,8 @@ function Home() {
           </div>
         </div>
       </div>
+
+      <FlowProgress currentPath="/" />
 
       <div className="stats-row reveal reveal-six" aria-label="Product stats">
         <div className="stat-card">

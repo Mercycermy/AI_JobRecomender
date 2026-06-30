@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 
+import FlowProgress from '../components/FlowProgress.jsx'
 import { fetchTelegramJobs, ingestTelegramJobs } from '../api/recommend.js'
 
 function splitPosts(rawText, channel) {
@@ -94,6 +95,8 @@ function TelegramJobs() {
         <h1>Current roles from channel posts.</h1>
         <p>Structured jobs from Telegram flow into the same matching engine as the main feed.</p>
       </div>
+
+      <FlowProgress currentPath="/telegram-jobs" />
 
       <div className="telegram-layout">
         <form className="telegram-import-panel" onSubmit={handleIngest}>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { experienceLevels } from '../data/mockData.js'
+import FlowProgress from '../components/FlowProgress.jsx'
 import {
   fetchRecommendations,
   fetchSkillSuggestions,
@@ -182,6 +183,8 @@ function ManualInput({ navigate }) {
           evidence for a recommendation you can trust.
         </p>
       </div>
+
+      <FlowProgress currentPath="/manual" />
 
       <form className="manual-form" onSubmit={submitManualInput}>
         <div className="field-group skill-builder">

@@ -80,6 +80,7 @@ export const jobRecommendations = [
     experience: 'Mid (3-5 yr)',
     match: 92,
     skills: ['SQL', 'Experimentation', 'Storytelling'],
+    missingSkillNames: ['Stakeholder Mapping', 'Cohort Analysis'],
     readiness: 86,
   },
   {
@@ -90,6 +91,7 @@ export const jobRecommendations = [
     experience: 'Junior (0-2 yr)',
     match: 78,
     skills: ['React', 'Accessibility', 'APIs'],
+    missingSkillNames: ['Testing Library', 'Design Systems'],
     readiness: 81,
   },
   {
@@ -100,6 +102,7 @@ export const jobRecommendations = [
     experience: 'Junior (0-2 yr)',
     match: 71,
     skills: ['Python', 'Dashboards', 'Statistics'],
+    missingSkillNames: ['SQL Window Functions', 'Experiment Design'],
     readiness: 72,
   },
   {
@@ -110,6 +113,7 @@ export const jobRecommendations = [
     experience: 'Mid (3-5 yr)',
     match: 64,
     skills: ['Interviews', 'Synthesis', 'Journey Maps'],
+    missingSkillNames: ['Research Ops', 'Portfolio Storytelling'],
     readiness: 69,
   },
   {
@@ -120,6 +124,7 @@ export const jobRecommendations = [
     experience: 'Senior (6+ yr)',
     match: 48,
     skills: ['Lifecycle', 'Analytics', 'Copywriting'],
+    missingSkillNames: ['Attribution Modeling', 'Lifecycle Strategy'],
     readiness: 58,
   },
   {
@@ -130,6 +135,7 @@ export const jobRecommendations = [
     experience: 'Senior (6+ yr)',
     match: 43,
     skills: ['Pipelines', 'Monitoring', 'Cloud'],
+    missingSkillNames: ['Docker', 'Incident Response'],
     readiness: 54,
   },
 ]

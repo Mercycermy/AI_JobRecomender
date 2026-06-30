@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+import FlowProgress from '../components/FlowProgress.jsx'
 import { generateResumeDocument, loadStoredProfile } from '../api/recommend.js'
 
 const emptyExperience = () => ({
@@ -196,6 +197,8 @@ function ResumeBuilder() {
         <h1>Build a clean resume and export it.</h1>
         <p>Fill the sections, generate the preview, then download the same layout.</p>
       </div>
+
+      <FlowProgress currentPath="/resume-builder" />
 
       <div className="resume-builder-layout">
         <form className="resume-builder-form" onSubmit={handleSubmit}>
