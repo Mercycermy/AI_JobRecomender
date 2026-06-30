@@ -1730,6 +1730,54 @@ button.chip {
   font-weight: 800;
 }
 
+.gap-job-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.gap-job-pill {
+  max-width: 100%;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: rgba(46, 134, 193, 0.1);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.gap-learning-path {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding-left: 20px;
+  color: var(--slate);
+}
+
+.gap-learning-path li {
+  padding-left: 4px;
+}
+
+.gap-learning-path strong,
+.gap-learning-path span {
+  display: block;
+}
+
+.gap-learning-path strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.gap-learning-path span {
+  margin-top: 2px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .resource-groups {
   display: grid;
   gap: 24px;

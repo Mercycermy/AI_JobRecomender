@@ -36,17 +36,49 @@ def test_gap_analyzer_basic():
 	assert docker_gap is not None
 	assert docker_gap["priority"] == 100
 	assert docker_gap["priority_label"] == "High"
+	assert docker_gap["priority_group"] == "learn_first"
 	assert docker_gap["occurrences"] == 3
+	assert docker_gap["job_count"] == 3
+	assert len(docker_gap["affected_jobs"]) == 3
+	assert docker_gap["learning_path"]
+	assert docker_gap["current"] < docker_gap["required"]
+	assert docker_gap["current_level"] in {"Beginner", "Intermediate", "Advanced"}
+	assert docker_gap["required_level"] in {"Beginner", "Intermediate", "Advanced"}
 
 	assert kubernetes_gap is not None
 	assert kubernetes_gap["priority"] == 67
 	assert kubernetes_gap["priority_label"] == "Medium"
+	assert kubernetes_gap["priority_group"] == "build_next"
 	assert kubernetes_gap["occurrences"] == 2
 
 	assert aws_gap is not None
 	assert aws_gap["priority"] == 33
 	assert aws_gap["priority_label"] == "Low"
+	assert aws_gap["priority_group"] == "watchlist"
 	assert aws_gap["occurrences"] == 1
+
+
+def test_gap_analyzer_computes_missing_skills_from_required_skills():
+	analyzer = GapAnalyzer()
+	profile = {
+		"skill_ids": ["lang-py"],
+		"skill_scores": {"lang-py": 0.8},
+	}
+	recommendations = [
+		{
+			"job_id": "job-1",
+			"job_title": "Backend Developer",
+			"match_percent": 82,
+			"required_skills": ["lang-py", "ops-docker", "lang-sql"],
+		}
+	]
+
+	gaps = analyzer.analyze(profile, recommendations)
+	gap_ids = {gap["skill_id"] for gap in gaps}
+
+	assert gap_ids == {"ops-docker", "lang-sql"}
+	assert all(gap["affected_jobs"][0]["title"] == "Backend Developer" for gap in gaps)
+	assert all(gap["first_action"] for gap in gaps)
 
 
 def test_get_session_gaps_threshold_and_order():
@@ -83,3 +115,5 @@ def test_format_gaps_for_ui_shape():
 	assert gap["current"] < gap["required"]
 	assert gap["priority"] >= 60
 	assert gap["priority_label"] in {"High", "Medium", "Low"}
+	assert gap["priority_group"] in {"learn_first", "build_next", "watchlist"}
+	assert gap["learning_path"]

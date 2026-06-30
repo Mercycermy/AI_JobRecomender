@@ -37,6 +37,76 @@ SKILL_QUERY_MAP = {
 }
 
 
+def _clamp_percent(value: float, minimum: int = 0, maximum: int = 100) -> int:
+	return max(minimum, min(maximum, round(value)))
+
+
+def _level_from_percent(value: int) -> str:
+	if value >= 75:
+		return "Advanced"
+	if value >= 45:
+		return "Intermediate"
+	return "Beginner"
+
+
+def _priority_metadata(priority: int) -> Dict[str, str]:
+	if priority >= 70:
+		return {
+			"priority_label": "High",
+			"level": "Advanced",
+			"priority_group": "learn_first",
+		}
+	if priority >= 40:
+		return {
+			"priority_label": "Medium",
+			"level": "Intermediate",
+			"priority_group": "build_next",
+		}
+	return {
+		"priority_label": "Low",
+		"level": "Beginner",
+		"priority_group": "watchlist",
+	}
+
+
+def _learning_path(
+	skill_name: str,
+	current: int,
+	required: int,
+	priority_label: str,
+) -> List[Dict[str, Any]]:
+	if current < 40:
+		start = f"Learn the core concepts and common vocabulary for {skill_name}."
+	elif current < 70:
+		start = f"Practice job-style tasks that use {skill_name} in a realistic workflow."
+	else:
+		start = f"Polish advanced {skill_name} examples and prepare interview talking points."
+
+	return [
+		{
+			"order": 1,
+			"title": "Close the foundation gap",
+			"description": start,
+		},
+		{
+			"order": 2,
+			"title": "Build proof",
+			"description": (
+				f"Create or update one project that shows {skill_name} at "
+				f"roughly {required}% readiness."
+			),
+		},
+		{
+			"order": 3,
+			"title": "Apply to matched roles",
+			"description": (
+				f"Add {skill_name} evidence to your resume before applying to "
+				f"{priority_label.lower()} priority matches."
+			),
+		},
+	]
+
+
 def get_session_gaps(session: Dict[str, Any]) -> List[Dict[str, Any]]:
 	"""Return ranked skill gaps from a completed quiz session.
 
@@ -81,26 +151,27 @@ def format_gaps_for_ui(
 		current = max(5, min(99, round(score * 100)))
 		required = min(95, max(current + 20, 75))
 		priority = round((1.0 - score) * 100)
-
-		if priority >= 70:
-			level = "Advanced"
-			priority_label = "High"
-		elif priority >= 40:
-			level = "Intermediate"
-			priority_label = "Medium"
-		else:
-			level = "Beginner"
-			priority_label = "Low"
+		meta = _priority_metadata(priority)
+		skill_name = normalizer.name_for(gap["skill_id"])
 
 		formatted.append(
 			{
 				"skill_id": gap["skill_id"],
-				"skill": normalizer.name_for(gap["skill_id"]),
+				"skill": skill_name,
 				"priority": priority,
-				"priority_label": priority_label,
-				"level": level,
+				"priority_label": meta["priority_label"],
+				"priority_group": meta["priority_group"],
+				"level": meta["level"],
 				"current": current,
 				"required": required,
+				"current_level": _level_from_percent(current),
+				"required_level": _level_from_percent(required),
+				"learning_path": _learning_path(
+					skill_name,
+					current,
+					required,
+					meta["priority_label"],
+				),
 				"score": gap.get("score"),
 			}
 		)
@@ -115,6 +186,75 @@ class GapAnalyzer:
 	def __init__(self, normalizer: Optional[SkillNormalizer] = None):
 		self.normalizer = normalizer or SkillNormalizer()
 
+	def _profile_skill_set(self, profile: Optional[Dict[str, Any]]) -> set[str]:
+		if not profile:
+			return set()
+		raw_skills = (
+			profile.get("skill_ids")
+			or profile.get("detected_skills")
+			or profile.get("skills")
+			or []
+		)
+		skills: set[str] = set()
+		for skill in raw_skills:
+			text = str(skill or "").strip()
+			if not text:
+				continue
+			skills.add(text)
+			resolved = self.normalizer.to_skill_id(text)
+			if resolved:
+				skills.add(resolved)
+		return skills
+
+	def _skill_score(
+		self,
+		profile: Optional[Dict[str, Any]],
+		skill_id: str,
+		user_skills: set[str],
+	) -> float:
+		if not profile:
+			return 0.0
+		scores = profile.get("skill_scores") or {}
+		candidates = [skill_id]
+		resolved = self.normalizer.to_skill_id(skill_id)
+		if resolved and resolved not in candidates:
+			candidates.append(resolved)
+		for candidate in candidates:
+			try:
+				return max(0.0, min(1.0, float(scores[candidate])))
+			except (KeyError, TypeError, ValueError):
+				continue
+		return 0.65 if skill_id in user_skills else 0.0
+
+	def _missing_skills_for_job(
+		self,
+		rec: Dict[str, Any],
+		user_skills: set[str],
+	) -> List[str]:
+		missing = rec.get("missing_skills")
+		if missing is None and rec.get("required_skills"):
+			missing = [
+				skill_id
+				for skill_id in rec.get("required_skills", [])
+				if str(skill_id) not in user_skills
+			]
+		if not isinstance(missing, list):
+			return []
+		return [str(skill_id) for skill_id in missing if str(skill_id or "").strip()]
+
+	def _job_summary(self, rec: Dict[str, Any], rank: int) -> Dict[str, Any]:
+		return {
+			"job_id": str(rec.get("job_id") or rec.get("id") or ""),
+			"title": (
+				rec.get("job_title")
+				or rec.get("title")
+				or f"Recommended job {rank}"
+			),
+			"rank": rank,
+			"match_percent": rec.get("match_percent", rec.get("match_score")),
+			"required_skill_count": rec.get("required_skill_count"),
+		}
+
 	def analyze(
 		self,
 		profile: Optional[Dict[str, Any]],
@@ -127,11 +267,16 @@ class GapAnalyzer:
 			return []
 
 		missing_counts: Counter[str] = Counter()
-		for rec in recs:
-			missing = rec.get("missing_skills") or []
-			for skill_id in missing:
+		affected_jobs: Dict[str, List[Dict[str, Any]]] = {}
+		user_skills = self._profile_skill_set(profile)
+		for index, rec in enumerate(recs, start=1):
+			missing = self._missing_skills_for_job(rec, user_skills)
+			for skill_id in dict.fromkeys(missing):
 				if skill_id:
 					missing_counts[str(skill_id)] += 1
+					affected_jobs.setdefault(str(skill_id), []).append(
+						self._job_summary(rec, index)
+					)
 
 		if not missing_counts:
 			return []
@@ -141,29 +286,48 @@ class GapAnalyzer:
 
 		for skill_id, count in missing_counts.most_common(limit):
 			priority = round((count / total) * 100)
-			if priority >= 70:
-				level = "Advanced"
-				priority_label = "High"
-			elif priority >= 40:
-				level = "Intermediate"
-				priority_label = "Medium"
-			else:
-				level = "Beginner"
-				priority_label = "Low"
-
-			current = max(10, 70 - round(priority * 0.5))
-			required = min(95, current + 30)
+			meta = _priority_metadata(priority)
+			score = self._skill_score(profile, skill_id, user_skills)
+			current = _clamp_percent(score * 100, minimum=5, maximum=95)
+			if score == 0.0 and skill_id not in user_skills:
+				current = 15
+			required = min(
+				95,
+				max(current + 20, 70 + round(priority * 0.2)),
+			)
+			skill_name = self.normalizer.name_for(skill_id)
 
 			gaps.append(
 				{
 					"skill_id": skill_id,
-					"skill": self.normalizer.name_for(skill_id),
+					"skill": skill_name,
 					"priority": priority,
-					"priority_label": priority_label,
-					"level": level,
+					"priority_label": meta["priority_label"],
+					"priority_group": meta["priority_group"],
+					"level": meta["level"],
 					"current": current,
 					"required": required,
+					"current_level": _level_from_percent(current),
+					"required_level": _level_from_percent(required),
 					"occurrences": count,
+					"frequency": round(count / total, 3),
+					"job_count": total,
+					"job_ids": [
+						job["job_id"]
+						for job in affected_jobs.get(skill_id, [])
+						if job.get("job_id")
+					],
+					"affected_jobs": affected_jobs.get(skill_id, []),
+					"learning_path": _learning_path(
+						skill_name,
+						current,
+						required,
+						meta["priority_label"],
+					),
+					"first_action": (
+						f"Start with {skill_name}; it is missing from "
+						f"{count} of the top {total} matched jobs."
+					),
 				}
 			)
 

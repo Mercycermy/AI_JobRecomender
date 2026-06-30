@@ -198,6 +198,11 @@ def test_manual_profile_analysis_does_not_require_quiz_session(client):
         "ops-docker",
         "lang-sql",
     }
+    first_gap = data["gaps"][0]
+    assert first_gap["current"] < first_gap["required"]
+    assert first_gap["priority_group"] in {"learn_first", "build_next", "watchlist"}
+    assert first_gap["affected_jobs"]
+    assert first_gap["learning_path"]
     assert "resources" in data
 
 

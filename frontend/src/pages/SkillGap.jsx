@@ -99,6 +99,28 @@ function SkillGap({ gaps: providedGaps, job, standalone = false, isLoading = fal
                 <span>Current {gap.current}%</span>
                 <span>Required {gap.required}%</span>
               </div>
+
+              {gap.affected_jobs?.length > 0 && (
+                <div className="gap-job-list">
+                  <span>Shows up in</span>
+                  {gap.affected_jobs.slice(0, 3).map((affectedJob) => (
+                    <span className="gap-job-pill" key={`${gap.skill_id}-${affectedJob.job_id || affectedJob.rank}`}>
+                      {affectedJob.title}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {gap.learning_path?.length > 0 && (
+                <ol className="gap-learning-path">
+                  {gap.learning_path.map((step) => (
+                    <li key={`${gap.skill_id}-${step.order || step.title}`}>
+                      <strong>{step.title}</strong>
+                      <span>{step.description}</span>
+                    </li>
+                  ))}
+                </ol>
+              )}
             </article>
           )
         })}
