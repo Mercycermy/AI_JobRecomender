@@ -69,21 +69,23 @@ function getFlowMeta(stepId, profile, recommendations, analysis) {
   const matchCount = recommendations?.length || 0
   const gapCount = analysis?.gaps?.length || 0
   const resourceCount = analysis?.resources?.length || 0
+  const hasProfile = Boolean(profile || skillCount)
+  const hasMatchingContext = hasProfile || matchCount > 0
 
   if (stepId === 'profile') {
     return skillCount ? `${skillCount} skills` : 'Start'
   }
 
   if (stepId === 'matches') {
-    return matchCount ? `${matchCount} roles` : 'Pending'
+    return matchCount ? `${matchCount} roles` : hasProfile ? 'Ready' : 'Pending'
   }
 
   if (stepId === 'gaps') {
-    return gapCount ? `${gapCount} gaps` : 'Pending'
+    return gapCount ? `${gapCount} gaps` : hasMatchingContext ? 'Review' : 'Pending'
   }
 
   if (stepId === 'learning') {
-    return resourceCount ? `${resourceCount} paths` : 'Pending'
+    return resourceCount ? `${resourceCount} paths` : hasMatchingContext ? 'Review' : 'Pending'
   }
 
   if (stepId === 'resume') {
@@ -94,20 +96,24 @@ function getFlowMeta(stepId, profile, recommendations, analysis) {
 }
 
 function isStepComplete(stepId, profile, recommendations, analysis) {
+  const hasProfile = Boolean(profile || countProfileSkills(profile) > 0)
+  const hasRecommendations = Boolean(recommendations?.length)
+  const hasMatchingContext = hasProfile || hasRecommendations
+
   if (stepId === 'profile') {
     return countProfileSkills(profile) > 0
   }
 
   if (stepId === 'matches') {
-    return Boolean(recommendations?.length)
+    return hasRecommendations
   }
 
   if (stepId === 'gaps') {
-    return Boolean(analysis?.gaps?.length)
+    return Boolean(analysis?.gaps?.length || hasMatchingContext)
   }
 
   if (stepId === 'learning') {
-    return Boolean(analysis?.resources?.length)
+    return Boolean(analysis?.resources?.length || hasMatchingContext)
   }
 
   if (stepId === 'resume') {

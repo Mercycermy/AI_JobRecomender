@@ -18,14 +18,21 @@ from app.telegram_jobs import TelegramJobIngestionService
 def client(tmp_path):
 	routes.app.config["TESTING"] = True
 	original_service = routes._telegram_job_service
+	original_recommender = routes._recommender
 	routes._telegram_job_service = TelegramJobIngestionService(
 		db_path=tmp_path / "jobs.db",
 		feed_path=tmp_path / "telegram_jobs.json",
 		today=date(2026, 6, 30),
 	)
+	routes._recommender = RecommendationEngine(
+		load_resources=False,
+		db_path=str(tmp_path / "jobs.db"),
+		today=date(2026, 6, 30),
+	)
 	with routes.app.test_client() as c:
 		yield c
 	routes._telegram_job_service = original_service
+	routes._recommender = original_recommender
 
 
 def sample_post(message_id="42"):
@@ -96,6 +103,34 @@ def test_telegram_ingestion_skips_expired_deadline(tmp_path):
 	assert result["skipped"] == 1
 	assert "deadline passed" in result["errors"][0]["errors"]
 	assert service.list_jobs()["count"] == 0
+
+
+def test_telegram_data_analysis_posts_infer_data_analyst_category(tmp_path):
+	service = TelegramJobIngestionService(
+		db_path=tmp_path / "jobs.db",
+		feed_path=tmp_path / "telegram_jobs.json",
+		today=date(2026, 6, 30),
+	)
+	post = {
+		"channel_name": "data_jobs",
+		"message_id": "data-1",
+		"posted_at": "2026-06-30",
+		"raw_text": (
+			"Title: Power BI Dashboard Analyst\n"
+			"Company: Metrics Studio\n"
+			"Skills: Power BI, Excel, SQL, Tableau\n"
+			"Location: Remote\n"
+			"Deadline: July 10, 2026\n"
+			"Apply: https://example.com/data"
+		),
+	}
+
+	result = service.ingest_posts([post])
+
+	assert result["inserted"] == 1
+	job = result["jobs"][0]
+	assert job["category"] == "data-analyst"
+	assert {"da-powerbi", "ba-excel", "da-tableau", "lang-sql"} <= set(job["required_skills"])
 
 
 def test_telegram_public_html_posts_are_parsed(tmp_path):
@@ -193,6 +228,39 @@ def test_telegram_jobs_routes_ingest_and_list(client):
 	list_data = list_response.get_json()
 	assert list_data["count"] == 1
 	assert list_data["jobs"][0]["source_channel"] == "python_jobs"
+
+
+def test_telegram_jobs_match_route_scores_active_jobs_for_profile(client):
+	ingest_response = client.post("/telegram/jobs/ingest", json={"posts": [sample_post()]})
+	assert ingest_response.status_code == 200
+
+	response = client.post(
+		"/telegram/jobs/match",
+		json={
+			"skill_profile": {
+				"skills": ["Python", "SQL", "Docker", "REST API"],
+				"skill_levels": {
+					"Python": "advanced",
+					"SQL": "advanced",
+					"Docker": "intermediate",
+					"REST API": "advanced",
+				},
+				"experience": "mid",
+				"category": "backend-dev",
+				"location": "remote",
+			},
+			"limit": 10,
+		},
+	)
+
+	assert response.status_code == 200
+	data = response.get_json()
+	assert data["count"] == 1
+	job = data["jobs"][0]
+	assert job["source"] == "Telegram: python_jobs"
+	assert job["match_score"] >= 75
+	assert job["matched_skill_names"]
+	assert "telegram_feed" in job["retrieval_sources"]
 
 
 def test_telegram_jobs_refresh_route_uses_public_channels(client):

@@ -316,6 +316,25 @@ export async function fetchTelegramJobs({ query = '', limit = 50 } = {}) {
   return response.json()
 }
 
+export async function fetchTelegramJobMatches(profile, { query = '', limit = 60 } = {}) {
+  const response = await fetch(`${API_BASE}/telegram/jobs/match`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      skill_profile: profile,
+      query,
+      limit,
+    }),
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || `Telegram match failed (${response.status})`)
+  }
+
+  return response.json()
+}
+
 export async function ingestTelegramJobs(posts) {
   const response = await fetch(`${API_BASE}/telegram/jobs/ingest`, {
     method: 'POST',

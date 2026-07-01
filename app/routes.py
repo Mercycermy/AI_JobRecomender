@@ -570,6 +570,40 @@ def telegram_jobs():
     return jsonify(_get_telegram_job_service().list_jobs(query=query, limit=limit))
 
 
+@app.route("/telegram/jobs/match", methods=["POST", "OPTIONS"])
+def telegram_jobs_match():
+    """Return active Telegram jobs ranked against the supplied profile."""
+    if request.method == "OPTIONS":
+        return "", 204
+
+    try:
+        payload = request.get_json(silent=True) or {}
+        profile_payload = payload.get("skill_profile") or payload.get("profile") or payload
+        profile = _get_profile_service().from_payload(profile_payload)
+        limit = int(payload.get("limit", 60))
+        limit = max(1, min(limit, 100))
+        query = payload.get("query", "")
+        feed = _get_telegram_job_service().list_jobs(query=query, limit=100)
+        recommender_input = _get_profile_service().to_recommender_input(profile)
+        ranked = _get_recommender().score_jobs(
+            recommender_input,
+            feed.get("jobs", []),
+            top_n=limit,
+            source_label="telegram_feed",
+        )
+        return jsonify({
+            "jobs": ranked,
+            "count": len(ranked),
+            "total": feed.get("total", len(ranked)),
+            "updated_at": feed.get("updated_at"),
+            "skill_profile": _get_profile_service().serialize(profile),
+        })
+    except (ProfileValidationError, TypeError, ValueError) as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
 @app.route("/telegram/jobs/ingest", methods=["POST", "OPTIONS"])
 def telegram_jobs_ingest():
     """Extract, validate, dedupe, and store raw Telegram job posts."""

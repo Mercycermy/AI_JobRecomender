@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import FlowProgress from '../components/FlowProgress.jsx'
-import { fetchTelegramJobs, ingestTelegramJobs, refreshTelegramJobs } from '../api/recommend.js'
+import {
+  fetchTelegramJobMatches,
+  fetchTelegramJobs,
+  ingestTelegramJobs,
+  loadStoredProfile,
+  refreshTelegramJobs,
+} from '../api/recommend.js'
 
 const defaultChannels = [
   '@freelance_ethio',
@@ -11,6 +17,35 @@ const defaultChannels = [
   '@geezjobs_ethiopia',
   '@Maroset',
 ]
+
+const matchFactors = [
+  ['skill_fit', 'Skills'],
+  ['semantic_similarity', 'Semantic'],
+  ['experience_match', 'Experience'],
+  ['role_match', 'Role'],
+  ['location_match', 'Location'],
+  ['freshness', 'Freshness'],
+]
+
+function getBadgeClass(match) {
+  if (match >= 75) {
+    return 'match-high'
+  }
+  if (match >= 50) {
+    return 'match-mid'
+  }
+  return 'match-low'
+}
+
+function hasUsableProfile(profile) {
+  const skills =
+    profile?.skill_ids ||
+    profile?.detected_skills ||
+    profile?.skills ||
+    Object.keys(profile?.skill_scores || {})
+
+  return Boolean(profile && skills?.length)
+}
 
 function splitPosts(rawText, channel) {
   return rawText
@@ -34,12 +69,17 @@ function TelegramJobs() {
   const [isLoading, setIsLoading] = useState(true)
   const [isIngesting, setIsIngesting] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isPersonalized, setIsPersonalized] = useState(false)
 
   const loadJobs = useCallback(async (search = '') => {
     setIsLoading(true)
     setError(null)
     try {
-      const payload = await fetchTelegramJobs({ query: search, limit: 60 })
+      const profile = loadStoredProfile()
+      const payload = hasUsableProfile(profile)
+        ? await fetchTelegramJobMatches(profile, { query: search, limit: 60 })
+        : await fetchTelegramJobs({ query: search, limit: 60 })
+      setIsPersonalized(hasUsableProfile(profile))
       setJobs(payload.jobs || [])
     } catch (err) {
       setError(err.message || 'Could not load Telegram jobs.')
@@ -50,9 +90,15 @@ function TelegramJobs() {
 
   useEffect(() => {
     let cancelled = false
-    fetchTelegramJobs({ query: '', limit: 60 })
+    const profile = loadStoredProfile()
+    const request = hasUsableProfile(profile)
+      ? fetchTelegramJobMatches(profile, { query: '', limit: 60 })
+      : fetchTelegramJobs({ query: '', limit: 60 })
+
+    request
       .then((payload) => {
         if (!cancelled) {
+          setIsPersonalized(hasUsableProfile(profile))
           setJobs(payload.jobs || [])
         }
       })
@@ -183,42 +229,97 @@ function TelegramJobs() {
             </button>
           </form>
 
+          {isPersonalized && (
+            <div className="telegram-summary">
+              <span>{jobs.length} profile-ranked</span>
+              <span>Current jobs only</span>
+            </div>
+          )}
+
           <div className="telegram-job-list">
             {jobs.length > 0 ? (
-              jobs.map((job) => (
-                <article className="telegram-job-card" key={job.job_id}>
-                  <div className="telegram-job-top">
-                    <div>
-                      <span className="chip chip-blue">{job.source_channel}</span>
-                      <h2>{job.job_title}</h2>
-                      <p>{job.company || job.category}</p>
+              jobs.map((job) => {
+                const matchScore = Number(job.match_score)
+                const hasMatchScore = Number.isFinite(matchScore)
+                const matchedSkills = job.matched_skill_names || []
+                const missingSkills = job.missing_skill_names || []
+                const displaySkills = matchedSkills.length
+                  ? matchedSkills
+                  : job.required_skill_names || []
+
+                return (
+                  <article className="telegram-job-card" key={job.job_id}>
+                    <div className="telegram-job-top">
+                      <div>
+                        <span className="chip chip-blue">{job.source_channel}</span>
+                        <h2>{job.job_title}</h2>
+                        <p>{job.company || job.category}</p>
+                      </div>
+                      <div className="telegram-job-status">
+                        {hasMatchScore && (
+                          <span className={`match-badge ${getBadgeClass(matchScore)}`}>
+                            {Math.round(matchScore)}% match
+                          </span>
+                        )}
+                        <strong>{job.posted_at}</strong>
+                      </div>
                     </div>
-                    <strong>{job.posted_at}</strong>
-                  </div>
 
-                  <div className="telegram-meta">
-                    <span>{job.location}</span>
-                    {job.salary && <span>{job.salary}</span>}
-                    {job.deadline_date && <span>Deadline {job.deadline_date}</span>}
-                    <span>{job.exp_level}</span>
-                    <span>{Math.round((job.confidence || 0) * 100)}% confidence</span>
-                  </div>
+                    <div className="telegram-meta">
+                      <span>{job.location}</span>
+                      {job.salary && <span>{job.salary}</span>}
+                      {job.deadline_date && <span>Deadline {job.deadline_date}</span>}
+                      <span>{job.exp_level}</span>
+                      {job.match_label && <span>{job.match_label} fit</span>}
+                      <span>{Math.round((job.confidence || 0) * 100)}% extraction</span>
+                    </div>
 
-                  <div className="skill-pills">
-                    {(job.required_skill_names || []).slice(0, 8).map((skill) => (
-                      <span className="chip chip-coral" key={`${job.job_id}-${skill}`}>{skill}</span>
-                    ))}
-                  </div>
+                    <div className="skill-pills">
+                      {displaySkills.slice(0, 8).map((skill) => (
+                        <span className="chip chip-blue" key={`${job.job_id}-${skill}`}>{skill}</span>
+                      ))}
+                    </div>
 
-                  <p>{job.description}</p>
+                    {missingSkills.length > 0 && (
+                      <div className="missing-skill-strip">
+                        <span>Missing skills</span>
+                        <div className="skill-pills">
+                          {missingSkills.slice(0, 5).map((skill) => (
+                            <span className="chip chip-coral" key={`${job.job_id}-${skill}`}>
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
-                  {job.apply_link && (
-                    <a className="button button-primary telegram-apply-link" href={job.apply_link} target="_blank" rel="noreferrer">
-                      Apply / View Post
-                    </a>
-                  )}
-                </article>
-              ))
+                    {job.explanation && <p className="match-explanation">{job.explanation}</p>}
+
+                    <p>{job.description}</p>
+
+                    {hasMatchScore && (
+                      <details className="match-details telegram-match-details">
+                        <summary>Score breakdown</summary>
+                        <div className="match-breakdown-grid">
+                          {matchFactors.map(([key, label]) => (
+                            <div key={key}>
+                              <span>{label}</span>
+                              <strong>{Math.round(job.breakdown?.[key] ?? 0)}%</strong>
+                              <small>{job.score_weights?.[key] ?? 0}% weight</small>
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+                    )}
+
+                    {job.apply_link && (
+                      <a className="button button-primary telegram-apply-link" href={job.apply_link} target="_blank" rel="noreferrer">
+                        Apply / View Post
+                      </a>
+                    )}
+                  </article>
+                )
+              })
             ) : (
               <div className="empty-state">
                 <p>{isLoading ? 'Loading Telegram jobs...' : 'No Telegram jobs found.'}</p>

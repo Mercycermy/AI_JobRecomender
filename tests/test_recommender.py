@@ -130,6 +130,56 @@ def test_explainable_hybrid_score_contains_all_factors():
     assert "Main skills to develop: Docker." in result["explanation"]
 
 
+def test_score_jobs_ranks_supplied_telegram_jobs_with_same_formula():
+    engine = RecommendationEngine(
+        load_resources=False,
+        today=date(2026, 6, 30),
+    )
+    profile = {
+        "skill_ids": ["da-powerbi", "da-excel", "lang-sql"],
+        "skill_scores": {"da-powerbi": 0.85, "da-excel": 0.8, "lang-sql": 0.75},
+        "experience_level": "junior",
+        "target_role": "data-analyst",
+        "location": "remote",
+    }
+    results = engine.score_jobs(
+        profile,
+        [
+            {
+                "job_id": "telegram-data",
+                "job_title": "Power BI Dashboard Analyst",
+                "description": "Build dashboards with Power BI, Excel, and SQL.",
+                "category": "data-analyst",
+                "source": "Telegram: data_jobs",
+                "source_channel": "data_jobs",
+                "required_skills": ["da-powerbi", "da-excel", "lang-sql"],
+                "exp_level": "junior",
+                "location": "Remote",
+                "posted_at": "2026-06-30",
+            },
+            {
+                "job_id": "telegram-sales",
+                "job_title": "Sales Representative",
+                "description": "Grow customer accounts and manage field sales.",
+                "category": "sales-representative",
+                "source": "Telegram: sales_jobs",
+                "source_channel": "sales_jobs",
+                "required_skills": ["sales-crm"],
+                "exp_level": "junior",
+                "location": "Remote",
+                "posted_at": "2026-06-30",
+            },
+        ],
+        top_n=2,
+        source_label="telegram_feed",
+    )
+
+    assert [item["job_id"] for item in results] == ["telegram-data", "telegram-sales"]
+    assert results[0]["match_score"] > results[1]["match_score"]
+    assert results[0]["matched_skill_names"] == ["SQL", "Power BI", "Excel"]
+    assert "telegram_feed" in results[0]["retrieval_sources"]
+
+
 def test_location_and_freshness_are_real_scoring_signals():
     engine = RecommendationEngine(
         load_resources=False,
@@ -142,6 +192,20 @@ def test_location_and_freshness_are_real_scoring_signals():
     assert engine._freshness_score("2026-06-24") == 1.0
     assert engine._freshness_score("2026-05-20") == 0.75
     assert engine._freshness_score("2025-01-01") == 0.2
+
+
+def test_data_analyst_role_family_recognizes_data_collection_titles():
+    engine = RecommendationEngine(load_resources=False)
+
+    score = engine._role_score(
+        "data-analyst",
+        {
+            "job_title": "Baseline Data Enumerator",
+            "category": "Information Technology (IT)",
+        },
+    )
+
+    assert score >= 0.9
 
 
 def test_database_ranking_is_deterministic_and_explainable():

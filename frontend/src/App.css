@@ -2425,6 +2425,23 @@ button.chip {
   font-size: 12px;
 }
 
+.telegram-job-status {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+
+.telegram-job-card .match-explanation {
+  margin: 0;
+  color: var(--slate);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.telegram-match-details {
+  margin-top: 0;
+}
+
 .telegram-apply-link {
   justify-self: start;
   width: auto;

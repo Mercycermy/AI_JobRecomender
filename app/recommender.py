@@ -99,9 +99,21 @@ ROLE_FAMILIES: Dict[str, Dict[str, Tuple[str, ...]]] = {
     "data-analyst": {
         "phrases": (
             "data analyst",
+            "data analysis",
+            "data analytics",
             "business intelligence",
+            "bi analyst",
             "reporting analyst",
             "analytics",
+            "power bi",
+            "powerbi",
+            "tableau",
+            "dashboard",
+            "excel analyst",
+            "sql analyst",
+            "statistics",
+            "data collection",
+            "data enumerator",
         ),
         "categories": (
             "data-analyst",
@@ -580,6 +592,57 @@ class RecommendationEngine:
         ) / total_weight
         fit = 0.75 * overlap + 0.25 * proficiency
         return min(1.0, fit), min(1.0, overlap), min(1.0, proficiency)
+
+    def _profile_inputs(
+        self,
+        skill_profile: Dict[str, Any],
+    ) -> Tuple[List[str], Set[str], Dict[str, float], str, str, str]:
+        detected_skills = (
+            skill_profile.get("skill_ids")
+            or skill_profile.get("detected_skills")
+            or skill_profile.get("skills")
+            or list((skill_profile.get("skill_scores") or {}).keys())
+        )
+        raw_skills = [
+            str(skill).strip()
+            for skill in detected_skills
+            if str(skill or "").strip()
+        ]
+        normalized_skills = self.normalizer.normalize_list(raw_skills)
+        user_skills = set(normalized_skills)
+
+        raw_scores = skill_profile.get("skill_scores") or {}
+        skill_scores: Dict[str, float] = {}
+        for raw_skill, score in raw_scores.items():
+            skill_id = self.normalizer.to_skill_id(str(raw_skill))
+            try:
+                score_value = float(score)
+            except (TypeError, ValueError):
+                continue
+            if skill_id:
+                skill_scores[skill_id] = max(0.0, min(1.0, score_value))
+
+        user_exp = (
+            skill_profile.get("experience_level")
+            or skill_profile.get("experience")
+            or "junior"
+        )
+        target_role = (
+            skill_profile.get("target_role")
+            or skill_profile.get("detected_role")
+            or skill_profile.get("top_category")
+            or skill_profile.get("category")
+            or ""
+        )
+        location_pref = skill_profile.get("location") or "remote"
+        return (
+            normalized_skills,
+            user_skills,
+            skill_scores,
+            str(user_exp),
+            str(target_role),
+            str(location_pref),
+        )
 
     def _semantic_candidates(
         self,
@@ -1146,44 +1209,14 @@ class RecommendationEngine:
 
     def rank_jobs(self, skill_profile: Dict[str, Any], top_n: int = 10) -> List[Dict[str, Any]]:
         """Return top jobs with a complete, explainable hybrid score."""
-        detected_skills = (
-            skill_profile.get("skill_ids")
-            or skill_profile.get("detected_skills")
-            or skill_profile.get("skills")
-            or list((skill_profile.get("skill_scores") or {}).keys())
-        )
-        raw_skills = [
-            str(skill).strip()
-            for skill in detected_skills
-            if str(skill or "").strip()
-        ]
-        normalized_skills = self.normalizer.normalize_list(raw_skills)
-        user_skills = set(normalized_skills)
-
-        raw_scores = skill_profile.get("skill_scores") or {}
-        skill_scores: Dict[str, float] = {}
-        for raw_skill, score in raw_scores.items():
-            skill_id = self.normalizer.to_skill_id(str(raw_skill))
-            try:
-                score_value = float(score)
-            except (TypeError, ValueError):
-                continue
-            if skill_id:
-                skill_scores[skill_id] = max(0.0, min(1.0, score_value))
-
-        user_exp = (
-            skill_profile.get("experience_level")
-            or skill_profile.get("experience")
-            or "junior"
-        )
-        target_role = (
-            skill_profile.get("target_role")
-            or skill_profile.get("detected_role")
-            or skill_profile.get("top_category")
-            or skill_profile.get("category")
-            or ""
-        )
-        location_pref = skill_profile.get("location") or "remote"
+        (
+            normalized_skills,
+            user_skills,
+            skill_scores,
+            user_exp,
+            target_role,
+            location_pref,
+        ) = self._profile_inputs(skill_profile)
 
         candidate_ids, candidate_metadata, vector_similarities = self._retrieve_candidates(
             normalized_skills,
@@ -1213,9 +1246,9 @@ class RecommendationEngine:
                     required_skills=job_skills.get(job_id, set()),
                     user_skills=user_skills,
                     skill_scores=skill_scores,
-                    user_exp=str(user_exp),
-                    target_role=str(target_role),
-                    location_pref=str(location_pref),
+                    user_exp=user_exp,
+                    target_role=target_role,
+                    location_pref=location_pref,
                     vector_similarity=vector_similarities.get(job_id),
                     semantic_context=semantic_context,
                     candidate_meta=candidate_metadata.get(job_id, {}),
@@ -1233,6 +1266,81 @@ class RecommendationEngine:
             )
         )
         return ranked[: max(1, min(int(top_n), 50))]
+
+    def score_jobs(
+        self,
+        skill_profile: Dict[str, Any],
+        jobs: Sequence[Dict[str, Any]],
+        top_n: int = 50,
+        source_label: str = "provided_jobs",
+    ) -> List[Dict[str, Any]]:
+        """Score supplied jobs with the same explainable formula as rank_jobs."""
+        (
+            normalized_skills,
+            user_skills,
+            skill_scores,
+            user_exp,
+            target_role,
+            location_pref,
+        ) = self._profile_inputs(skill_profile)
+        semantic_context = self._semantic_context(normalized_skills, target_role)
+
+        ranked: List[Dict[str, Any]] = []
+        for job in jobs:
+            job_payload = dict(job)
+            if not job_payload.get("date_added") and job_payload.get("posted_at"):
+                job_payload["date_added"] = job_payload.get("posted_at")
+            if not job_payload.get("source"):
+                job_payload["source"] = source_label
+
+            if self._validate_job_for_display(job_payload):
+                continue
+
+            raw_required = (
+                job_payload.get("required_skills")
+                or job_payload.get("required_skill_ids")
+                or job_payload.get("required_skill_names")
+                or []
+            )
+            required_skills = set(
+                self.normalizer.normalize_list(
+                    [
+                        str(skill)
+                        for skill in raw_required
+                        if str(skill or "").strip()
+                    ]
+                )
+            )
+            overlap_count = len(user_skills & required_skills)
+            ranked.append(
+                self._score_job(
+                    job=job_payload,
+                    required_skills=required_skills,
+                    user_skills=user_skills,
+                    skill_scores=skill_scores,
+                    user_exp=user_exp,
+                    target_role=target_role,
+                    location_pref=location_pref,
+                    semantic_context=semantic_context,
+                    candidate_meta={
+                        "sources": [source_label],
+                        "retrieval_score": 1.0 if overlap_count else 0.35,
+                        "skill_overlap_count": overlap_count,
+                    },
+                )
+            )
+
+        ranked.sort(
+            key=lambda item: (
+                -item["match_score"],
+                -item["rerank_factors"]["exact_skill_overlap"],
+                -item["rerank_factors"]["seniority_fit"],
+                -item["rerank_factors"]["location_fit"],
+                -item["rerank_factors"]["semantic_similarity"],
+                item["job_id"],
+            )
+        )
+        return ranked[: max(1, min(int(top_n), 100))]
 
     def _db_fallback_recommendations(
         self,
