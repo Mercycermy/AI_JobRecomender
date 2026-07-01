@@ -46,6 +46,8 @@ step12_resume_generator.txt
 step13_telegram_jobs.txt
 step14_frontend_flow.txt
 step15_validation_quality.txt
+step16_reliability.txt
+step17_deployment_guide.md
 
 # OS
 .DS_Store
