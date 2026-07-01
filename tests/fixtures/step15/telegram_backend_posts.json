@@ -1,0 +1,47 @@
+{
+  "description": "Telegram import payload with duplicate backend posts and a matching profile.",
+  "today": "2026-06-30",
+  "posts": [
+    {
+      "channel_name": "python_jobs",
+      "message_id": "42",
+      "posted_at": "2026-06-30",
+      "raw_text": "Title: Backend Developer\nCompany: Acme Analytics\nSkills: Python, SQL, Docker, REST API\nLocation: Remote\nSalary: $90k-$110k\nDeadline: July 10, 2026\nApply: https://example.com/apply"
+    },
+    {
+      "channel_name": "python_jobs",
+      "message_id": "43",
+      "posted_at": "2026-06-30",
+      "raw_text": "Title: Backend Developer\nCompany: Acme Analytics\nSkills: Python, SQL, Docker, REST API\nLocation: Remote\nSalary: $90k-$110k\nDeadline: July 10, 2026\nApply: https://example.com/apply"
+    }
+  ],
+  "match_profile": {
+    "skill_ids": [
+      "lang-py",
+      "lang-sql",
+      "ops-docker",
+      "be-rest"
+    ],
+    "skill_scores": {
+      "lang-py": 0.8,
+      "lang-sql": 0.75,
+      "ops-docker": 0.6,
+      "be-rest": 0.8
+    },
+    "experience_level": "mid",
+    "target_role": "backend-dev",
+    "location": "remote"
+  },
+  "expected": {
+    "inserted": 1,
+    "deduped": 1,
+    "required_skills": [
+      "lang-py",
+      "lang-sql",
+      "ops-docker",
+      "be-rest"
+    ],
+    "query": "docker",
+    "min_match_score": 75
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "description": "Known skill-gap inputs that should return curated learning resources.",
+  "gaps": [
+    {
+      "skill_id": "ops-docker",
+      "skill": "Docker",
+      "priority": 90,
+      "priority_label": "High",
+      "priority_group": "learn_first",
+      "current": 20,
+      "required": 80
+    },
+    {
+      "skill_id": "lang-sql",
+      "skill": "SQL",
+      "priority": 75,
+      "priority_label": "High",
+      "priority_group": "learn_first",
+      "current": 35,
+      "required": 80
+    }
+  ],
+  "expected": {
+    "skill_ids": [
+      "ops-docker",
+      "lang-sql"
+    ],
+    "limit_per_skill": 2
+  }
+}

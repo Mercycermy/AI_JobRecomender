@@ -45,6 +45,8 @@ step11_resume_upload.txt
 step12_resume_generator.txt
 step13_telegram_jobs.txt
 step14_frontend_flow.txt
+step15_validation_quality.txt
+
 # OS
 .DS_Store
 Thumbs.db

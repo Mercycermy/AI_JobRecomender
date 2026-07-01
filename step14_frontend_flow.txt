@@ -19,7 +19,6 @@ The primary nav now links to:
 - Resume
 - Telegram
 - Admin
-
 Route matching was tightened so Results, Learn, and Resume show the correct active state.
 
 2. Product flow status strip

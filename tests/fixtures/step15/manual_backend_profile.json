@@ -1,0 +1,48 @@
+{
+  "description": "Manual backend profile with mixed evidence, canonical skill labels, and one unknown skill.",
+  "input": {
+    "skills": [
+      "Python",
+      "FastAPI",
+      "REST API",
+      "Docker",
+      "SQL",
+      "Unknown Future Skill"
+    ],
+    "skill_levels": {
+      "Python": "advanced",
+      "FastAPI": "intermediate",
+      "REST API": "intermediate",
+      "Docker": "intermediate",
+      "SQL": "intermediate"
+    },
+    "experience": "mid",
+    "experience_years": 3,
+    "has_projects": true,
+    "portfolio_url": "https://example.com/portfolio",
+    "category": "backend-dev",
+    "location": "remote"
+  },
+  "expected": {
+    "skill_ids": [
+      "lang-py",
+      "be-fastapi",
+      "be-rest",
+      "ops-docker",
+      "lang-sql"
+    ],
+    "skill_scores": {
+      "lang-py": 0.82,
+      "be-fastapi": 0.65,
+      "be-rest": 0.65,
+      "ops-docker": 0.65,
+      "lang-sql": 0.65
+    },
+    "unresolved_skills": [
+      "Unknown Future Skill"
+    ],
+    "target_role": "backend-dev",
+    "location": "remote",
+    "min_confidence": 0.75
+  }
+}

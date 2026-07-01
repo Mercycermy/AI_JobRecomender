@@ -1,0 +1,67 @@
+{
+  "description": "Resume-builder payload that should generate stable preview and export assets.",
+  "payload": {
+    "name": "Jordan Lee",
+    "title": "Backend Developer",
+    "email": "jordan@example.com",
+    "phone": "555-0100",
+    "location": "Remote",
+    "summary": "Backend developer who builds Python APIs, reporting workflows, and production-ready data integrations.",
+    "skills": "Python, SQL, Docker, REST APIs, FastAPI",
+    "experience": [
+      {
+        "title": "Software Developer",
+        "company": "Acme Analytics",
+        "location": "Remote",
+        "start": "2023",
+        "end": "Present",
+        "bullets": [
+          "Built REST APIs for customer reporting workflows.",
+          "Improved dashboard refresh time by 30%."
+        ]
+      }
+    ],
+    "education": [
+      {
+        "school": "State University",
+        "degree": "BS Computer Science",
+        "year": "2022",
+        "details": [
+          "Coursework in databases and software engineering"
+        ]
+      }
+    ],
+    "projects": [
+      {
+        "name": "Job Match Dashboard",
+        "link": "https://example.com/project",
+        "bullets": [
+          "Built a Flask and React dashboard for job matching."
+        ]
+      }
+    ],
+    "certifications": "AWS Cloud Practitioner",
+    "links": [
+      {
+        "label": "Portfolio",
+        "url": "https://example.com"
+      }
+    ]
+  },
+  "expected": {
+    "filename": "jordan-lee-resume",
+    "plain_text_contains": [
+      "Jordan Lee",
+      "Backend Developer",
+      "Python, SQL, Docker, REST APIs, FastAPI"
+    ],
+    "quality_checks": {
+      "has_contact": true,
+      "has_summary": true,
+      "has_experience": true,
+      "has_skills": true,
+      "has_education": true,
+      "has_projects": true
+    }
+  }
+}
