@@ -129,8 +129,19 @@ export async function fetchRecommendations(profile, topN = 10) {
 export function persistRecommendationSession(profile, jobs, rawRecs = null) {
   sessionStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile))
   sessionStorage.setItem(RECOMMENDATIONS_STORAGE_KEY, JSON.stringify(jobs))
+  try {
+    localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile))
+    localStorage.setItem(RECOMMENDATIONS_STORAGE_KEY, JSON.stringify(jobs))
+  } catch {
+    // Session storage still keeps the active recommendation flow available.
+  }
   if (rawRecs) {
     sessionStorage.setItem(RAW_RECOMMENDATIONS_STORAGE_KEY, JSON.stringify(rawRecs))
+    try {
+      localStorage.setItem(RAW_RECOMMENDATIONS_STORAGE_KEY, JSON.stringify(rawRecs))
+    } catch {
+      // Raw recommendations are optional for the current session.
+    }
   } else {
     sessionStorage.removeItem(RAW_RECOMMENDATIONS_STORAGE_KEY)
   }
@@ -190,12 +201,22 @@ export function persistQuizAttempt(profile, progress = null, jobs = []) {
 
 export function persistAnalysis(analysis) {
   sessionStorage.setItem(ANALYSIS_STORAGE_KEY, JSON.stringify(analysis))
+  try {
+    localStorage.setItem(ANALYSIS_STORAGE_KEY, JSON.stringify(analysis))
+  } catch {
+    // Session storage still keeps analysis available for the current flow.
+  }
 }
 
 export function loadStoredRecommendations() {
   try {
     const raw = sessionStorage.getItem(RECOMMENDATIONS_STORAGE_KEY)
-    return raw ? JSON.parse(raw) : null
+    if (raw) {
+      return JSON.parse(raw)
+    }
+
+    const localRaw = localStorage.getItem(RECOMMENDATIONS_STORAGE_KEY)
+    return localRaw ? JSON.parse(localRaw) : null
   } catch {
     return null
   }
@@ -204,7 +225,12 @@ export function loadStoredRecommendations() {
 export function loadStoredProfile() {
   try {
     const raw = sessionStorage.getItem(PROFILE_STORAGE_KEY)
-    return raw ? JSON.parse(raw) : null
+    if (raw) {
+      return JSON.parse(raw)
+    }
+
+    const localRaw = localStorage.getItem(PROFILE_STORAGE_KEY)
+    return localRaw ? JSON.parse(localRaw) : null
   } catch {
     return null
   }
@@ -213,7 +239,12 @@ export function loadStoredProfile() {
 export function loadStoredAnalysis() {
   try {
     const raw = sessionStorage.getItem(ANALYSIS_STORAGE_KEY)
-    return raw ? JSON.parse(raw) : null
+    if (raw) {
+      return JSON.parse(raw)
+    }
+
+    const localRaw = localStorage.getItem(ANALYSIS_STORAGE_KEY)
+    return localRaw ? JSON.parse(localRaw) : null
   } catch {
     return null
   }
@@ -239,7 +270,12 @@ export function loadStoredQuizProgress() {
 export function loadStoredRawRecommendations() {
   try {
     const raw = sessionStorage.getItem(RAW_RECOMMENDATIONS_STORAGE_KEY)
-    return raw ? JSON.parse(raw) : null
+    if (raw) {
+      return JSON.parse(raw)
+    }
+
+    const localRaw = localStorage.getItem(RAW_RECOMMENDATIONS_STORAGE_KEY)
+    return localRaw ? JSON.parse(localRaw) : null
   } catch {
     return null
   }

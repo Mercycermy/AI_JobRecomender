@@ -1175,6 +1175,15 @@
   gap: 12px;
 }
 
+.admin-role-quiz-controls {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.35fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.admin-role-quiz-controls label,
+.admin-role-quiz-form label,
 .admin-prompt-editor label {
   display: grid;
   gap: 8px;
@@ -1185,17 +1194,76 @@
   text-transform: uppercase;
 }
 
+.admin-role-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-content: start;
+}
+
+.admin-role-quiz-form {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  padding: 16px;
+}
+
+.admin-role-quiz-form-grid {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.6fr) repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-role-quiz-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-role-quiz-actions small {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.admin-role-quiz-controls select,
+.admin-role-quiz-form input,
+.admin-role-quiz-form select,
+.admin-role-quiz-form textarea,
+.admin-prompt-editor input,
+.admin-prompt-editor select,
 .admin-prompt-editor textarea {
   width: 100%;
-  min-height: 92px;
   border: 1px solid var(--line-strong);
   border-radius: 8px;
   background: var(--surface-strong);
   color: var(--ink);
   padding: 12px;
-  resize: vertical;
   font: inherit;
   line-height: 1.5;
+}
+
+.admin-role-quiz-controls select,
+.admin-role-quiz-form input,
+.admin-role-quiz-form select,
+.admin-prompt-editor input {
+  min-height: 44px;
+}
+
+.admin-prompt-editor select {
+  min-height: 44px;
+}
+
+.admin-role-quiz-form textarea,
+.admin-prompt-editor textarea {
+  min-height: 92px;
+  resize: vertical;
 }
 
 .admin-panel {
@@ -1331,6 +1399,9 @@
 .admin-status-verified,
 .admin-status-ready,
 .admin-status-current,
+.admin-status-all-quizzes,
+.admin-status-ai-ready,
+.admin-status-stored-data,
 .admin-status-personalized,
 .admin-status-low {
   color: var(--mint);
@@ -3056,6 +3127,8 @@ button.chip {
   .admin-stat-grid,
   .admin-dashboard-grid,
   .admin-subtabs,
+  .admin-role-quiz-controls,
+  .admin-role-quiz-form-grid,
   .resource-admin-grid,
   .content-controls {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3159,6 +3232,8 @@ button.chip {
   .admin-dashboard-grid,
   .admin-analysis-list,
   .admin-subtabs,
+  .admin-role-quiz-controls,
+  .admin-role-quiz-form-grid,
   .admin-toolbar,
   .resource-admin-grid,
   .content-controls {

@@ -1,11 +1,16 @@
 import { useEffect, useState } from 'react'
 import {
+  fetchAnalysis,
+  fetchRecommendations,
+  fetchResumeTips,
   fetchTelegramJobs,
   loadStoredAnalysis,
   loadStoredProfile,
   loadStoredQuizHistory,
   loadStoredQuizProgress,
   loadStoredRecommendations,
+  persistAnalysis,
+  persistRecommendationSession,
 } from '../api/recommend.js'
 import {
   fallbackQuestions,
@@ -17,6 +22,89 @@ import {
 const adminTabs = ['Overview', 'Profile', 'Matching', 'Learning', 'Resume', 'Telegram']
 const profilePages = ['Quiz Intake', 'Match Graph', 'Completion Detail', 'Quiz Prompts']
 const ADMIN_QUIZ_PROMPTS_STORAGE_KEY = 'adminQuizPrompts'
+const WORK_TYPE_OPTIONS = [
+  {
+    id: 'SOFTWARE',
+    label: 'Build software, websites, or apps',
+    aliases: [
+      'software',
+      'website',
+      'web',
+      'apps',
+      'app',
+      'frontend',
+      'backend',
+      'fullstack',
+      'mobile',
+      'devops',
+      'developer',
+      'programming',
+      'engineering',
+    ],
+  },
+  {
+    id: 'DATA_AI',
+    label: 'Work with data, analytics, or AI models',
+    aliases: ['data', 'analytics', 'analyst', 'ai', 'machine learning', 'ml', 'model', 'statistics'],
+  },
+  {
+    id: 'CREATIVE',
+    label: 'Design visuals, interfaces, or creative content',
+    aliases: ['design', 'visual', 'interface', 'creative', 'ux', 'ui', 'content', 'brand'],
+  },
+  {
+    id: 'BUSINESS',
+    label: 'Business, product, or project management',
+    aliases: ['business', 'product', 'project', 'manager', 'management', 'operations', 'scrum'],
+  },
+  {
+    id: 'SALES_MKT',
+    label: 'Sales, marketing, or customer-facing work',
+    aliases: ['sales', 'marketing', 'customer', 'support', 'account manager', 'growth', 'community'],
+  },
+  {
+    id: 'ACCOUNTING',
+    label: 'Accounting, finance, or banking',
+    aliases: ['accounting', 'finance', 'banking', 'audit', 'bookkeeping', 'payroll'],
+  },
+  {
+    id: 'ADMIN',
+    label: 'Administration, office management, or HR',
+    aliases: ['administration', 'admin', 'office', 'hr', 'human resources', 'recruiting'],
+  },
+  {
+    id: 'ENGINEERING',
+    label: 'Architecture, engineering, or construction',
+    aliases: ['architecture', 'construction', 'civil', 'mechanical', 'electrical', 'architect'],
+  },
+  {
+    id: 'EDUCATION',
+    label: 'Education, training, or instruction',
+    aliases: ['education', 'training', 'instruction', 'teacher', 'trainer', 'curriculum'],
+  },
+  {
+    id: 'LOGISTICS',
+    label: 'Logistics, delivery, or transport',
+    aliases: ['logistics', 'delivery', 'transport', 'driver', 'fleet', 'supply chain', 'warehouse'],
+  },
+  {
+    id: 'MEDICAL',
+    label: 'Healthcare or medical work',
+    aliases: ['healthcare', 'medical', 'medicine', 'nurse', 'clinical', 'pharmacy'],
+  },
+  {
+    id: 'GENERAL',
+    label: 'General or other',
+    aliases: ['general', 'other'],
+  },
+]
+const DEFAULT_QUIZ_ROLE = 'General or other'
+const ALL_QUIZ_ROLES = 'All work types'
+const EMPTY_PROMPT_DRAFT = {
+  role: DEFAULT_QUIZ_ROLE,
+  stem: '',
+  optionsText: '',
+}
 
 const defaultChannels = [
   '@freelance_ethio',
@@ -45,6 +133,39 @@ function formatLabel(value, fallback = 'Not set') {
     .replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
+function normalizeText(value) {
+  return String(value || '')
+    .replace(/[_-]/g, ' ')
+    .toLowerCase()
+    .trim()
+}
+
+function getWorkTypeLabel(value, fallback = DEFAULT_QUIZ_ROLE) {
+  const raw = String(value || '').trim()
+  if (!raw) {
+    return fallback
+  }
+
+  const normalized = normalizeText(raw)
+  const directMatch = WORK_TYPE_OPTIONS.find((item) =>
+    normalizeText(item.id) === normalized || normalizeText(item.label) === normalized,
+  )
+
+  if (directMatch) {
+    return directMatch.label
+  }
+
+  const aliasMatch = WORK_TYPE_OPTIONS.find((item) =>
+    item.aliases.some((alias) => normalized.includes(normalizeText(alias))),
+  )
+
+  return aliasMatch?.label || fallback
+}
+
+function getWorkTypeOptionLabels() {
+  return WORK_TYPE_OPTIONS.map((item) => item.label)
+}
+
 function loadCachedResumeTips() {
   if (typeof window === 'undefined') {
     return null
@@ -52,9 +173,27 @@ function loadCachedResumeTips() {
 
   try {
     const raw = sessionStorage.getItem('resumeTipsCoaching')
-    return raw ? JSON.parse(raw) : null
+    if (raw) {
+      return JSON.parse(raw)
+    }
+
+    const localRaw = localStorage.getItem('resumeTipsCoaching')
+    return localRaw ? JSON.parse(localRaw) : null
   } catch {
     return null
+  }
+}
+
+function persistCachedResumeTips(payload) {
+  if (!payload) {
+    return
+  }
+
+  try {
+    sessionStorage.setItem('resumeTipsCoaching', JSON.stringify(payload))
+    localStorage.setItem('resumeTipsCoaching', JSON.stringify(payload))
+  } catch {
+    // The in-memory admin state still updates if browser storage is unavailable.
   }
 }
 
@@ -91,6 +230,31 @@ function flattenResourceGroups(groups = []) {
   )
 }
 
+function getResourcesForSignals(resources, signals) {
+  if (!signals.length) {
+    return []
+  }
+
+  return resources.filter((resource) => {
+    const resourceSignal = normalizeText(resource.skill || resource.title)
+    return signals.some((signal) => {
+      const normalizedSignal = normalizeText(signal)
+      return resourceSignal.includes(normalizedSignal) || normalizedSignal.includes(resourceSignal)
+    })
+  })
+}
+
+function getDerivedGaps(signals) {
+  return signals.map((signal, index) => ({
+    skill: signal,
+    skill_id: normalizeText(signal).replace(/\s+/g, '-'),
+    priority: Math.max(45, 90 - index * 8),
+    priority_label: 'Stored signal',
+    current: 'Observed',
+    required: 'Recommended',
+  }))
+}
+
 function getJobTitle(job) {
   return job.title || job.job_title || 'Recommended role'
 }
@@ -101,6 +265,19 @@ function getJobCompany(job) {
 
 function getJobCategory(job) {
   return formatLabel(job.category || job.role_category)
+}
+
+function getJobWorkType(job) {
+  return getWorkTypeLabel(
+    [
+      job.category,
+      job.role_category,
+      job.title,
+      job.job_title,
+      job.company,
+      job.description,
+    ].filter(Boolean).join(' '),
+  )
 }
 
 function getJobMatch(job) {
@@ -145,7 +322,7 @@ function getAverageMatch(jobs) {
 }
 
 function getGapName(gap) {
-  return gap.skill || formatLabel(gap.skill_id, 'Skill gap')
+  return gap.skill || formatLabel(gap.skill_id, 'Coverage gap')
 }
 
 function getGapPriority(gap) {
@@ -179,7 +356,9 @@ function getTopMatchedJobs(jobs, limit = 3) {
 
 function getProfileFillItems(profile, skills) {
   const evidence = profile?.evidence || {}
-  const targetRole = profile?.target_role || profile?.top_category || profile?.category || profile?.detected_role
+  const targetRole = profile?.role_count > 1
+    ? `${profile.role_count} work types`
+    : profile?.target_role || profile?.top_category || profile?.category || profile?.detected_role
   const hasExperience = Boolean(profile?.experience_level || profile?.experience)
   const hasLocation = Boolean(profile?.location)
   const hasEvidence = Boolean(
@@ -190,12 +369,12 @@ function getProfileFillItems(profile, skills) {
 
   return [
     {
-      label: 'Skills mapped',
-      value: skills.length ? `${skills.length} skills` : 'Missing',
+      label: 'Supporting signals',
+      value: skills.length ? `${skills.length} signals` : 'Missing',
       score: Math.min(100, Math.round((skills.length / 6) * 100)),
     },
     {
-      label: 'Target role',
+      label: 'Work type',
       value: formatLabel(targetRole),
       score: targetRole ? 100 : 0,
     },
@@ -235,9 +414,21 @@ function getQuizSummary(profile, progress) {
   }
 }
 
+function normalizeRole(value, fallback = DEFAULT_QUIZ_ROLE) {
+  return getWorkTypeLabel(value, fallback)
+}
+
+function parsePromptOptions(optionsText) {
+  return optionsText
+    .split('\n')
+    .map((option) => option.trim())
+    .filter(Boolean)
+}
+
 function normalizePrompt(question, index) {
   return {
     id: question.id || `prompt-${index + 1}`,
+    role: normalizeRole(question.role || question.role_category || question.target_role || question.category),
     stem: question.stem || question.text || '',
     options: Array.isArray(question.options) ? question.options.map(String) : [],
     status: 'Live',
@@ -255,6 +446,7 @@ function normalizeStoredPrompt(prompt, index) {
 
   return {
     ...basePrompt,
+    role: normalizeRole(source.role || basePrompt.role),
     status: source.status || basePrompt.status,
     updated: source.updated || basePrompt.updated,
   }
@@ -294,6 +486,11 @@ function saveAdminQuizPrompts(prompts) {
   }
 }
 
+function createPromptId(role) {
+  const roleSlug = role.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+  return `prompt-${roleSlug || 'role'}-${Date.now()}`
+}
+
 function getAttemptProfile(attempt) {
   return attempt?.profile || {}
 }
@@ -306,6 +503,22 @@ function getAttemptJobs(attempt) {
   return Array.isArray(attempt?.jobs) ? attempt.jobs : []
 }
 
+function getAttemptWorkType(attempt) {
+  const profile = getAttemptProfile(attempt)
+  const progress = getAttemptProgress(attempt)
+
+  return getWorkTypeLabel(
+    progress?.detected_domain ||
+      progress?.detected_role ||
+      profile.detected_domain ||
+      profile.target_role ||
+      profile.detected_role ||
+      profile.top_category ||
+      profile.category,
+    '',
+  )
+}
+
 function buildMatchGraphRows(attempts, fallbackJobs) {
   const rows = new Map()
   const sourceAttempts = attempts.length
@@ -313,8 +526,25 @@ function buildMatchGraphRows(attempts, fallbackJobs) {
     : [{ id: 'current-matches', jobs: fallbackJobs }]
 
   sourceAttempts.forEach((attempt) => {
-    getAttemptJobs(attempt).forEach((job) => {
-      const title = getJobTitle(job)
+    const attemptJobs = getAttemptJobs(attempt)
+    const attemptWorkType = getAttemptWorkType(attempt)
+
+    if (!attemptJobs.length && attemptWorkType) {
+      const current = rows.get(attemptWorkType) || {
+        title: attemptWorkType,
+        category: 'General AI work area',
+        count: 0,
+        scoreTotal: 0,
+        maxScore: 0,
+      }
+
+      current.count += 1
+      rows.set(attemptWorkType, current)
+      return
+    }
+
+    attemptJobs.forEach((job) => {
+      const title = getJobWorkType(job)
       const score = getJobMatch(job)
 
       if (!title || score === null) {
@@ -323,7 +553,7 @@ function buildMatchGraphRows(attempts, fallbackJobs) {
 
       const current = rows.get(title) || {
         title,
-        category: getJobCategory(job),
+        category: 'General AI work area',
         count: 0,
         scoreTotal: 0,
         maxScore: 0,
@@ -345,13 +575,35 @@ function buildMatchGraphRows(attempts, fallbackJobs) {
     .slice(0, 8)
 }
 
+function countWorkTypeSignals(values) {
+  const counts = new Map()
+
+  values.forEach((value) => {
+    const workType = getWorkTypeLabel(value, '')
+    if (!workType) {
+      return
+    }
+
+    counts.set(workType, (counts.get(workType) || 0) + 1)
+  })
+
+  return [...counts.entries()]
+    .map(([workType, count]) => ({ workType, count }))
+    .sort((left, right) => right.count - left.count || left.workType.localeCompare(right.workType))
+}
+
 function Admin() {
   const [activeTab, setActiveTab] = useState(adminTabs[0])
   const [activeProfilePage, setActiveProfilePage] = useState(profilePages[0])
   const [jobSearch, setJobSearch] = useState('')
   const [quizPrompts, setQuizPrompts] = useState(loadAdminQuizPrompts)
+  const [selectedPromptRole, setSelectedPromptRole] = useState(ALL_QUIZ_ROLES)
+  const [newPromptDraft, setNewPromptDraft] = useState({ ...EMPTY_PROMPT_DRAFT })
   const [editingPromptId, setEditingPromptId] = useState('')
-  const [promptDraft, setPromptDraft] = useState({ stem: '', optionsText: '' })
+  const [promptDraft, setPromptDraft] = useState({ ...EMPTY_PROMPT_DRAFT })
+  const [analysis, setAnalysis] = useState(() => loadStoredAnalysis())
+  const [resumeCoaching, setResumeCoaching] = useState(() => loadCachedResumeTips())
+  const [storedRecommendations, setStoredRecommendations] = useState(() => loadStoredRecommendations() || [])
   const [telegramState, setTelegramState] = useState({
     error: '',
     isLoading: true,
@@ -360,28 +612,15 @@ function Admin() {
   })
 
   const profile = loadStoredProfile()
-  const recommendations = loadStoredRecommendations() || []
-  const analysis = loadStoredAnalysis()
+  const recommendations = storedRecommendations
   const quizHistory = loadStoredQuizHistory()
   const quizProgress = loadStoredQuizProgress()
-  const resumeCoaching = loadCachedResumeTips()
 
-  const profileSkills = getProfileSkills(profile)
-  const profileFillItems = getProfileFillItems(profile, profileSkills)
-  const filledProfileFields = profileFillItems.filter((item) => item.score >= 100).length
-  const quizSummary = getQuizSummary(profile, quizProgress)
+  const currentProfileSkills = getProfileSkills(profile)
+  const currentQuizSummary = getQuizSummary(profile, quizProgress)
   const visibleRecommendations = recommendations.length
     ? recommendations
     : fallbackJobRecommendations
-  const recommendationSource = recommendations.length ? 'Current session' : 'Demo catalog'
-  const averageMatch = getAverageMatch(visibleRecommendations)
-  const gaps = analysis?.gaps || []
-  const resourceGroups = analysis?.resources?.length
-    ? analysis.resources
-    : groupFallbackResources(fallbackLearningResources)
-  const resources = flattenResourceGroups(resourceGroups)
-  const topMissingSkills = uniqueItems(visibleRecommendations.flatMap(getMissingSkills)).slice(0, 6)
-  const topMatchedJobs = getTopMatchedJobs(visibleRecommendations)
   const currentQuizAttempt = profile || quizProgress
     ? {
         id: profile?.session_id || 'active-session',
@@ -396,6 +635,16 @@ function Admin() {
     ...(currentQuizAttempt ? [currentQuizAttempt] : []),
     ...quizHistory.filter((attempt) => attempt?.id !== currentQuizAttempt?.id),
   ]
+  const aggregateRecommendationRows = quizAttempts.flatMap(getAttemptJobs)
+  const aggregateRecommendations = aggregateRecommendationRows.length
+    ? aggregateRecommendationRows
+    : visibleRecommendations
+  const hasStoredRecommendations = aggregateRecommendationRows.length > 0 || recommendations.length > 0
+  const recommendationSource = aggregateRecommendationRows.length
+    ? 'Stored quiz history'
+    : recommendations.length
+      ? 'Current session'
+      : 'Demo catalog'
   const matchGraphRows = buildMatchGraphRows(quizAttempts, visibleRecommendations)
   const quizAttemptSummaries = quizAttempts.map((attempt, index) => {
     const attemptProfile = getAttemptProfile(attempt)
@@ -413,20 +662,261 @@ function Admin() {
       skills: attemptSkills.length,
       answered: summary.answered,
       estimated: summary.estimated,
-      role: summary.detectedRole || attemptProfile.target_role || attemptProfile.top_category,
+      role: getWorkTypeLabel(
+        summary.detectedDomain ||
+          summary.detectedRole ||
+          attemptProfile.detected_domain ||
+          attemptProfile.target_role ||
+          attemptProfile.top_category ||
+          attemptProfile.category,
+      ),
       confidence: summary.confidence,
       bestJob,
       jobs: jobs.length,
     }
   })
   const totalQuizAnswers = quizAttemptSummaries.reduce((total, attempt) => total + attempt.answered, 0)
+  const totalEstimatedQuizAnswers = quizAttemptSummaries.reduce(
+    (total, attempt) => total + Math.max(attempt.estimated, attempt.answered),
+    0,
+  )
   const profilesWithSkills = quizAttemptSummaries.filter((attempt) => attempt.skills > 0).length
+  const quizProfiles = quizAttempts.map(getAttemptProfile).filter((attemptProfile) =>
+    Object.keys(attemptProfile).length,
+  )
+  const quizProgressRows = quizAttempts.map(getAttemptProgress)
+  const workTypeCoverage = countWorkTypeSignals([
+    ...quizAttemptSummaries.map((attempt) => attempt.role),
+    ...quizProgressRows.map((progress) => progress?.detected_role),
+    ...quizProgressRows.map((progress) => progress?.detected_domain),
+    ...quizProfiles.map((attemptProfile) =>
+      attemptProfile.detected_domain ||
+      attemptProfile.target_role ||
+        attemptProfile.detected_role ||
+        attemptProfile.top_category ||
+        attemptProfile.category,
+    ),
+  ])
+  const workTypeNames = workTypeCoverage.map((item) => item.workType)
+  const quizDomains = uniqueItems([
+    ...quizProgressRows.map((progress) => progress?.detected_domain),
+    ...quizProfiles.map((attemptProfile) => attemptProfile.detected_domain || attemptProfile.domain),
+  ])
+  const quizConfidenceValues = quizAttemptSummaries
+    .map((attempt) => Number(attempt.confidence))
+    .filter((value) => Number.isFinite(value))
+  const aggregateConfidence = quizConfidenceValues.length
+    ? Math.round(quizConfidenceValues.reduce((total, value) => total + value, 0) / quizConfidenceValues.length)
+    : currentQuizSummary.confidence
+  const profileSkills = uniqueItems([
+    ...currentProfileSkills,
+    ...quizProfiles.flatMap(getProfileSkills),
+  ])
+  const firstProfileValue = (field) =>
+    quizProfiles.map((attemptProfile) => attemptProfile?.[field]).find(Boolean) || profile?.[field]
+  const aggregateEvidence = {
+    experience_years: quizProfiles
+      .map((attemptProfile) => attemptProfile?.evidence?.experience_years ?? attemptProfile?.experience_years)
+      .find((value) => value !== null && value !== undefined),
+    has_projects: quizProfiles.some((attemptProfile) =>
+      attemptProfile?.evidence?.has_projects || attemptProfile?.has_projects,
+    ),
+    portfolio_url: quizProfiles
+      .map((attemptProfile) => attemptProfile?.evidence?.portfolio_url || attemptProfile?.portfolio_url)
+      .find(Boolean),
+  }
+  const aggregateProfile = {
+    ...profile,
+    detected_skills: profileSkills,
+    skill_ids: profileSkills,
+    skills: profileSkills,
+    target_role: workTypeNames[0] || profile?.target_role,
+    role_count: workTypeNames.length,
+    experience_level: firstProfileValue('experience_level') || firstProfileValue('experience'),
+    experience: firstProfileValue('experience'),
+    location: firstProfileValue('location'),
+    evidence: aggregateEvidence,
+    question_count: totalQuizAnswers || currentQuizSummary.answered,
+    confidence: aggregateConfidence,
+    detected_domain: quizDomains[0] || currentQuizSummary.detectedDomain,
+  }
+  const profileFillItems = getProfileFillItems(aggregateProfile, profileSkills)
+  const filledProfileFields = profileFillItems.filter((item) => item.score >= 100).length
+  const quizSummary = {
+    ...currentQuizSummary,
+    answered: totalQuizAnswers || currentQuizSummary.answered,
+    estimated: totalEstimatedQuizAnswers || currentQuizSummary.estimated,
+    percent: totalEstimatedQuizAnswers
+      ? Math.min(100, Math.round((totalQuizAnswers / totalEstimatedQuizAnswers) * 100))
+      : currentQuizSummary.percent,
+    confidence: aggregateConfidence,
+    detectedDomain: quizDomains.length > 1
+      ? `${quizDomains.length} domains`
+      : quizDomains[0] || currentQuizSummary.detectedDomain,
+    detectedRole: workTypeNames.length > 1
+      ? `${workTypeNames.length} work types`
+      : workTypeNames[0] || currentQuizSummary.detectedRole,
+  }
+  const aggregateJobCount = uniqueItems(aggregateRecommendations.map(getJobTitle)).length
+  const averageMatch = getAverageMatch(aggregateRecommendations)
+  const topMissingSkills = uniqueItems(aggregateRecommendations.flatMap(getMissingSkills)).slice(0, 6)
+  const derivedGaps = getDerivedGaps(topMissingSkills)
+  const gaps = analysis?.gaps?.length ? analysis.gaps : derivedGaps
+  const resourcesForSignals = getResourcesForSignals(fallbackLearningResources, topMissingSkills)
+  const resourceGroups = analysis?.resources?.length
+    ? analysis.resources
+    : resourcesForSignals.length
+      ? groupFallbackResources(resourcesForSignals)
+      : groupFallbackResources(fallbackLearningResources)
+  const resources = flattenResourceGroups(resourceGroups)
+  const gapStatus = analysis?.gaps?.length ? 'AI ready' : derivedGaps.length ? 'Stored data' : 'Pending'
+  const learningStatus = analysis?.resources?.length
+    ? 'AI ready'
+    : resourcesForSignals.length
+      ? 'Stored data'
+      : 'Catalog'
+  const resumeStatus = resumeCoaching
+    ? 'AI ready'
+    : profileSkills.length || quizAttempts.length
+      ? 'Ready'
+      : 'Template'
+  const topMatchedJobs = getTopMatchedJobs(aggregateRecommendations)
+  const promptRoleOptions = uniqueItems([
+    DEFAULT_QUIZ_ROLE,
+    ...getWorkTypeOptionLabels(),
+    ...workTypeNames,
+    ...quizPrompts.map((prompt) => normalizeRole(prompt.role)),
+    ...aggregateRecommendations.map(getJobWorkType),
+    getWorkTypeLabel(profile?.target_role, ''),
+    getWorkTypeLabel(profile?.detected_role, ''),
+    getWorkTypeLabel(profile?.top_category, ''),
+  ]).sort((left, right) => {
+    if (left === DEFAULT_QUIZ_ROLE) {
+      return -1
+    }
+
+    if (right === DEFAULT_QUIZ_ROLE) {
+      return 1
+    }
+
+    return left.localeCompare(right)
+  })
+  const filteredQuizPrompts = selectedPromptRole === ALL_QUIZ_ROLES
+    ? quizPrompts
+    : quizPrompts.filter((prompt) => normalizeRole(prompt.role) === selectedPromptRole)
+  const promptCoverageByRole = promptRoleOptions.map((role) => ({
+    role,
+    count: quizPrompts.filter((prompt) => normalizeRole(prompt.role) === role).length,
+  }))
+  const newPromptOptions = parsePromptOptions(newPromptDraft.optionsText)
+  const canAddPrompt = Boolean(newPromptDraft.stem.trim()) && newPromptOptions.length >= 2
 
   const filteredJobs = visibleRecommendations.filter((job) =>
-    `${getJobTitle(job)} ${getJobCompany(job)} ${getJobCategory(job)}`
+    `${getJobTitle(job)} ${getJobCompany(job)} ${getJobCategory(job)} ${getJobWorkType(job)}`
       .toLowerCase()
       .includes(jobSearch.toLowerCase()),
   )
+  const canBuildRecommendations = profileSkills.length > 0 || quizAttempts.length > 0
+  const aggregateProfilePayload = JSON.stringify(aggregateProfile)
+  const aggregateRecommendationsPayload = JSON.stringify(aggregateRecommendations)
+  const adminAiRequestKey = [
+    aggregateProfilePayload,
+    aggregateRecommendationsPayload,
+  ].join('::')
+  const canRequestAdminAi = hasStoredRecommendations && (profileSkills.length > 0 || quizAttempts.length > 0)
+
+  useEffect(() => {
+    if (storedRecommendations.length || !canBuildRecommendations) {
+      return
+    }
+
+    let cancelled = false
+    const profilePayload = JSON.parse(aggregateProfilePayload)
+
+    fetchRecommendations(profilePayload)
+      .then((result) => {
+        if (cancelled) {
+          return
+        }
+
+        setStoredRecommendations(result.jobs)
+        persistRecommendationSession(result.profile, result.jobs, result.rawRecs)
+      })
+      .catch(() => {
+        // Fallback recommendations remain visible until the backend can score the stored profile.
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [adminAiRequestKey, aggregateProfilePayload, canBuildRecommendations, storedRecommendations.length])
+
+  useEffect(() => {
+    if (!canRequestAdminAi || analysis?.gaps?.length || analysis?.resources?.length) {
+      return
+    }
+
+    let cancelled = false
+    const profilePayload = JSON.parse(aggregateProfilePayload)
+    const recommendationsPayload = JSON.parse(aggregateRecommendationsPayload)
+
+    fetchAnalysis(null, profilePayload, recommendationsPayload)
+      .then((payload) => {
+        if (cancelled) {
+          return
+        }
+
+        setAnalysis(payload)
+        persistAnalysis(payload)
+      })
+      .catch(() => {
+        // Derived gaps/resources keep admin useful when the AI analysis endpoint is unavailable.
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    adminAiRequestKey,
+    aggregateProfilePayload,
+    aggregateRecommendationsPayload,
+    canRequestAdminAi,
+    analysis?.gaps?.length,
+    analysis?.resources?.length,
+  ])
+
+  useEffect(() => {
+    if (!canRequestAdminAi || resumeCoaching) {
+      return
+    }
+
+    let cancelled = false
+    const profilePayload = JSON.parse(aggregateProfilePayload)
+    const recommendationsPayload = JSON.parse(aggregateRecommendationsPayload)
+
+    fetchResumeTips(null, profilePayload, recommendationsPayload)
+      .then((payload) => {
+        if (cancelled) {
+          return
+        }
+
+        setResumeCoaching(payload)
+        persistCachedResumeTips(payload)
+      })
+      .catch(() => {
+        // Stored profile guidance remains visible until AI coaching is available.
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    adminAiRequestKey,
+    aggregateProfilePayload,
+    aggregateRecommendationsPayload,
+    canRequestAdminAi,
+    resumeCoaching,
+  ])
 
   useEffect(() => {
     let cancelled = false
@@ -465,28 +955,30 @@ function Admin() {
   const metrics = [
     {
       label: 'Profile',
-      value: profileSkills.length ? `${profileSkills.length} skills` : 'Not started',
-      status: profileSkills.length ? 'Ready' : 'Pending',
+      value: workTypeNames.length || quizAttempts.length
+        ? `${workTypeNames.length || 1} work types`
+        : 'Not started',
+      status: profileSkills.length || quizAttempts.length ? 'Ready' : 'Pending',
     },
     {
       label: 'Matches',
-      value: recommendations.length ? `${recommendations.length} roles` : `${visibleRecommendations.length} demo`,
-      status: recommendations.length ? 'Current' : 'Demo',
+      value: `${aggregateJobCount || visibleRecommendations.length} recommendations`,
+      status: hasStoredRecommendations ? 'Stored data' : canBuildRecommendations ? 'Loading' : 'Demo',
     },
     {
-      label: 'Skill gaps',
-      value: gaps.length ? `${gaps.length} active` : 'Awaiting analysis',
-      status: gaps.length ? 'Ready' : 'Pending',
+      label: 'Coverage gaps',
+      value: gaps.length ? `${gaps.length} active` : 'Awaiting AI',
+      status: gapStatus,
     },
     {
       label: 'Learning',
       value: `${resources.length} resources`,
-      status: analysis?.resources?.length ? 'Current' : 'Catalog',
+      status: learningStatus,
     },
     {
       label: 'Resume',
       value: `${getResumeSectionCount(resumeCoaching)} sections`,
-      status: resumeCoaching ? 'Personalized' : 'Template',
+      status: resumeStatus,
     },
     {
       label: 'Telegram',
@@ -499,32 +991,40 @@ function Admin() {
     {
       title: 'Quiz and manual profile',
       route: '/quiz, /manual',
-      status: profileSkills.length ? 'Ready' : 'Pending',
-      detail: 'Feeds the canonical skill profile used by every downstream recommendation feature.',
+      status: profileSkills.length || quizAttempts.length ? 'Ready' : 'Pending',
+      detail: 'Aggregates every main quiz attempt, work-type signal, and answer row into the admin profile.',
     },
     {
       title: 'Job recommendations',
       route: '/results',
-      status: recommendations.length ? 'Current' : 'Demo',
-      detail: 'Uses the same ranked roles, match scores, missing skills, and score factors shown to users.',
+      status: hasStoredRecommendations ? 'Stored data' : canBuildRecommendations ? 'Loading' : 'Demo',
+      detail: hasStoredRecommendations
+        ? 'Rolls up stored AI recommendations and match scores by the broad work type selected in the main quiz.'
+        : 'Uses the stored profile to request AI recommendations before falling back to demo data.',
     },
     {
-      title: 'Skill gap analysis',
+      title: 'Recommendation gap analysis',
       route: '/results/gap/:jobId',
-      status: gaps.length ? 'Ready' : 'Pending',
-      detail: 'Tracks the highest-impact missing skills from the active recommendation set.',
+      status: gapStatus,
+      detail: analysis?.gaps?.length
+        ? 'Uses cached AI analysis for recommendation coverage gaps.'
+        : 'Derives coverage gaps from stored recommendation data while AI analysis loads.',
     },
     {
       title: 'Learning resources',
       route: '/results/resources',
-      status: analysis?.resources?.length ? 'Current' : 'Catalog',
-      detail: 'Audits resources by the same skill groups used in the learner-facing study map.',
+      status: learningStatus,
+      detail: analysis?.resources?.length
+        ? 'Uses AI resource recommendations from the learner-facing study map.'
+        : 'Uses stored recommendation gaps to choose the closest resources before AI resources are available.',
     },
     {
       title: 'Resume coaching and builder',
       route: '/results/resume, /resume-builder',
-      status: resumeCoaching ? 'Personalized' : 'Template',
-      detail: 'Mirrors resume tips, upload readiness, and generated resume coverage.',
+      status: resumeStatus,
+      detail: resumeCoaching
+        ? 'Mirrors AI resume tips, upload readiness, and generated resume coverage.'
+        : 'Uses the stored profile and recommendations while AI resume coaching loads.',
     },
     {
       title: 'Telegram jobs',
@@ -546,9 +1046,9 @@ function Admin() {
       score: Math.round((filledProfileFields / profileFillItems.length) * 100),
     },
     {
-      label: 'Matched jobs',
-      value: `${visibleRecommendations.length} roles`,
-      score: Math.min(100, Math.round((visibleRecommendations.length / 10) * 100)),
+      label: 'AI recommendations',
+      value: `${aggregateJobCount || visibleRecommendations.length} items`,
+      score: Math.min(100, Math.round(((aggregateJobCount || visibleRecommendations.length) / 10) * 100)),
     },
     {
       label: 'Gap analysis',
@@ -571,7 +1071,7 @@ function Admin() {
   const topGap = gaps[0]
   const analysisNotes = [
     {
-      label: 'Best match',
+      label: 'Best all-quiz match',
       value: topMatchedJobs[0] ? getJobTitle(topMatchedJobs[0]) : 'No match yet',
       detail: topMatchedJobs[0] ? `${getJobMatch(topMatchedJobs[0]) ?? '--'}% match` : 'Run profile scoring',
     },
@@ -583,36 +1083,64 @@ function Admin() {
     {
       label: 'Main gap',
       value: topGap ? getGapName(topGap) : formatLabel(topMissingSkills[0], 'No repeated gap'),
-      detail: topGap ? `${getGapPriority(topGap) ?? '--'} priority` : 'Based on current matches',
+      detail: topGap ? `${getGapPriority(topGap) ?? '--'} priority` : 'Based on all quiz matches',
     },
     {
       label: 'Quiz confidence',
       value: formatPercent(quizSummary.confidence),
-      detail: formatLabel(quizSummary.difficulty),
+      detail: formatLabel(quizSummary.detectedRole || quizSummary.difficulty),
     },
   ]
   const startPromptEdit = (prompt) => {
     setEditingPromptId(prompt.id)
     setPromptDraft({
+      role: normalizeRole(prompt.role),
       stem: prompt.stem,
       optionsText: prompt.options.join('\n'),
     })
   }
   const cancelPromptEdit = () => {
     setEditingPromptId('')
-    setPromptDraft({ stem: '', optionsText: '' })
+    setPromptDraft({ ...EMPTY_PROMPT_DRAFT })
+  }
+  const addPrompt = (event) => {
+    event.preventDefault()
+
+    const role = normalizeRole(newPromptDraft.role)
+    const stem = newPromptDraft.stem.trim()
+    const options = parsePromptOptions(newPromptDraft.optionsText)
+
+    if (!stem || options.length < 2) {
+      return
+    }
+
+    const nextPrompt = {
+      id: createPromptId(role),
+      role,
+      stem,
+      options,
+      status: 'Live',
+      updated: 'Added locally',
+    }
+
+    setQuizPrompts((prompts) => {
+      const nextPrompts = [nextPrompt, ...prompts]
+      saveAdminQuizPrompts(nextPrompts)
+      return nextPrompts
+    })
+    setSelectedPromptRole(role)
+    setNewPromptDraft({ ...EMPTY_PROMPT_DRAFT, role })
   }
   const updatePrompt = () => {
-    const normalizedOptions = promptDraft.optionsText
-      .split('\n')
-      .map((option) => option.trim())
-      .filter(Boolean)
+    const role = normalizeRole(promptDraft.role)
+    const normalizedOptions = parsePromptOptions(promptDraft.optionsText)
 
     setQuizPrompts((prompts) => {
       const nextPrompts = prompts.map((prompt) =>
         prompt.id === editingPromptId
           ? {
               ...prompt,
+              role,
               stem: promptDraft.stem.trim() || prompt.stem,
               options: normalizedOptions.length ? normalizedOptions : prompt.options,
               updated: 'Saved locally',
@@ -623,6 +1151,7 @@ function Admin() {
       saveAdminQuizPrompts(nextPrompts)
       return nextPrompts
     })
+    setSelectedPromptRole(role)
     cancelPromptEdit()
   }
   const deletePrompt = (promptId) => {
@@ -643,8 +1172,8 @@ function Admin() {
           <p className="eyebrow">Admin command center</p>
           <h1>Feature operations for the active career workflow.</h1>
           <p>
-            Admin now follows the same user-facing flow: profile, matches, gaps,
-            learning, resume, and current jobs. Use the direct path <code>/admin</code>.
+            Admin now rolls up all main quiz attempts into the same flow: profile,
+            matches, gaps, learning, resume, and current jobs. Use the direct path <code>/admin</code>.
           </p>
         </div>
 
@@ -705,11 +1234,11 @@ function Admin() {
               <div className="pipeline-list">
                 <div>
                   <span>Profile intake</span>
-                  <strong>{profileSkills.length ? 'Active' : 'Pending'}</strong>
+                  <strong>{quizAttempts.length ? `${quizAttempts.length} quizzes / ${workTypeNames.length || 1} work types` : 'Pending'}</strong>
                 </div>
                 <div>
                   <span>Matching engine</span>
-                  <strong>{visibleRecommendations.length} roles available</strong>
+                  <strong>{aggregateJobCount || visibleRecommendations.length} recommendations across work types</strong>
                 </div>
                 <div>
                   <span>Analysis layer</span>
@@ -777,24 +1306,36 @@ function Admin() {
                   <small>Across cached quizzes</small>
                 </article>
                 <article>
-                  <span>Profiles with skills</span>
+                  <span>Quiz profiles</span>
                   <strong>{profilesWithSkills}</strong>
-                  <small>{profileSkills.length} current skills</small>
+                  <small>{profileSkills.length} supporting signals</small>
                 </article>
                 <article>
-                  <span>Current source</span>
-                  <strong>{formatLabel(profile?.source, profile ? 'Manual' : 'Pending')}</strong>
+                  <span>Work types</span>
+                  <strong>{workTypeNames.length || 0}</strong>
                   <small>{recommendationSource}</small>
                 </article>
               </div>
+
+              {workTypeCoverage.length > 0 && (
+                <div className="admin-analysis-list" aria-label="Main quiz work type coverage">
+                  {workTypeCoverage.map((item) => (
+                    <article key={item.workType}>
+                      <span>Main quiz work type</span>
+                      <strong>{item.workType}</strong>
+                      <small>{item.count} quiz signal{item.count === 1 ? '' : 's'}</small>
+                    </article>
+                  ))}
+                </div>
+              )}
 
               {quizAttemptSummaries.length ? (
                 <div className="admin-table" role="table" aria-label="Profile intake for all taken quizzes">
                   <div className="admin-table-row admin-table-head" role="row">
                     <span>Quiz</span>
-                    <span>Role</span>
+                    <span>Work type</span>
                     <span>Answers</span>
-                    <span>Skills</span>
+                    <span>Signals</span>
                     <span>Best match</span>
                   </div>
 
@@ -822,11 +1363,11 @@ function Admin() {
           {activeProfilePage === 'Match Graph' && (
             <div className="admin-profile-dashboard">
               <div className="admin-panel-heading">
-                <span>Most matched jobs across quizzes</span>
-                <strong>{matchGraphRows.length} roles</strong>
+                <span>Most matched work types across quizzes</span>
+                <strong>{matchGraphRows.length} work types</strong>
               </div>
 
-              <div className="admin-match-graph" aria-label="Most matched jobs graph">
+              <div className="admin-match-graph" aria-label="Most matched work types graph">
                 {matchGraphRows.map((row) => (
                   <article className="admin-graph-row" key={row.title}>
                     <div className="admin-graph-copy">
@@ -843,7 +1384,7 @@ function Admin() {
 
               {!matchGraphRows.length && (
                 <div className="admin-empty">
-                  No match scores are available yet. Run quizzes or recommendations to populate this graph.
+                  No work-type match scores are available yet. Run quizzes or recommendations to populate this graph.
                 </div>
               )}
             </div>
@@ -854,7 +1395,7 @@ function Admin() {
               <div className="admin-dashboard-grid">
                 <section className="admin-dashboard-card">
                   <div className="admin-panel-heading">
-                    <span>Most filled quiz or jobs</span>
+                    <span>Most filled quiz or recommendations</span>
                     <strong>{mostFilledItem ? `${mostFilledItem.score}%` : 'Pending'}</strong>
                   </div>
 
@@ -911,17 +1452,101 @@ function Admin() {
             <div className="admin-profile-dashboard">
               <div className="admin-panel-heading">
                 <span>Quiz prompt coverage</span>
-                <strong>{quizPrompts.length} prompts</strong>
+                <strong>{filteredQuizPrompts.length} shown</strong>
               </div>
 
+              <div className="admin-role-quiz-controls">
+                <label>
+                  Work type filter
+                  <select
+                    value={selectedPromptRole}
+                    onChange={(event) => setSelectedPromptRole(event.target.value)}
+                  >
+                    <option value={ALL_QUIZ_ROLES}>{ALL_QUIZ_ROLES}</option>
+                    {promptRoleOptions.map((role) => (
+                      <option value={role} key={role}>{role}</option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className="admin-role-counts" aria-label="Quiz prompt coverage by work type">
+                  {promptCoverageByRole.map((item) => (
+                    <span className="chip chip-blue" key={item.role}>
+                      {item.role} {item.count}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <form className="admin-role-quiz-form" onSubmit={addPrompt}>
+                <div className="admin-role-quiz-form-grid">
+                  <label>
+                    Work type
+                    <select
+                      value={newPromptDraft.role}
+                      onChange={(event) => setNewPromptDraft((draft) => ({
+                        ...draft,
+                        role: event.target.value,
+                      }))}
+                    >
+                      {promptRoleOptions.map((role) => (
+                        <option value={role} key={role}>{role}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Quiz question
+                    <textarea
+                      value={newPromptDraft.stem}
+                      onChange={(event) => setNewPromptDraft((draft) => ({
+                        ...draft,
+                        stem: event.target.value,
+                      }))}
+                    />
+                  </label>
+                  <label>
+                    Answer options
+                    <textarea
+                      value={newPromptDraft.optionsText}
+                      placeholder="One option per line"
+                      onChange={(event) => setNewPromptDraft((draft) => ({
+                        ...draft,
+                        optionsText: event.target.value,
+                      }))}
+                    />
+                  </label>
+                </div>
+
+                <div className="admin-role-quiz-actions">
+                  <button className="button button-primary" type="submit" disabled={!canAddPrompt}>
+                    Add quiz question
+                  </button>
+                  <small>{newPromptOptions.length} options ready</small>
+                </div>
+              </form>
+
               <div className="question-review-list">
-                {quizPrompts.map((prompt) => {
+                {filteredQuizPrompts.map((prompt) => {
                   const isEditing = editingPromptId === prompt.id
 
                   return (
                     <article className="question-review-card" key={prompt.id}>
                       {isEditing ? (
                         <div className="admin-prompt-editor">
+                          <label>
+                            Work type
+                            <select
+                              value={promptDraft.role}
+                              onChange={(event) => setPromptDraft((draft) => ({
+                                ...draft,
+                                role: event.target.value,
+                              }))}
+                            >
+                              {promptRoleOptions.map((role) => (
+                                <option value={role} key={role}>{role}</option>
+                              ))}
+                            </select>
+                          </label>
                           <label>
                             Prompt
                             <textarea
@@ -945,7 +1570,7 @@ function Admin() {
                         </div>
                       ) : (
                         <div>
-                          <span className="chip chip-blue">{prompt.status}</span>
+                          <span className="chip chip-blue">{normalizeRole(prompt.role)}</span>
                           <h2>{prompt.stem}</h2>
                           <p>{prompt.options.join(' / ')}</p>
                           <small className="admin-small-note">{prompt.updated}</small>
@@ -978,8 +1603,10 @@ function Admin() {
                 })}
               </div>
 
-              {!quizPrompts.length && (
-                <div className="admin-empty">All local quiz prompts have been removed from this admin view.</div>
+              {!filteredQuizPrompts.length && (
+                <div className="admin-empty">
+                  No quiz questions are saved for {selectedPromptRole === ALL_QUIZ_ROLES ? 'any work type' : selectedPromptRole}.
+                </div>
               )}
             </div>
           )}
@@ -999,7 +1626,7 @@ function Admin() {
               <input
                 type="search"
                 value={jobSearch}
-                placeholder="Role, company, category"
+                placeholder="Recommendation, company, work type"
                 onChange={(event) => setJobSearch(event.target.value)}
               />
             </label>
@@ -1012,11 +1639,11 @@ function Admin() {
 
           <div className="admin-table" role="table" aria-label="Recommendation alignment">
             <div className="admin-table-row admin-table-head" role="row">
-              <span>Role</span>
-              <span>Category</span>
+              <span>Recommendation</span>
+              <span>Work type</span>
               <span>Match</span>
-              <span>Gaps</span>
-              <span>Evidence</span>
+              <span>Coverage gaps</span>
+              <span>Signals</span>
             </div>
 
             {filteredJobs.map((job) => {
@@ -1030,7 +1657,7 @@ function Admin() {
                     <strong>{getJobTitle(job)}</strong>
                     <small>{getJobCompany(job)}</small>
                   </span>
-                  <span>{getJobCategory(job)}</span>
+                  <span>{getJobWorkType(job)}</span>
                   <span>
                     {match === null ? (
                       <span className={statusClass('Pending')}>Pending</span>
@@ -1038,7 +1665,7 @@ function Admin() {
                       <span className={`match-badge ${getMatchClass(match)}`}>{match}%</span>
                     )}
                   </span>
-                  <span>{missingSkills.length ? `${missingSkills.length} skills` : 'None'}</span>
+                  <span>{missingSkills.length ? `${missingSkills.length} gaps` : 'None'}</span>
                   <span>{matchedSkills.slice(0, 2).map(formatLabel).join(', ') || 'Scored factors'}</span>
                 </div>
               )
@@ -1051,8 +1678,8 @@ function Admin() {
         <div className="admin-section-stack">
           <section className="admin-panel">
             <div className="admin-panel-heading">
-              <span>Skill gap analysis</span>
-              <strong>{gaps.length ? `${gaps.length} active gaps` : 'Awaiting matches'}</strong>
+              <span>Recommendation coverage gaps</span>
+              <strong>{gaps.length ? `${gaps.length} active gaps / ${gapStatus}` : 'Awaiting AI'}</strong>
             </div>
 
             {gaps.length ? (
@@ -1090,7 +1717,7 @@ function Admin() {
           <section className="admin-panel">
             <div className="admin-panel-heading">
               <span>Learning resources</span>
-              <strong>{analysis?.resources?.length ? 'Personalized' : 'Catalog fallback'}</strong>
+              <strong>{learningStatus}</strong>
             </div>
 
             <div className="resource-admin-grid">
@@ -1120,21 +1747,21 @@ function Admin() {
         <section className="admin-panel">
           <div className="admin-panel-heading">
             <span>Resume workflow</span>
-            <strong>{resumeCoaching ? 'Personalized coaching cached' : 'Template guidance'}</strong>
+            <strong>{resumeStatus}</strong>
           </div>
 
           <div className="admin-feature-grid">
             <article className="admin-feature-card">
               <div className="admin-card-kicker">
                 <span>/results/resume</span>
-                <strong className={statusClass(resumeCoaching ? 'Personalized' : 'Template')}>
-                  {resumeCoaching ? 'Personalized' : 'Template'}
+                <strong className={statusClass(resumeStatus)}>
+                  {resumeStatus}
                 </strong>
               </div>
               <h2>Resume tips</h2>
               <p>
                 {resumeCoaching?.summary ||
-                  'Uses profile and gap context to produce role-specific coaching.'}
+                  'Uses profile, work-type, and gap context to produce recommendation-aware coaching.'}
               </p>
             </article>
 
@@ -1206,10 +1833,10 @@ function Admin() {
 
           <div className="admin-table" role="table" aria-label="Telegram feed alignment">
             <div className="admin-table-row admin-table-head" role="row">
-              <span>Role</span>
+              <span>Opening</span>
               <span>Channel</span>
               <span>Experience</span>
-              <span>Skills</span>
+              <span>Signals</span>
               <span>Posted</span>
             </div>
 
