@@ -129,6 +129,14 @@ export function persistRecommendationSession(profile, jobs, rawRecs = null) {
   sessionStorage.setItem(RECOMMENDATIONS_STORAGE_KEY, JSON.stringify(jobs))
   if (rawRecs) {
     sessionStorage.setItem(RAW_RECOMMENDATIONS_STORAGE_KEY, JSON.stringify(rawRecs))
+  } else {
+    sessionStorage.removeItem(RAW_RECOMMENDATIONS_STORAGE_KEY)
+  }
+
+  sessionStorage.removeItem(ANALYSIS_STORAGE_KEY)
+  sessionStorage.removeItem('resumeTipsCoaching')
+  if (profile?.source !== 'quiz') {
+    sessionStorage.removeItem(QUIZ_SESSION_STORAGE_KEY)
   }
 }
 

@@ -59,6 +59,37 @@
     "lang-sql": [
       "structured query language"
     ],
+    "da-sql-analytics": [
+      "cohort",
+      "cohorts",
+      "conversion rate",
+      "cte",
+      "funnel",
+      "funnels",
+      "window function",
+      "window functions"
+    ],
+    "da-powerbi": [
+      "bi dashboard",
+      "business intelligence",
+      "dashboard",
+      "dashboards",
+      "executive dashboard"
+    ],
+    "da-stats": [
+      "a/b test",
+      "confidence interval",
+      "confidence range",
+      "hypothesis test",
+      "regression"
+    ],
+    "db-general": [
+      "data dictionary",
+      "data governance",
+      "metric definitions",
+      "semantic model",
+      "source tables"
+    ],
     "fe-react": [
       "hooks",
       "react hooks"

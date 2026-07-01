@@ -16,6 +16,8 @@ function groupFallbackResources(resources) {
 
 function LearningResources({ standalone = false, resources: providedResources, isLoading = false, error = null }) {
   const stored = loadStoredAnalysis()
+  const hasProvidedResourceContext = Array.isArray(providedResources)
+  const hasStoredResourceContext = Boolean(stored)
   const standaloneHeader = standalone ? (
     <>
       <div className="page-heading">
@@ -53,9 +55,13 @@ function LearningResources({ standalone = false, resources: providedResources, i
 
   const resolvedResources = providedResources?.length
     ? providedResources
-    : stored?.resources?.length
-      ? stored.resources
-      : groupFallbackResources(fallbackLearningResources)
+    : hasProvidedResourceContext
+      ? []
+      : stored?.resources?.length
+        ? stored.resources
+        : hasStoredResourceContext
+          ? []
+          : groupFallbackResources(fallbackLearningResources)
 
   if (!resolvedResources.length) {
     return (
@@ -65,7 +71,9 @@ function LearningResources({ standalone = false, resources: providedResources, i
           <p>
             {error
               ? error
-              : 'Complete the assessment to load curated resources from the learning catalog.'}
+              : hasProvidedResourceContext || hasStoredResourceContext
+                ? 'No curated learning resources were found for the current gaps yet. Review the gap list and keep the matched role skills visible in your profile.'
+                : 'Complete the assessment to load curated resources from the learning catalog.'}
           </p>
         </div>
       </section>

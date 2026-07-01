@@ -1120,6 +1120,9 @@
 .results-header h1 {
   font-size: 48px;
   line-height: 1.08;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 
 .page-heading p:not(.eyebrow) {
@@ -1844,7 +1847,8 @@ button.chip {
 }
 
 .detail-page .page-heading {
-  margin-bottom: 26px;
+  width: min(900px, 100%);
+  margin: 0 auto 26px;
 }
 
 .gap-list {

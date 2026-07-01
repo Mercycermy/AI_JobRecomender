@@ -2,8 +2,33 @@ import FlowProgress from '../components/FlowProgress.jsx'
 import { loadStoredAnalysis } from '../api/recommend.js'
 import { skillGaps as fallbackSkillGaps } from '../data/mockData.js'
 
+function uniqueSkillNames(values = []) {
+  return [...new Set(values.filter(Boolean).map((value) => String(value)))]
+}
+
+function getJobMissingSkillNames(job) {
+  return uniqueSkillNames(
+    job?.missingSkillNames ||
+      job?.missing_skill_names ||
+      job?.missing_skills ||
+      [],
+  )
+}
+
+function getJobGapRows(job) {
+  return getJobMissingSkillNames(job).map((skill, index) => ({
+    skill,
+    level: index < 2 ? 'High' : 'Medium',
+    current: 45,
+    required: 80,
+    priority: Math.max(60, 90 - index * 8),
+  }))
+}
+
 function SkillGap({ gaps: providedGaps, job, standalone = false, isLoading = false, error = null }) {
   const stored = loadStoredAnalysis()
+  const hasStandaloneJobContext = Boolean(standalone && job)
+  const jobGaps = hasStandaloneJobContext ? getJobGapRows(job) : []
   const standaloneHeader = standalone ? (
     <>
       <div className="page-heading">
@@ -31,7 +56,7 @@ function SkillGap({ gaps: providedGaps, job, standalone = false, isLoading = fal
     )
   }
 
-  if (error && !providedGaps?.length && !stored?.gaps?.length) {
+  if (error && !providedGaps?.length && !stored?.gaps?.length && !jobGaps.length) {
     return (
       <section className={standalone ? 'detail-page' : 'panel-section'}>
         {standaloneHeader}
@@ -44,9 +69,11 @@ function SkillGap({ gaps: providedGaps, job, standalone = false, isLoading = fal
 
   const sourceGaps = providedGaps?.length
     ? providedGaps
-    : stored?.gaps?.length
-      ? stored.gaps
-      : fallbackSkillGaps
+    : hasStandaloneJobContext
+      ? jobGaps
+      : stored?.gaps?.length
+        ? stored.gaps
+        : fallbackSkillGaps
 
   if (!sourceGaps.length) {
     return (
@@ -56,7 +83,9 @@ function SkillGap({ gaps: providedGaps, job, standalone = false, isLoading = fal
           <p>
             {error
               ? error
-              : 'Complete the skills assessment to see your real skill gaps from quiz results.'}
+              : hasStandaloneJobContext
+                ? `${job.title} does not show critical missing skills against your current profile. Keep strengthening the matched skills and review the score breakdown for smaller fit factors.`
+                : 'Complete the skills assessment to see your real skill gaps from quiz results.'}
           </p>
         </div>
       </section>

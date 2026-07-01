@@ -1553,6 +1553,55 @@ class QuizEngine:
 
         self._update_detected_role(session)
 
+    def _merge_answer_text_evidence(
+        self,
+        session: dict,
+        answer_raw: str,
+        ai_score: float,
+    ) -> None:
+        text = str(answer_raw or "").strip()
+        if not text:
+            return
+
+        score = max(0.55, min(0.9, float(ai_score or 0.0)))
+        for skill_id in self.normalizer.extract_skills(text):
+            if not self._answer_text_skill_allowed(session, skill_id):
+                continue
+            self._add_skill_score(session, skill_id, score)
+
+    def _answer_text_skill_allowed(self, session: dict, skill_id: str) -> bool:
+        detected_domain = str(session.get("detected_domain") or "").upper()
+        if detected_domain != "DATA_AI":
+            return True
+
+        metadata = self.normalizer.metadata_for(skill_id)
+        domain = str(metadata.get("domain") or "").casefold()
+        category = str(metadata.get("category") or "").casefold()
+        tags = {
+            str(tag).casefold()
+            for tag in metadata.get("differentiation_tags", [])
+            if str(tag).strip()
+        }
+        data_ai_support_skills = {
+            "ba-excel",
+            "da-excel",
+            "db-general",
+            "db-schema",
+            "lang-py",
+            "lang-sql",
+            "soft-collab",
+            "soft-comm",
+            "soft-problem",
+        }
+
+        return (
+            skill_id in data_ai_support_skills
+            or "data" in domain
+            or "analytics" in domain
+            or "database" in category
+            or bool(tags.intersection({"bi", "data", "data-analysis", "data-science", "ml"}))
+        )
+
     def apply_signals(self, session: dict, selected_option: dict) -> dict:
         signals = selected_option.get("signals", {})
         for key, score in signals.items():
@@ -1983,6 +2032,7 @@ class QuizEngine:
         performance = self.classify_performance(ai_score)
 
         self._merge_ai_evidence(session, question, chosen, ai_evaluation, ai_score)
+        self._merge_answer_text_evidence(session, answer_raw, ai_score)
 
         next_id = self.next_question_id(
             question,

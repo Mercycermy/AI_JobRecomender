@@ -21,12 +21,15 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-def _start_role(engine: QuizEngine, role: str = "frontend-dev"):
+def _start_role(
+    engine: QuizEngine,
+    role: str = "frontend-dev",
+    domain_answer: str = "A",
+):
     session = engine.create_session()
     session_id = session["session_id"]
 
     domain_question = engine.get_question(session["first_question_id"])
-    domain_answer = "A"
     result = engine.submit_answer(
         session_id,
         domain_question["id"],
@@ -127,6 +130,47 @@ def test_quiz_stops_after_target_technical_questions_and_reports_metrics():
     assert profile["difficulty_counts"]["advanced"] >= 2
     assert profile["skill_level"] == "senior"
     assert profile["confidence"] >= 80
+
+
+def test_free_text_answers_enrich_quiz_skill_profile():
+    engine = QuizEngine()
+    session_id, result = _start_role(
+        engine,
+        role="data-analyst",
+        domain_answer="B",
+    )
+    question = result["next_question"]
+
+    result = engine.submit_answer(
+        session_id,
+        question["id"],
+        (
+            "I used SQL CTEs, cohort funnels, a Power BI dashboard, "
+            "Tableau validation views, and metric definitions to explain "
+            "conversion rate changes to marketing, finance, and sales stakeholders."
+        ),
+        None,
+        {
+            "score": 0.8,
+            "feedback": "Strong data analyst answer",
+            "skill_scores": {},
+            "category_score_deltas": {"data-analyst": 5},
+            "confidence": 0.9,
+            "follow_up_question": None,
+        },
+    )
+
+    session = engine.load_session(session_id)
+    skill_ids = set(session["skill_scores"])
+
+    assert "lang-sql" in skill_ids
+    assert "da-sql-analytics" in skill_ids
+    assert "da-powerbi" in skill_ids
+    assert "da-tableau" in skill_ids
+    assert "db-general" in skill_ids
+    assert not any(skill_id.startswith("mkt-") for skill_id in skill_ids)
+    assert "sm-sales" not in skill_ids
+    assert result["status"] == "continue"
 
 
 def test_broad_role_is_capped_instead_of_using_entire_question_bank():

@@ -8,7 +8,7 @@ import re
 import sqlite3
 import urllib.error
 import urllib.request
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
@@ -68,6 +68,12 @@ DEFAULT_TELEGRAM_CHANNELS: Tuple[str, ...] = (
 )
 
 
+def _ethiopia_today() -> date:
+    return datetime.now(timezone.utc).astimezone(
+        timezone(timedelta(hours=3))
+    ).date()
+
+
 class TelegramJobIngestionService:
     """Extract, validate, dedupe, and store Telegram job posts."""
 
@@ -83,7 +89,7 @@ class TelegramJobIngestionService:
         self.feed_path = Path(feed_path or settings.telegram_jobs_feed_path)
         self.normalizer = normalizer or SkillNormalizer()
         self.ai_extractor = ai_extractor
-        self.today = today or date.today()
+        self.today = today or _ethiopia_today()
 
     def ingest_posts(self, posts: Sequence[Any]) -> Dict[str, Any]:
         if not isinstance(posts, Sequence) or isinstance(posts, (str, bytes)):
