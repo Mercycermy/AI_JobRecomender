@@ -803,7 +803,7 @@
 
 .admin-tabs {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 18px;
 }
@@ -837,6 +837,7 @@
 
 .admin-metric-card,
 .admin-panel,
+.admin-feature-card,
 .question-review-card,
 .resource-admin-card,
 .content-controls article {
@@ -850,6 +851,34 @@
   display: grid;
   gap: 10px;
   padding: 20px;
+}
+
+.admin-route-note {
+  min-width: 220px;
+  display: grid;
+  gap: 6px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  box-shadow: 0 16px 38px rgba(13, 34, 51, 0.08);
+}
+
+.admin-route-note span,
+.admin-route-note small,
+.admin-card-kicker span,
+.admin-small-note {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.admin-route-note strong {
+  color: var(--navy);
+  font-family: var(--font-mono);
+  font-size: 26px;
 }
 
 .metric-label,
@@ -894,6 +923,47 @@
   display: grid;
   grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
   gap: 18px;
+}
+
+.admin-feature-grid {
+  position: relative;
+  z-index: 1;
+  width: min(1180px, 100%);
+  margin-inline: auto;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.admin-feature-card {
+  display: grid;
+  align-content: start;
+  gap: 13px;
+  padding: 20px;
+}
+
+.admin-card-kicker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-feature-card h2,
+.admin-inline-grid strong,
+.admin-skill-row strong {
+  margin: 0;
+  color: var(--ink);
+}
+
+.admin-feature-card h2 {
+  font-size: 19px;
+}
+
+.admin-feature-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
 }
 
 .admin-panel {
@@ -1026,20 +1096,99 @@
 
 .admin-status-published,
 .admin-status-live,
-.admin-status-verified {
+.admin-status-verified,
+.admin-status-ready,
+.admin-status-current,
+.admin-status-personalized,
+.admin-status-low {
   color: var(--mint);
   background: rgba(34, 168, 120, 0.12);
 }
 
 .admin-status-needs-review,
-.admin-status-review {
+.admin-status-review,
+.admin-status-pending,
+.admin-status-loading,
+.admin-status-template,
+.admin-status-catalog,
+.admin-status-medium {
   color: var(--amber);
   background: rgba(243, 177, 61, 0.15);
 }
 
-.admin-status-draft {
+.admin-status-draft,
+.admin-status-demo,
+.admin-status-high {
   color: var(--coral);
   background: rgba(232, 93, 117, 0.12);
+}
+
+.admin-inline-grid,
+.admin-profile-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-inline-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 20px;
+}
+
+.admin-inline-grid article,
+.admin-skill-row {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  padding: 14px;
+}
+
+.admin-inline-grid span,
+.admin-skill-row span {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.admin-profile-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-skill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-empty {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  color: var(--muted);
+  padding: 16px;
+  line-height: 1.6;
+}
+
+.admin-panel-divider {
+  height: 1px;
+  margin: 22px 0;
+  background: var(--line);
+}
+
+.admin-section-stack {
+  position: relative;
+  z-index: 1;
+  width: min(1180px, 100%);
+  margin-inline: auto;
+  display: grid;
+  gap: 18px;
+}
+
+.admin-small-note {
+  margin: 12px 0 0;
 }
 
 .question-review-list,
@@ -2669,6 +2818,9 @@ button.chip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .admin-feature-grid,
+  .admin-inline-grid,
+  .admin-profile-grid,
   .resource-admin-grid,
   .content-controls {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2765,6 +2917,9 @@ button.chip {
   .tips-grid,
   .admin-tabs,
   .admin-metrics,
+  .admin-feature-grid,
+  .admin-inline-grid,
+  .admin-profile-grid,
   .admin-toolbar,
   .resource-admin-grid,
   .content-controls {
@@ -2896,6 +3051,7 @@ button.chip {
   .gap-row-header,
   .gap-values,
   .resource-card-footer,
+  .admin-card-kicker,
   .pipeline-list div,
   .resource-admin-card {
     align-items: flex-start;
