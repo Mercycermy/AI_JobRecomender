@@ -374,6 +374,7 @@ def test_retrieval_includes_telegram_jobs_and_filters_invalid_jobs(tmp_path):
     assert "telegram_feed" in telegram["retrieval_sources"]
 
 
+@pytest.mark.ml
 def test_engine_loads_with_vectors():
     if not _vector_stack_ready():
         print("SKIP test_engine_loads_with_vectors (run seed_db.py + build_vectors.py)")
@@ -388,6 +389,7 @@ def test_engine_loads_with_vectors():
     assert engine.index.ntotal == len(engine.job_ids)
 
 
+@pytest.mark.ml
 def test_rank_jobs_semantic_profile(warm_recommendation_engine):
     if warm_recommendation_engine is None:
         pytest.skip("run seed_db.py + build_vectors.py")
@@ -417,6 +419,7 @@ def test_rank_jobs_semantic_profile(warm_recommendation_engine):
     )
 
 
+@pytest.mark.ml
 def test_semantic_query_returns_backend_roles(warm_recommendation_engine):
     """Profiles with API/backend skills should rank software roles when index exists."""
     if warm_recommendation_engine is None:

@@ -7,15 +7,24 @@ from __future__ import annotations
 from typing import Optional
 
 from flask import Flask, jsonify, request
+from werkzeug.exceptions import HTTPException
 
 from app.ai_tips import GroqResumeCoach
 from app.answer_evaluator import evaluate, evaluate_mcq
 from app.config import settings
 from app.gap_analyzer import GapAnalyzer, format_gaps_for_ui
 from app.learning_path import LearningPath
+from app.migrations import run_migrations
 from app.profile_service import ProfileService, ProfileValidationError
 from app.quiz_engine import QuizEngine
 from app.recommender import RecommendationEngine
+from app.reliability import (
+    configure_logging,
+    json_http_error,
+    json_unhandled_error,
+    reliability_after_request,
+    reliability_before_request,
+)
 from app.resource_recommender import ResourceRecommender
 from app.resume_generator import ResumeGeneratorError, ResumeGeneratorService
 from app.resume_tips import ResumeCoach
@@ -23,8 +32,29 @@ from app.resume_upload import ResumeUploadError, ResumeUploadService, loads_json
 from app.skill_normalizer import SkillNormalizer
 from app.telegram_jobs import TelegramJobIngestionError, TelegramJobIngestionService
 
+settings.validate_startup()
+
 app = Flask(__name__)
-app.config["SECRET_KEY"] = settings.secret_key
+api_logger = configure_logging(settings.log_level)
+app.logger.handlers = api_logger.handlers
+app.logger.setLevel(api_logger.level)
+app.config["SECRET_KEY"] = settings.effective_secret_key
+app.config["MAX_CONTENT_LENGTH"] = settings.max_content_length
+app.config["API_KEY"] = settings.api_key
+app.config["REQUIRE_API_KEY"] = settings.require_api_key
+app.config["RATE_LIMIT_ENABLED"] = settings.rate_limit_enabled
+app.config["RATE_LIMIT_PUBLIC_PER_MINUTE"] = settings.rate_limit_public_per_minute
+app.config["RATE_LIMIT_WRITE_PER_MINUTE"] = settings.rate_limit_write_per_minute
+
+if settings.run_migrations_on_startup:
+    try:
+        migration_report = run_migrations(settings.recommender_db_path)
+        if migration_report["count"]:
+            app.logger.info("Applied migrations: %s", migration_report["applied"])
+    except Exception:
+        app.logger.exception("Database migration failed.")
+        if settings.is_production:
+            raise
 
 _recommender: Optional[RecommendationEngine] = None
 _skill_normalizer: Optional[SkillNormalizer] = None
@@ -136,14 +166,38 @@ def _add_cors_headers(response):
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Vary"] = "Origin"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Session-Id"
-    response.headers["Access-Control-Expose-Headers"] = "X-Session-Id"
+    response.headers["Access-Control-Allow-Headers"] = (
+        "Content-Type, X-Session-Id, X-Request-Id, X-API-Key"
+    )
+    response.headers["Access-Control-Expose-Headers"] = (
+        "X-Session-Id, X-Request-Id, X-RateLimit-Remaining"
+    )
     return response
+
+
+@app.before_request
+def api_reliability_before_request():
+    return reliability_before_request()
+
+
+@app.after_request
+def api_reliability_after_request(response):
+    return reliability_after_request(response)
 
 
 @app.after_request
 def cors_after_request(response):
     return _add_cors_headers(response)
+
+
+@app.errorhandler(HTTPException)
+def handle_http_error(error):
+    return json_http_error(error)
+
+
+@app.errorhandler(Exception)
+def handle_unhandled_error(error):
+    return json_unhandled_error(error)
 
 
 @app.route("/health", methods=["GET"])

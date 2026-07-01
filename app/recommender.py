@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import sqlite3
@@ -17,6 +18,7 @@ from app.skill_normalizer import SkillNormalizer, normalize_skill_text
 DB_PATH = str(settings.recommender_db_path)
 INDEX_PATH = str(settings.jobs_index_path)
 MAPPER_PATH = str(settings.jobs_id_map_path)
+_LOGGER = logging.getLogger("ai_job_recommender.recommender")
 
 MATCH_WEIGHTS: Dict[str, float] = {
     "skill_fit": 0.40,
@@ -272,6 +274,8 @@ def _tokens(value: Any) -> Set[str]:
 class RecommendationEngine:
     """Retrieve broadly, then rerank every candidate with one scoring formula."""
 
+    _RESOURCE_CACHE: Dict[Tuple[str, str, str], Dict[str, Any]] = {}
+
     def __init__(
         self,
         load_resources: bool = True,
@@ -296,7 +300,20 @@ class RecommendationEngine:
             self._load_resources()
 
     def _load_resources(self) -> None:
-        print("Initializing Recommendation Engine resources...")
+        cache_key = (
+            str(self.index_path),
+            str(self.mapper_path),
+            settings.embedding_model,
+        )
+        cached = self._RESOURCE_CACHE.get(cache_key)
+        if cached is not None:
+            self.model = cached["model"]
+            self.index = cached["index"]
+            self.job_ids = list(cached["job_ids"])
+            _LOGGER.info("Reused cached recommender vector resources.")
+            return
+
+        _LOGGER.info("Initializing Recommendation Engine resources.")
         vector_artifacts_ready = (
             os.path.exists(self.index_path)
             and os.path.exists(self.mapper_path)
@@ -312,34 +329,43 @@ class RecommendationEngine:
                     local_files_only=True,
                 )
             except Exception as exc:
-                print(f"Warning: Failed to load local SentenceTransformer model: {exc}")
+                _LOGGER.warning(
+                    "Failed to load local SentenceTransformer model: %s",
+                    exc,
+                )
         else:
-            print("Skipping semantic model load; vector artifacts are missing.")
+            _LOGGER.info("Skipping semantic model load; vector artifacts are missing.")
 
         try:
             import faiss
 
             if os.path.exists(self.index_path):
                 self.index = faiss.read_index(self.index_path)
-                print(f"Loaded FAISS index from {self.index_path}.")
+                _LOGGER.info("Loaded FAISS index from %s.", self.index_path)
             else:
-                print(f"Warning: FAISS index file not found at {self.index_path}.")
+                _LOGGER.warning("FAISS index file not found at %s.", self.index_path)
         except Exception as exc:
-            print(f"Warning: Failed to load FAISS index: {exc}")
+            _LOGGER.warning("Failed to load FAISS index: %s", exc)
 
         if os.path.exists(self.mapper_path):
             with open(self.mapper_path, "r", encoding="utf-8") as handle:
                 self.job_ids = [str(job_id) for job_id in json.load(handle)]
-                print(f"Loaded {len(self.job_ids)} job ID mappings.")
+                _LOGGER.info("Loaded %s job ID mappings.", len(self.job_ids))
         else:
-            print(f"Warning: Job ID mapping file not found at {self.mapper_path}.")
+            _LOGGER.warning("Job ID mapping file not found at %s.", self.mapper_path)
 
         if self.index is not None and self.index.ntotal != len(self.job_ids):
-            print(
-                "Warning: FAISS index and job ID map sizes differ; "
+            _LOGGER.warning(
+                "FAISS index and job ID map sizes differ; "
                 "semantic retrieval will be disabled."
             )
             self.index = None
+
+        self._RESOURCE_CACHE[cache_key] = {
+            "model": self.model,
+            "index": self.index,
+            "job_ids": list(self.job_ids),
+        }
 
     def info(self) -> Dict[str, Any]:
         return {
