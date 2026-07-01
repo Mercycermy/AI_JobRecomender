@@ -15,11 +15,6 @@ function Layout({ children, currentPath }) {
     { href: '/', label: 'Home', exact: true },
     { href: '/quiz', label: 'Quiz' },
     { href: '/manual', label: 'Manual' },
-    { href: '/results', label: 'Results', match: (path) => path === '/results' || path.startsWith('/results/gap') },
-    { href: '/results/resources', label: 'Learn' },
-    { href: '/results/resume', label: 'Resume', match: (path) => path === '/results/resume' || path.startsWith('/resume-builder') },
-    { href: '/telegram-jobs', label: 'Telegram' },
-    { href: '/admin', label: 'Admin' },
   ]
   const isCurrent = (item) => {
     if (item.match) {
