@@ -838,6 +838,7 @@
 .admin-metric-card,
 .admin-panel,
 .admin-feature-card,
+.admin-dashboard-card,
 .question-review-card,
 .resource-admin-card,
 .content-controls article {
@@ -964,6 +965,138 @@
   margin: 0;
   color: var(--muted);
   line-height: 1.6;
+}
+
+.admin-profile-dashboard {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.admin-stat-grid,
+.admin-dashboard-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-stat-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.admin-stat-grid article {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  padding: 16px;
+}
+
+.admin-stat-grid span,
+.admin-stat-grid small,
+.admin-mini-job span,
+.admin-mini-job small,
+.admin-progress-row span,
+.admin-analysis-list span,
+.admin-analysis-list small {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.admin-stat-grid strong,
+.admin-mini-job strong,
+.admin-progress-row strong,
+.admin-analysis-list strong {
+  color: var(--ink);
+}
+
+.admin-stat-grid strong {
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.admin-dashboard-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-dashboard-card {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  padding: 18px;
+}
+
+.admin-match-list,
+.admin-progress-list,
+.admin-analysis-list {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-mini-job {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  padding: 12px;
+}
+
+.admin-mini-job > div {
+  display: grid;
+  gap: 5px;
+}
+
+.admin-mini-job > div:last-child {
+  justify-items: end;
+}
+
+.admin-progress-meter {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(46, 134, 193, 0.13);
+}
+
+.admin-progress-meter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--mint), var(--blue));
+}
+
+.admin-progress-row {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  padding: 12px;
+}
+
+.admin-progress-row > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-analysis-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-analysis-list article {
+  display: grid;
+  gap: 5px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  padding: 12px;
 }
 
 .admin-panel {
@@ -2821,6 +2954,8 @@ button.chip {
   .admin-feature-grid,
   .admin-inline-grid,
   .admin-profile-grid,
+  .admin-stat-grid,
+  .admin-dashboard-grid,
   .resource-admin-grid,
   .content-controls {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2920,6 +3055,9 @@ button.chip {
   .admin-feature-grid,
   .admin-inline-grid,
   .admin-profile-grid,
+  .admin-stat-grid,
+  .admin-dashboard-grid,
+  .admin-analysis-list,
   .admin-toolbar,
   .resource-admin-grid,
   .content-controls {
@@ -3052,10 +3190,19 @@ button.chip {
   .gap-values,
   .resource-card-footer,
   .admin-card-kicker,
+  .admin-progress-row > div:first-child,
   .pipeline-list div,
   .resource-admin-card {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .admin-mini-job {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-mini-job > div:last-child {
+    justify-items: start;
   }
 
   .resource-admin-card {

@@ -5,6 +5,8 @@ export const RECOMMENDATIONS_STORAGE_KEY = 'jobRecommendations'
 export const RAW_RECOMMENDATIONS_STORAGE_KEY = 'rawJobRecommendations'
 export const ANALYSIS_STORAGE_KEY = 'recommendationAnalysis'
 export const QUIZ_SESSION_STORAGE_KEY = 'quizSessionId'
+export const QUIZ_PROGRESS_STORAGE_KEY = 'quizProgress'
+export const QUIZ_HISTORY_STORAGE_KEY = 'quizAttemptHistory'
 
 const EXPERIENCE_MAP = {
   Internship: 'intern',
@@ -146,6 +148,46 @@ export function persistQuizSessionId(sessionId) {
   }
 }
 
+export function persistQuizProgress(progress) {
+  if (progress) {
+    sessionStorage.setItem(QUIZ_PROGRESS_STORAGE_KEY, JSON.stringify(progress))
+  } else {
+    sessionStorage.removeItem(QUIZ_PROGRESS_STORAGE_KEY)
+  }
+}
+
+export function loadStoredQuizHistory() {
+  try {
+    const raw = localStorage.getItem(QUIZ_HISTORY_STORAGE_KEY)
+    const parsed = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+export function persistQuizAttempt(profile, progress = null, jobs = []) {
+  if (!profile) {
+    return
+  }
+
+  const history = loadStoredQuizHistory()
+  const id = profile.session_id || progress?.session_id || `quiz-${Date.now()}`
+  const entry = {
+    id,
+    completed_at: new Date().toISOString(),
+    profile,
+    progress,
+    jobs,
+  }
+  const nextHistory = [
+    entry,
+    ...history.filter((item) => item?.id !== id),
+  ].slice(0, 25)
+
+  localStorage.setItem(QUIZ_HISTORY_STORAGE_KEY, JSON.stringify(nextHistory))
+}
+
 export function persistAnalysis(analysis) {
   sessionStorage.setItem(ANALYSIS_STORAGE_KEY, JSON.stringify(analysis))
 }
@@ -185,6 +227,15 @@ export function loadStoredSessionId() {
   }
 }
 
+export function loadStoredQuizProgress() {
+  try {
+    const raw = sessionStorage.getItem(QUIZ_PROGRESS_STORAGE_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
 export function loadStoredRawRecommendations() {
   try {
     const raw = sessionStorage.getItem(RAW_RECOMMENDATIONS_STORAGE_KEY)
@@ -201,6 +252,7 @@ export function clearStoredRecommendations() {
   sessionStorage.removeItem(ANALYSIS_STORAGE_KEY)
   sessionStorage.removeItem('resumeTipsCoaching')
   sessionStorage.removeItem(QUIZ_SESSION_STORAGE_KEY)
+  sessionStorage.removeItem(QUIZ_PROGRESS_STORAGE_KEY)
 }
 
 export async function fetchAnalysis(sessionId, profile = null, recommendations = null) {

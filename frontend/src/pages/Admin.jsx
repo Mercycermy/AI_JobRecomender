@@ -3,9 +3,8 @@ import {
   fetchTelegramJobs,
   loadStoredAnalysis,
   loadStoredProfile,
-  loadStoredRawRecommendations,
+  loadStoredQuizProgress,
   loadStoredRecommendations,
-  loadStoredSessionId,
 } from '../api/recommend.js'
 import {
   fallbackQuestions,
@@ -174,6 +173,94 @@ function getResumeSectionCount(coaching) {
   return coaching?.tips?.length || fallbackResumeTips.length
 }
 
+function formatPercent(value, fallback = 'Pending') {
+  const numeric = Number(value)
+
+  if (!Number.isFinite(numeric)) {
+    return fallback
+  }
+
+  return `${Math.round(numeric <= 1 ? numeric * 100 : numeric)}%`
+}
+
+function getTopMatchedJobs(jobs, limit = 3) {
+  return [...jobs]
+    .sort((left, right) => (getJobMatch(right) ?? -1) - (getJobMatch(left) ?? -1))
+    .slice(0, limit)
+}
+
+function getProfileFillItems(profile, skills) {
+  const evidence = profile?.evidence || {}
+  const targetRole = profile?.target_role || profile?.top_category || profile?.category || profile?.detected_role
+  const hasExperience = Boolean(profile?.experience_level || profile?.experience)
+  const hasLocation = Boolean(profile?.location)
+  const hasEvidence = Boolean(
+    evidence.experience_years !== null && evidence.experience_years !== undefined ||
+      evidence.has_projects ||
+      evidence.portfolio_url,
+  )
+
+  return [
+    {
+      label: 'Skills mapped',
+      value: skills.length ? `${skills.length} skills` : 'Missing',
+      score: Math.min(100, Math.round((skills.length / 6) * 100)),
+    },
+    {
+      label: 'Target role',
+      value: formatLabel(targetRole),
+      score: targetRole ? 100 : 0,
+    },
+    {
+      label: 'Experience',
+      value: formatLabel(profile?.experience_level || profile?.experience),
+      score: hasExperience ? 100 : 0,
+    },
+    {
+      label: 'Evidence',
+      value: hasEvidence ? 'Added' : 'Light',
+      score: hasEvidence ? 100 : profile ? 35 : 0,
+    },
+    {
+      label: 'Location',
+      value: formatLabel(profile?.location, 'Remote-friendly'),
+      score: hasLocation ? 100 : profile ? 65 : 0,
+    },
+  ]
+}
+
+function getQuizSummary(profile, progress) {
+  const answered = Number(progress?.questions_answered ?? profile?.question_count ?? 0)
+  const estimated = Number(progress?.estimated_total ?? (answered ? Math.max(answered, 12) : fallbackQuestions.length))
+  const percent = Number(progress?.percent ?? (estimated ? (answered / estimated) * 100 : 0))
+  const confidence = progress?.confidence ?? profile?.confidence
+
+  return {
+    answered: Number.isFinite(answered) ? answered : 0,
+    estimated: Number.isFinite(estimated) && estimated > 0 ? estimated : fallbackQuestions.length,
+    percent: Number.isFinite(percent) ? Math.min(100, Math.round(percent)) : 0,
+    confidence,
+    detectedDomain: progress?.detected_domain || profile?.detected_domain,
+    detectedRole: progress?.detected_role || profile?.detected_role || profile?.target_role,
+    difficulty: progress?.difficulty_reached || profile?.difficulty_reached || 'Not reached',
+    performanceCounts: progress?.performance_counts || profile?.performance_counts || {},
+  }
+}
+
+function getStrongestSkills(profile, skills) {
+  const scores = profile?.skill_scores || {}
+
+  return skills
+    .map((skill) => {
+      const value = Number(scores[skill])
+      return {
+        skill,
+        score: Number.isFinite(value) ? Math.round(value <= 1 ? value * 100 : value) : null,
+      }
+    })
+    .sort((left, right) => (right.score ?? -1) - (left.score ?? -1))
+}
+
 function Admin() {
   const [activeTab, setActiveTab] = useState(adminTabs[0])
   const [jobSearch, setJobSearch] = useState('')
@@ -186,12 +273,14 @@ function Admin() {
 
   const profile = loadStoredProfile()
   const recommendations = loadStoredRecommendations() || []
-  const rawRecommendations = loadStoredRawRecommendations() || []
   const analysis = loadStoredAnalysis()
-  const sessionId = loadStoredSessionId()
+  const quizProgress = loadStoredQuizProgress()
   const resumeCoaching = loadCachedResumeTips()
 
   const profileSkills = getProfileSkills(profile)
+  const profileFillItems = getProfileFillItems(profile, profileSkills)
+  const filledProfileFields = profileFillItems.filter((item) => item.score >= 100).length
+  const quizSummary = getQuizSummary(profile, quizProgress)
   const visibleRecommendations = recommendations.length
     ? recommendations
     : fallbackJobRecommendations
@@ -203,6 +292,8 @@ function Admin() {
     : groupFallbackResources(fallbackLearningResources)
   const resources = flattenResourceGroups(resourceGroups)
   const topMissingSkills = uniqueItems(visibleRecommendations.flatMap(getMissingSkills)).slice(0, 6)
+  const topMatchedJobs = getTopMatchedJobs(visibleRecommendations)
+  const strongestSkills = getStrongestSkills(profile, profileSkills).slice(0, 4)
 
   const filteredJobs = visibleRecommendations.filter((job) =>
     `${getJobTitle(job)} ${getJobCompany(job)} ${getJobCategory(job)}`
@@ -316,6 +407,64 @@ function Admin() {
     },
   ]
 
+  const completionItems = [
+    {
+      label: 'Quiz answers',
+      value: `${quizSummary.answered}/${quizSummary.estimated}`,
+      score: quizSummary.percent,
+    },
+    {
+      label: 'Profile fields',
+      value: `${filledProfileFields}/${profileFillItems.length}`,
+      score: Math.round((filledProfileFields / profileFillItems.length) * 100),
+    },
+    {
+      label: 'Matched jobs',
+      value: `${visibleRecommendations.length} roles`,
+      score: Math.min(100, Math.round((visibleRecommendations.length / 10) * 100)),
+    },
+    {
+      label: 'Gap analysis',
+      value: gaps.length ? `${gaps.length} gaps` : 'Pending',
+      score: gaps.length ? 100 : 0,
+    },
+    {
+      label: 'Learning resources',
+      value: `${resources.length} resources`,
+      score: Math.min(100, Math.round((resources.length / 6) * 100)),
+    },
+  ]
+  const overviewCompletion = Math.round(
+    completionItems.reduce((total, item) => total + item.score, 0) / completionItems.length,
+  )
+  const readyFeatureCount = featureMap.filter(
+    (feature) => !['Pending', 'Review', 'Loading'].includes(feature.status),
+  ).length
+  const mostFilledItem = [...completionItems].sort((left, right) => right.score - left.score)[0]
+  const topGap = gaps[0]
+  const analysisNotes = [
+    {
+      label: 'Best match',
+      value: topMatchedJobs[0] ? getJobTitle(topMatchedJobs[0]) : 'No match yet',
+      detail: topMatchedJobs[0] ? `${getJobMatch(topMatchedJobs[0]) ?? '--'}% match` : 'Run profile scoring',
+    },
+    {
+      label: 'Most complete',
+      value: mostFilledItem?.label || 'Pending',
+      detail: mostFilledItem ? `${mostFilledItem.value} / ${mostFilledItem.score}%` : 'No coverage yet',
+    },
+    {
+      label: 'Main gap',
+      value: topGap ? getGapName(topGap) : formatLabel(topMissingSkills[0], 'No repeated gap'),
+      detail: topGap ? `${getGapPriority(topGap) ?? '--'} priority` : 'Based on current matches',
+    },
+    {
+      label: 'Quiz confidence',
+      value: formatPercent(quizSummary.confidence),
+      detail: formatLabel(quizSummary.difficulty),
+    },
+  ]
+
   return (
     <section className="admin-page">
       <div className="admin-header">
@@ -378,47 +527,44 @@ function Admin() {
           <div className="admin-grid">
             <section className="admin-panel">
               <div className="admin-panel-heading">
-                <span>Active context</span>
-                <strong>{profileSkills.length ? 'Profile loaded' : 'No profile'}</strong>
+                <span>Workflow coverage</span>
+                <strong>{overviewCompletion}% complete</strong>
               </div>
 
               <div className="pipeline-list">
                 <div>
-                  <span>Profile source</span>
-                  <strong>{formatLabel(profile?.source, profile ? 'Manual' : 'Pending')}</strong>
+                  <span>Profile intake</span>
+                  <strong>{profileSkills.length ? 'Active' : 'Pending'}</strong>
                 </div>
                 <div>
-                  <span>Recommendation source</span>
-                  <strong>{recommendationSource}</strong>
+                  <span>Matching engine</span>
+                  <strong>{visibleRecommendations.length} roles available</strong>
                 </div>
                 <div>
-                  <span>Raw scoring payload</span>
-                  <strong>{rawRecommendations.length ? `${rawRecommendations.length} rows` : 'Not cached'}</strong>
+                  <span>Analysis layer</span>
+                  <strong>{gaps.length ? 'Generated' : 'Pending'}</strong>
                 </div>
                 <div>
-                  <span>Quiz session</span>
-                  <strong>{sessionId || 'Not active'}</strong>
+                  <span>Resume support</span>
+                  <strong>{getResumeSectionCount(resumeCoaching)} guidance sections</strong>
                 </div>
               </div>
             </section>
 
             <section className="admin-panel">
               <div className="admin-panel-heading">
-                <span>Coverage focus</span>
-                <strong>{topMissingSkills.length ? `${topMissingSkills.length} skills` : 'Clear'}</strong>
+                <span>Feature readiness</span>
+                <strong>{readyFeatureCount} / {featureMap.length} live</strong>
               </div>
 
-              {topMissingSkills.length ? (
-                <div className="admin-skill-list">
-                  {topMissingSkills.map((skill) => (
-                    <span className="chip chip-coral" key={skill}>
-                      {formatLabel(skill)}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <div className="admin-empty">No repeated missing skills are visible yet.</div>
-              )}
+              <div className="pipeline-list">
+                {featureMap.map((feature) => (
+                  <div key={feature.title}>
+                    <span>{feature.title}</span>
+                    <strong className={statusClass(feature.status)}>{feature.status}</strong>
+                  </div>
+                ))}
+              </div>
             </section>
           </div>
         </div>
@@ -448,6 +594,159 @@ function Admin() {
               <span>Source</span>
               <strong>{formatLabel(profile?.source, profile ? 'Manual' : 'Pending')}</strong>
             </article>
+          </div>
+
+          <div className="admin-profile-dashboard">
+            <div className="admin-stat-grid">
+              <article>
+                <span>Best matched job</span>
+                <strong>{topMatchedJobs[0] ? getJobTitle(topMatchedJobs[0]) : 'No match yet'}</strong>
+                <small>
+                  {topMatchedJobs[0] && getJobMatch(topMatchedJobs[0]) !== null
+                    ? `${getJobMatch(topMatchedJobs[0])}% match`
+                    : recommendationSource}
+                </small>
+              </article>
+
+              <article>
+                <span>Answered questions</span>
+                <strong>{quizSummary.answered}</strong>
+                <small>{quizSummary.estimated} estimated total</small>
+              </article>
+
+              <article>
+                <span>Most filled area</span>
+                <strong>{mostFilledItem?.label || 'Pending'}</strong>
+                <small>{mostFilledItem ? `${mostFilledItem.score}% complete` : 'No data'}</small>
+              </article>
+
+              <article>
+                <span>Analysis readiness</span>
+                <strong>{gaps.length ? `${gaps.length} gaps` : 'Pending'}</strong>
+                <small>{resources.length} learning resources</small>
+              </article>
+            </div>
+
+            <div className="admin-dashboard-grid">
+              <section className="admin-dashboard-card">
+                <div className="admin-panel-heading">
+                  <span>Most matched jobs</span>
+                  <strong>{recommendationSource}</strong>
+                </div>
+
+                <div className="admin-match-list">
+                  {topMatchedJobs.map((job) => {
+                    const match = getJobMatch(job)
+                    const missingSkills = getMissingSkills(job)
+
+                    return (
+                      <article className="admin-mini-job" key={job.id || job.job_id || getJobTitle(job)}>
+                        <div>
+                          <strong>{getJobTitle(job)}</strong>
+                          <span>{getJobCompany(job)}</span>
+                        </div>
+                        <div>
+                          <span className={match === null ? statusClass('Pending') : `match-badge ${getMatchClass(match)}`}>
+                            {match === null ? 'Pending' : `${match}%`}
+                          </span>
+                          <small>{missingSkills.length ? `${missingSkills.length} gaps` : 'No gaps'}</small>
+                        </div>
+                      </article>
+                    )
+                  })}
+                </div>
+              </section>
+
+              <section className="admin-dashboard-card">
+                <div className="admin-panel-heading">
+                  <span>Answered questions</span>
+                  <strong>{quizSummary.percent}% mapped</strong>
+                </div>
+
+                <div className="admin-progress-meter" aria-label={`Quiz progress ${quizSummary.percent}%`}>
+                  <span style={{ width: `${quizSummary.percent}%` }}></span>
+                </div>
+
+                <div className="pipeline-list">
+                  <div>
+                    <span>Questions</span>
+                    <strong>{quizSummary.answered} / {quizSummary.estimated}</strong>
+                  </div>
+                  <div>
+                    <span>Detected role</span>
+                    <strong>{formatLabel(quizSummary.detectedRole)}</strong>
+                  </div>
+                  <div>
+                    <span>Difficulty reached</span>
+                    <strong>{formatLabel(quizSummary.difficulty)}</strong>
+                  </div>
+                </div>
+
+                <div className="admin-skill-list">
+                  {Object.entries(quizSummary.performanceCounts)
+                    .filter(([, count]) => Number(count) > 0)
+                    .map(([label, count]) => (
+                      <span className="chip chip-blue" key={label}>
+                        {formatLabel(label)} {count}
+                      </span>
+                    ))}
+                  {!Object.values(quizSummary.performanceCounts).some((count) => Number(count) > 0) && (
+                    <span className="chip chip-blue">No answers cached</span>
+                  )}
+                </div>
+              </section>
+
+              <section className="admin-dashboard-card">
+                <div className="admin-panel-heading">
+                  <span>Most filled quiz or jobs</span>
+                  <strong>{mostFilledItem ? `${mostFilledItem.score}%` : 'Pending'}</strong>
+                </div>
+
+                <div className="admin-progress-list">
+                  {completionItems.map((item) => (
+                    <div className="admin-progress-row" key={item.label}>
+                      <div>
+                        <span>{item.label}</span>
+                        <strong>{item.value}</strong>
+                      </div>
+                      <div className="admin-progress-meter" aria-label={`${item.label} ${item.score}%`}>
+                        <span style={{ width: `${item.score}%` }}></span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="admin-dashboard-card">
+                <div className="admin-panel-heading">
+                  <span>Additional analysis</span>
+                  <strong>{formatLabel(quizSummary.detectedDomain, 'Profile signal')}</strong>
+                </div>
+
+                <div className="admin-analysis-list">
+                  {analysisNotes.map((item) => (
+                    <article key={item.label}>
+                      <span>{item.label}</span>
+                      <strong>{item.value}</strong>
+                      <small>{item.detail}</small>
+                    </article>
+                  ))}
+                </div>
+
+                <div className="admin-panel-divider"></div>
+
+                <div className="admin-skill-list">
+                  {(strongestSkills.length ? strongestSkills : topMissingSkills.map((skill) => ({ skill, score: null }))).slice(0, 4).map((item) => (
+                    <span className={item.score === null ? 'chip chip-coral' : 'chip chip-blue'} key={item.skill}>
+                      {formatLabel(item.skill)}{item.score === null ? '' : ` ${item.score}%`}
+                    </span>
+                  ))}
+                  {!strongestSkills.length && !topMissingSkills.length && (
+                    <span className="chip chip-blue">No signal yet</span>
+                  )}
+                </div>
+              </section>
+            </div>
           </div>
 
           {profileSkills.length ? (

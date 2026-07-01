@@ -4,6 +4,8 @@ import FlowProgress from '../components/FlowProgress.jsx'
 import {
   clearStoredRecommendations,
   mapJobToCard,
+  persistQuizAttempt,
+  persistQuizProgress,
   persistQuizSessionId,
   persistRecommendationSession,
 } from '../api/recommend.js'
@@ -77,6 +79,7 @@ function Quiz({ navigate }) {
         if (isMounted) {
           setQuestion(normalizeQuestion(payload, 0))
           setProgressInfo(payload.progress || null)
+          persistQuizProgress(payload.progress || null)
           setApiError('')
         }
       } catch {
@@ -134,8 +137,10 @@ function Quiz({ navigate }) {
         const jobs = rawRecs.map(mapJobToCard)
         if (profile) {
           persistRecommendationSession(profile, jobs, rawRecs)
+          persistQuizAttempt(profile, payload.progress || null, jobs)
         }
         persistQuizSessionId(sessionIdRef.current)
+        persistQuizProgress(payload.progress || null)
         navigate('/results')
         return
       }
@@ -144,6 +149,7 @@ function Quiz({ navigate }) {
       setCurrentIndex(nextIndex)
       setQuestion(normalizeQuestion(payload, nextIndex))
   setProgressInfo(payload.progress || null)
+      persistQuizProgress(payload.progress || null)
       setSelectedOption('')
       setTextAnswer('')
     } catch (err) {
