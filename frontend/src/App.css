@@ -824,6 +824,29 @@
   background: linear-gradient(135deg, #1b4f72, #2e86c1);
 }
 
+.admin-subtabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.admin-subtabs button {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: var(--surface-strong);
+  font-weight: 800;
+}
+
+.admin-subtabs button.is-active,
+.admin-subtabs button:hover {
+  color: var(--navy);
+  border-color: var(--line-strong);
+  background: rgba(46, 134, 193, 0.12);
+}
+
 .admin-overview {
   display: grid;
   gap: 18px;
@@ -1097,6 +1120,82 @@
   border-radius: 8px;
   background: var(--surface-strong);
   padding: 12px;
+}
+
+.admin-match-graph {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-graph-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.9fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  padding: 14px;
+}
+
+.admin-graph-copy {
+  display: grid;
+  gap: 5px;
+}
+
+.admin-graph-copy strong,
+.admin-graph-score {
+  color: var(--ink);
+}
+
+.admin-graph-copy span {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.admin-graph-track {
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(46, 134, 193, 0.13);
+}
+
+.admin-graph-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--mint), var(--blue));
+}
+
+.admin-prompt-editor {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-prompt-editor label {
+  display: grid;
+  gap: 8px;
+  color: var(--navy);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.admin-prompt-editor textarea {
+  width: 100%;
+  min-height: 92px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  color: var(--ink);
+  padding: 12px;
+  resize: vertical;
+  font: inherit;
+  line-height: 1.5;
 }
 
 .admin-panel {
@@ -2956,6 +3055,7 @@ button.chip {
   .admin-profile-grid,
   .admin-stat-grid,
   .admin-dashboard-grid,
+  .admin-subtabs,
   .resource-admin-grid,
   .content-controls {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3058,6 +3158,7 @@ button.chip {
   .admin-stat-grid,
   .admin-dashboard-grid,
   .admin-analysis-list,
+  .admin-subtabs,
   .admin-toolbar,
   .resource-admin-grid,
   .content-controls {
@@ -3198,6 +3299,10 @@ button.chip {
   }
 
   .admin-mini-job {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-graph-row {
     grid-template-columns: 1fr;
   }
 

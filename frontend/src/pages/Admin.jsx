@@ -3,6 +3,7 @@ import {
   fetchTelegramJobs,
   loadStoredAnalysis,
   loadStoredProfile,
+  loadStoredQuizHistory,
   loadStoredQuizProgress,
   loadStoredRecommendations,
 } from '../api/recommend.js'
@@ -14,6 +15,8 @@ import {
 } from '../data/mockData.js'
 
 const adminTabs = ['Overview', 'Profile', 'Matching', 'Learning', 'Resume', 'Telegram']
+const profilePages = ['Quiz Intake', 'Match Graph', 'Completion Detail', 'Quiz Prompts']
+const ADMIN_QUIZ_PROMPTS_STORAGE_KEY = 'adminQuizPrompts'
 
 const defaultChannels = [
   '@freelance_ethio',
@@ -62,21 +65,6 @@ function getProfileSkills(profile) {
       profile?.skills ||
       Object.keys(profile?.skill_scores || {}),
   )
-}
-
-function getSkillLevel(profile, skill) {
-  const levels = profile?.skill_levels || profile?.skillScores || {}
-  const value = levels[skill] ?? profile?.skill_scores?.[skill]
-
-  if (value === null || value === undefined || value === '') {
-    return 'Mapped'
-  }
-
-  if (typeof value === 'number') {
-    return value <= 1 ? `${Math.round(value * 100)}%` : `${Math.round(value)}%`
-  }
-
-  return formatLabel(value)
 }
 
 function groupFallbackResources(resources) {
@@ -247,23 +235,123 @@ function getQuizSummary(profile, progress) {
   }
 }
 
-function getStrongestSkills(profile, skills) {
-  const scores = profile?.skill_scores || {}
+function normalizePrompt(question, index) {
+  return {
+    id: question.id || `prompt-${index + 1}`,
+    stem: question.stem || question.text || '',
+    options: Array.isArray(question.options) ? question.options.map(String) : [],
+    status: 'Live',
+    updated: 'Local draft',
+  }
+}
 
-  return skills
-    .map((skill) => {
-      const value = Number(scores[skill])
-      return {
-        skill,
-        score: Number.isFinite(value) ? Math.round(value <= 1 ? value * 100 : value) : null,
+function getDefaultQuizPrompts() {
+  return fallbackQuestions.map((question, index) => normalizePrompt(question, index))
+}
+
+function normalizeStoredPrompt(prompt, index) {
+  const source = prompt || {}
+  const basePrompt = normalizePrompt(source, index)
+
+  return {
+    ...basePrompt,
+    status: source.status || basePrompt.status,
+    updated: source.updated || basePrompt.updated,
+  }
+}
+
+function loadAdminQuizPrompts() {
+  if (typeof window === 'undefined') {
+    return getDefaultQuizPrompts()
+  }
+
+  try {
+    const raw = localStorage.getItem(ADMIN_QUIZ_PROMPTS_STORAGE_KEY)
+    if (!raw) {
+      return getDefaultQuizPrompts()
+    }
+
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) {
+      return getDefaultQuizPrompts()
+    }
+
+    return parsed.map((prompt, index) => normalizeStoredPrompt(prompt, index))
+  } catch {
+    return getDefaultQuizPrompts()
+  }
+}
+
+function saveAdminQuizPrompts(prompts) {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  try {
+    localStorage.setItem(ADMIN_QUIZ_PROMPTS_STORAGE_KEY, JSON.stringify(prompts))
+  } catch {
+    // Admin prompt edits can still work for the current session if browser storage is unavailable.
+  }
+}
+
+function getAttemptProfile(attempt) {
+  return attempt?.profile || {}
+}
+
+function getAttemptProgress(attempt) {
+  return attempt?.progress || {}
+}
+
+function getAttemptJobs(attempt) {
+  return Array.isArray(attempt?.jobs) ? attempt.jobs : []
+}
+
+function buildMatchGraphRows(attempts, fallbackJobs) {
+  const rows = new Map()
+  const sourceAttempts = attempts.length
+    ? attempts
+    : [{ id: 'current-matches', jobs: fallbackJobs }]
+
+  sourceAttempts.forEach((attempt) => {
+    getAttemptJobs(attempt).forEach((job) => {
+      const title = getJobTitle(job)
+      const score = getJobMatch(job)
+
+      if (!title || score === null) {
+        return
       }
+
+      const current = rows.get(title) || {
+        title,
+        category: getJobCategory(job),
+        count: 0,
+        scoreTotal: 0,
+        maxScore: 0,
+      }
+
+      current.count += 1
+      current.scoreTotal += score
+      current.maxScore = Math.max(current.maxScore, score)
+      rows.set(title, current)
     })
-    .sort((left, right) => (right.score ?? -1) - (left.score ?? -1))
+  })
+
+  return [...rows.values()]
+    .map((row) => ({
+      ...row,
+      averageScore: Math.round(row.scoreTotal / Math.max(row.count, 1)),
+    }))
+    .sort((left, right) => right.averageScore - left.averageScore)
+    .slice(0, 8)
 }
 
 function Admin() {
   const [activeTab, setActiveTab] = useState(adminTabs[0])
+  const [activeProfilePage, setActiveProfilePage] = useState(profilePages[0])
   const [jobSearch, setJobSearch] = useState('')
+  const [quizPrompts, setQuizPrompts] = useState(loadAdminQuizPrompts)
+  const [editingPromptId, setEditingPromptId] = useState('')
+  const [promptDraft, setPromptDraft] = useState({ stem: '', optionsText: '' })
   const [telegramState, setTelegramState] = useState({
     error: '',
     isLoading: true,
@@ -274,6 +362,7 @@ function Admin() {
   const profile = loadStoredProfile()
   const recommendations = loadStoredRecommendations() || []
   const analysis = loadStoredAnalysis()
+  const quizHistory = loadStoredQuizHistory()
   const quizProgress = loadStoredQuizProgress()
   const resumeCoaching = loadCachedResumeTips()
 
@@ -293,7 +382,45 @@ function Admin() {
   const resources = flattenResourceGroups(resourceGroups)
   const topMissingSkills = uniqueItems(visibleRecommendations.flatMap(getMissingSkills)).slice(0, 6)
   const topMatchedJobs = getTopMatchedJobs(visibleRecommendations)
-  const strongestSkills = getStrongestSkills(profile, profileSkills).slice(0, 4)
+  const currentQuizAttempt = profile || quizProgress
+    ? {
+        id: profile?.session_id || 'active-session',
+        completed_at: profile?.session_id ? 'Current quiz session' : 'In progress',
+        profile,
+        progress: quizProgress,
+        jobs: visibleRecommendations,
+        isCurrent: true,
+      }
+    : null
+  const quizAttempts = [
+    ...(currentQuizAttempt ? [currentQuizAttempt] : []),
+    ...quizHistory.filter((attempt) => attempt?.id !== currentQuizAttempt?.id),
+  ]
+  const matchGraphRows = buildMatchGraphRows(quizAttempts, visibleRecommendations)
+  const quizAttemptSummaries = quizAttempts.map((attempt, index) => {
+    const attemptProfile = getAttemptProfile(attempt)
+    const attemptProgress = getAttemptProgress(attempt)
+    const attemptSkills = getProfileSkills(attemptProfile)
+    const summary = getQuizSummary(attemptProfile, attemptProgress)
+    const jobs = getAttemptJobs(attempt)
+    const bestJob = getTopMatchedJobs(jobs, 1)[0]
+
+    return {
+      id: attempt.id || `attempt-${index + 1}`,
+      label: attempt.isCurrent ? 'Current session' : `Quiz ${index + 1}`,
+      completedAt: attempt.completed_at || 'Saved attempt',
+      source: attempt.isCurrent ? 'Active browser session' : 'Saved local history',
+      skills: attemptSkills.length,
+      answered: summary.answered,
+      estimated: summary.estimated,
+      role: summary.detectedRole || attemptProfile.target_role || attemptProfile.top_category,
+      confidence: summary.confidence,
+      bestJob,
+      jobs: jobs.length,
+    }
+  })
+  const totalQuizAnswers = quizAttemptSummaries.reduce((total, attempt) => total + attempt.answered, 0)
+  const profilesWithSkills = quizAttemptSummaries.filter((attempt) => attempt.skills > 0).length
 
   const filteredJobs = visibleRecommendations.filter((job) =>
     `${getJobTitle(job)} ${getJobCompany(job)} ${getJobCategory(job)}`
@@ -464,6 +591,50 @@ function Admin() {
       detail: formatLabel(quizSummary.difficulty),
     },
   ]
+  const startPromptEdit = (prompt) => {
+    setEditingPromptId(prompt.id)
+    setPromptDraft({
+      stem: prompt.stem,
+      optionsText: prompt.options.join('\n'),
+    })
+  }
+  const cancelPromptEdit = () => {
+    setEditingPromptId('')
+    setPromptDraft({ stem: '', optionsText: '' })
+  }
+  const updatePrompt = () => {
+    const normalizedOptions = promptDraft.optionsText
+      .split('\n')
+      .map((option) => option.trim())
+      .filter(Boolean)
+
+    setQuizPrompts((prompts) => {
+      const nextPrompts = prompts.map((prompt) =>
+        prompt.id === editingPromptId
+          ? {
+              ...prompt,
+              stem: promptDraft.stem.trim() || prompt.stem,
+              options: normalizedOptions.length ? normalizedOptions : prompt.options,
+              updated: 'Saved locally',
+            }
+          : prompt,
+      )
+
+      saveAdminQuizPrompts(nextPrompts)
+      return nextPrompts
+    })
+    cancelPromptEdit()
+  }
+  const deletePrompt = (promptId) => {
+    setQuizPrompts((prompts) => {
+      const nextPrompts = prompts.filter((prompt) => prompt.id !== promptId)
+      saveAdminQuizPrompts(nextPrompts)
+      return nextPrompts
+    })
+    if (editingPromptId === promptId) {
+      cancelPromptEdit()
+    }
+  }
 
   return (
     <section className="admin-page">
@@ -571,222 +742,247 @@ function Admin() {
       )}
 
       {activeTab === 'Profile' && (
-        <section className="admin-panel">
+        <section className="admin-panel admin-profile-page">
           <div className="admin-panel-heading">
-            <span>Profile intake</span>
-            <strong>{profileSkills.length ? `${profileSkills.length} mapped skills` : 'Not started'}</strong>
+            <span>Profile workspace</span>
+            <strong>{activeProfilePage}</strong>
           </div>
 
-          <div className="admin-inline-grid">
-            <article>
-              <span>Target role</span>
-              <strong>{formatLabel(profile?.target_role || profile?.top_category || profile?.category)}</strong>
-            </article>
-            <article>
-              <span>Experience</span>
-              <strong>{formatLabel(profile?.experience_level || profile?.experience)}</strong>
-            </article>
-            <article>
-              <span>Location</span>
-              <strong>{formatLabel(profile?.location, 'Remote-friendly')}</strong>
-            </article>
-            <article>
-              <span>Source</span>
-              <strong>{formatLabel(profile?.source, profile ? 'Manual' : 'Pending')}</strong>
-            </article>
+          <div className="admin-subtabs" role="tablist" aria-label="Profile admin pages">
+            {profilePages.map((page) => (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeProfilePage === page}
+                className={activeProfilePage === page ? 'is-active' : ''}
+                key={page}
+                onClick={() => setActiveProfilePage(page)}
+              >
+                {page}
+              </button>
+            ))}
           </div>
 
-          <div className="admin-profile-dashboard">
-            <div className="admin-stat-grid">
-              <article>
-                <span>Best matched job</span>
-                <strong>{topMatchedJobs[0] ? getJobTitle(topMatchedJobs[0]) : 'No match yet'}</strong>
-                <small>
-                  {topMatchedJobs[0] && getJobMatch(topMatchedJobs[0]) !== null
-                    ? `${getJobMatch(topMatchedJobs[0])}% match`
-                    : recommendationSource}
-                </small>
-              </article>
-
-              <article>
-                <span>Answered questions</span>
-                <strong>{quizSummary.answered}</strong>
-                <small>{quizSummary.estimated} estimated total</small>
-              </article>
-
-              <article>
-                <span>Most filled area</span>
-                <strong>{mostFilledItem?.label || 'Pending'}</strong>
-                <small>{mostFilledItem ? `${mostFilledItem.score}% complete` : 'No data'}</small>
-              </article>
-
-              <article>
-                <span>Analysis readiness</span>
-                <strong>{gaps.length ? `${gaps.length} gaps` : 'Pending'}</strong>
-                <small>{resources.length} learning resources</small>
-              </article>
-            </div>
-
-            <div className="admin-dashboard-grid">
-              <section className="admin-dashboard-card">
-                <div className="admin-panel-heading">
-                  <span>Most matched jobs</span>
-                  <strong>{recommendationSource}</strong>
-                </div>
-
-                <div className="admin-match-list">
-                  {topMatchedJobs.map((job) => {
-                    const match = getJobMatch(job)
-                    const missingSkills = getMissingSkills(job)
-
-                    return (
-                      <article className="admin-mini-job" key={job.id || job.job_id || getJobTitle(job)}>
-                        <div>
-                          <strong>{getJobTitle(job)}</strong>
-                          <span>{getJobCompany(job)}</span>
-                        </div>
-                        <div>
-                          <span className={match === null ? statusClass('Pending') : `match-badge ${getMatchClass(match)}`}>
-                            {match === null ? 'Pending' : `${match}%`}
-                          </span>
-                          <small>{missingSkills.length ? `${missingSkills.length} gaps` : 'No gaps'}</small>
-                        </div>
-                      </article>
-                    )
-                  })}
-                </div>
-              </section>
-
-              <section className="admin-dashboard-card">
-                <div className="admin-panel-heading">
+          {activeProfilePage === 'Quiz Intake' && (
+            <div className="admin-profile-dashboard">
+              <div className="admin-stat-grid">
+                <article>
+                  <span>Taken quizzes</span>
+                  <strong>{quizAttemptSummaries.length}</strong>
+                  <small>{quizHistory.length} saved history</small>
+                </article>
+                <article>
                   <span>Answered questions</span>
-                  <strong>{quizSummary.percent}% mapped</strong>
-                </div>
+                  <strong>{totalQuizAnswers}</strong>
+                  <small>Across cached quizzes</small>
+                </article>
+                <article>
+                  <span>Profiles with skills</span>
+                  <strong>{profilesWithSkills}</strong>
+                  <small>{profileSkills.length} current skills</small>
+                </article>
+                <article>
+                  <span>Current source</span>
+                  <strong>{formatLabel(profile?.source, profile ? 'Manual' : 'Pending')}</strong>
+                  <small>{recommendationSource}</small>
+                </article>
+              </div>
 
-                <div className="admin-progress-meter" aria-label={`Quiz progress ${quizSummary.percent}%`}>
-                  <span style={{ width: `${quizSummary.percent}%` }}></span>
-                </div>
+              {quizAttemptSummaries.length ? (
+                <div className="admin-table" role="table" aria-label="Profile intake for all taken quizzes">
+                  <div className="admin-table-row admin-table-head" role="row">
+                    <span>Quiz</span>
+                    <span>Role</span>
+                    <span>Answers</span>
+                    <span>Skills</span>
+                    <span>Best match</span>
+                  </div>
 
-                <div className="pipeline-list">
-                  <div>
-                    <span>Questions</span>
-                    <strong>{quizSummary.answered} / {quizSummary.estimated}</strong>
-                  </div>
-                  <div>
-                    <span>Detected role</span>
-                    <strong>{formatLabel(quizSummary.detectedRole)}</strong>
-                  </div>
-                  <div>
-                    <span>Difficulty reached</span>
-                    <strong>{formatLabel(quizSummary.difficulty)}</strong>
-                  </div>
-                </div>
-
-                <div className="admin-skill-list">
-                  {Object.entries(quizSummary.performanceCounts)
-                    .filter(([, count]) => Number(count) > 0)
-                    .map(([label, count]) => (
-                      <span className="chip chip-blue" key={label}>
-                        {formatLabel(label)} {count}
+                  {quizAttemptSummaries.map((attempt) => (
+                    <div className="admin-table-row" role="row" key={attempt.id}>
+                      <span>
+                        <strong>{attempt.label}</strong>
+                        <small>{attempt.source} / {attempt.completedAt}</small>
                       </span>
-                    ))}
-                  {!Object.values(quizSummary.performanceCounts).some((count) => Number(count) > 0) && (
-                    <span className="chip chip-blue">No answers cached</span>
-                  )}
-                </div>
-              </section>
-
-              <section className="admin-dashboard-card">
-                <div className="admin-panel-heading">
-                  <span>Most filled quiz or jobs</span>
-                  <strong>{mostFilledItem ? `${mostFilledItem.score}%` : 'Pending'}</strong>
-                </div>
-
-                <div className="admin-progress-list">
-                  {completionItems.map((item) => (
-                    <div className="admin-progress-row" key={item.label}>
-                      <div>
-                        <span>{item.label}</span>
-                        <strong>{item.value}</strong>
-                      </div>
-                      <div className="admin-progress-meter" aria-label={`${item.label} ${item.score}%`}>
-                        <span style={{ width: `${item.score}%` }}></span>
-                      </div>
+                      <span>{formatLabel(attempt.role)}</span>
+                      <span>{attempt.answered} / {attempt.estimated}</span>
+                      <span>{attempt.skills}</span>
+                      <span>{attempt.bestJob ? `${getJobTitle(attempt.bestJob)} (${getJobMatch(attempt.bestJob)}%)` : `${attempt.jobs} matches`}</span>
                     </div>
                   ))}
                 </div>
-              </section>
-
-              <section className="admin-dashboard-card">
-                <div className="admin-panel-heading">
-                  <span>Additional analysis</span>
-                  <strong>{formatLabel(quizSummary.detectedDomain, 'Profile signal')}</strong>
+              ) : (
+                <div className="admin-empty">
+                  No quiz attempts are stored yet. Completed quizzes will appear here for admin review.
                 </div>
-
-                <div className="admin-analysis-list">
-                  {analysisNotes.map((item) => (
-                    <article key={item.label}>
-                      <span>{item.label}</span>
-                      <strong>{item.value}</strong>
-                      <small>{item.detail}</small>
-                    </article>
-                  ))}
-                </div>
-
-                <div className="admin-panel-divider"></div>
-
-                <div className="admin-skill-list">
-                  {(strongestSkills.length ? strongestSkills : topMissingSkills.map((skill) => ({ skill, score: null }))).slice(0, 4).map((item) => (
-                    <span className={item.score === null ? 'chip chip-coral' : 'chip chip-blue'} key={item.skill}>
-                      {formatLabel(item.skill)}{item.score === null ? '' : ` ${item.score}%`}
-                    </span>
-                  ))}
-                  {!strongestSkills.length && !topMissingSkills.length && (
-                    <span className="chip chip-blue">No signal yet</span>
-                  )}
-                </div>
-              </section>
-            </div>
-          </div>
-
-          {profileSkills.length ? (
-            <div className="admin-profile-grid">
-              {profileSkills.map((skill) => (
-                <article className="admin-skill-row" key={skill}>
-                  <strong>{formatLabel(skill)}</strong>
-                  <span>{getSkillLevel(profile, skill)}</span>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="admin-empty">
-              Complete the quiz or manual profile first. The admin page will then reflect the same
-              canonical profile used by recommendations, learning, and resume guidance.
+              )}
             </div>
           )}
 
-          <div className="admin-panel-divider"></div>
+          {activeProfilePage === 'Match Graph' && (
+            <div className="admin-profile-dashboard">
+              <div className="admin-panel-heading">
+                <span>Most matched jobs across quizzes</span>
+                <strong>{matchGraphRows.length} roles</strong>
+              </div>
 
-          <div className="admin-panel-heading">
-            <span>Quiz prompt coverage</span>
-            <strong>{fallbackQuestions.length} fallback prompts</strong>
-          </div>
+              <div className="admin-match-graph" aria-label="Most matched jobs graph">
+                {matchGraphRows.map((row) => (
+                  <article className="admin-graph-row" key={row.title}>
+                    <div className="admin-graph-copy">
+                      <strong>{row.title}</strong>
+                      <span>{row.category} / seen {row.count}x / peak {row.maxScore}%</span>
+                    </div>
+                    <div className="admin-graph-track" aria-label={`${row.title} average match ${row.averageScore}%`}>
+                      <span style={{ width: `${row.averageScore}%` }}></span>
+                    </div>
+                    <strong className="admin-graph-score">{row.averageScore}%</strong>
+                  </article>
+                ))}
+              </div>
 
-          <div className="question-review-list">
-            {fallbackQuestions.slice(0, 4).map((question) => (
-              <article className="question-review-card" key={question.id}>
-                <div>
-                  <span className="chip chip-blue">Assessment</span>
-                  <h2>{question.stem}</h2>
-                  <p>{question.options.slice(0, 2).join(' / ')}</p>
+              {!matchGraphRows.length && (
+                <div className="admin-empty">
+                  No match scores are available yet. Run quizzes or recommendations to populate this graph.
                 </div>
+              )}
+            </div>
+          )}
 
-                <div className="question-review-actions">
-                  <span className={statusClass('Live')}>Live</span>
-                </div>
-              </article>
-            ))}
-          </div>
+          {activeProfilePage === 'Completion Detail' && (
+            <div className="admin-profile-dashboard">
+              <div className="admin-dashboard-grid">
+                <section className="admin-dashboard-card">
+                  <div className="admin-panel-heading">
+                    <span>Most filled quiz or jobs</span>
+                    <strong>{mostFilledItem ? `${mostFilledItem.score}%` : 'Pending'}</strong>
+                  </div>
+
+                  <div className="admin-progress-list">
+                    {completionItems.map((item) => (
+                      <div className="admin-progress-row" key={item.label}>
+                        <div>
+                          <span>{item.label}</span>
+                          <strong>{item.value}</strong>
+                        </div>
+                        <div className="admin-progress-meter" aria-label={`${item.label} ${item.score}%`}>
+                          <span style={{ width: `${item.score}%` }}></span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                <section className="admin-dashboard-card">
+                  <div className="admin-panel-heading">
+                    <span>Profile field detail</span>
+                    <strong>{filledProfileFields} / {profileFillItems.length} filled</strong>
+                  </div>
+
+                  <div className="admin-progress-list">
+                    {profileFillItems.map((item) => (
+                      <div className="admin-progress-row" key={item.label}>
+                        <div>
+                          <span>{item.label}</span>
+                          <strong>{item.value}</strong>
+                        </div>
+                        <div className="admin-progress-meter" aria-label={`${item.label} ${item.score}%`}>
+                          <span style={{ width: `${item.score}%` }}></span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              </div>
+
+              <div className="admin-analysis-list">
+                {analysisNotes.map((item) => (
+                  <article key={item.label}>
+                    <span>{item.label}</span>
+                    <strong>{item.value}</strong>
+                    <small>{item.detail}</small>
+                  </article>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeProfilePage === 'Quiz Prompts' && (
+            <div className="admin-profile-dashboard">
+              <div className="admin-panel-heading">
+                <span>Quiz prompt coverage</span>
+                <strong>{quizPrompts.length} prompts</strong>
+              </div>
+
+              <div className="question-review-list">
+                {quizPrompts.map((prompt) => {
+                  const isEditing = editingPromptId === prompt.id
+
+                  return (
+                    <article className="question-review-card" key={prompt.id}>
+                      {isEditing ? (
+                        <div className="admin-prompt-editor">
+                          <label>
+                            Prompt
+                            <textarea
+                              value={promptDraft.stem}
+                              onChange={(event) => setPromptDraft((draft) => ({
+                                ...draft,
+                                stem: event.target.value,
+                              }))}
+                            />
+                          </label>
+                          <label>
+                            Options
+                            <textarea
+                              value={promptDraft.optionsText}
+                              onChange={(event) => setPromptDraft((draft) => ({
+                                ...draft,
+                                optionsText: event.target.value,
+                              }))}
+                            />
+                          </label>
+                        </div>
+                      ) : (
+                        <div>
+                          <span className="chip chip-blue">{prompt.status}</span>
+                          <h2>{prompt.stem}</h2>
+                          <p>{prompt.options.join(' / ')}</p>
+                          <small className="admin-small-note">{prompt.updated}</small>
+                        </div>
+                      )}
+
+                      <div className="question-review-actions">
+                        {isEditing ? (
+                          <>
+                            <button className="button button-primary" type="button" onClick={updatePrompt}>
+                              Update
+                            </button>
+                            <button className="button button-ghost" type="button" onClick={cancelPromptEdit}>
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button className="button button-ghost" type="button" onClick={() => startPromptEdit(prompt)}>
+                              Edit
+                            </button>
+                            <button className="button button-ghost" type="button" onClick={() => deletePrompt(prompt.id)}>
+                              Delete
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </article>
+                  )
+                })}
+              </div>
+
+              {!quizPrompts.length && (
+                <div className="admin-empty">All local quiz prompts have been removed from this admin view.</div>
+              )}
+            </div>
+          )}
         </section>
       )}
 
