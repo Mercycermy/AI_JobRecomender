@@ -12,16 +12,10 @@ import {
   persistAnalysis,
   persistRecommendationSession,
 } from '../api/recommend.js'
-import {
-  fallbackQuestions,
-  jobRecommendations as fallbackJobRecommendations,
-  learningResources as fallbackLearningResources,
-  resumeTips as fallbackResumeTips,
-} from '../data/mockData.js'
-
 const adminTabs = ['Overview', 'Profile', 'Matching', 'Learning', 'Resume', 'Telegram']
 const profilePages = ['Quiz Intake', 'Match Graph', 'Completion Detail', 'Quiz Prompts']
 const ADMIN_QUIZ_PROMPTS_STORAGE_KEY = 'adminQuizPrompts'
+const ADMIN_RESOURCES_STORAGE_KEY = 'adminLearningResources'
 const WORK_TYPE_OPTIONS = [
   {
     id: 'SOFTWARE',
@@ -105,6 +99,24 @@ const EMPTY_PROMPT_DRAFT = {
   stem: '',
   optionsText: '',
 }
+const EMPTY_RESOURCE_DRAFT = {
+  skill: '',
+  title: '',
+  platform: '',
+  level: '',
+  hours: '',
+  url: '',
+}
+const MAIN_WORK_TYPE_PROMPTS = [
+  {
+    id: 'main-work-type-router',
+    role: DEFAULT_QUIZ_ROLE,
+    stem: 'What best describes the kind of work you do or want to do?',
+    options: WORK_TYPE_OPTIONS.map((item) => item.label),
+    status: 'Live',
+    updated: 'Main quiz router',
+  },
+]
 
 const defaultChannels = [
   '@freelance_ethio',
@@ -206,18 +218,61 @@ function getProfileSkills(profile) {
   )
 }
 
-function groupFallbackResources(resources) {
-  const groups = new Map()
+function normalizeResource(resource, index) {
+  const source = resource || {}
+  const title = source.title || source.name || ''
+  const skill = source.skill || source.skill_name || source.work_type || ''
 
-  resources.forEach((resource) => {
-    const skill = resource.skill || 'Recommended'
-    if (!groups.has(skill)) {
-      groups.set(skill, { skill, resources: [] })
-    }
-    groups.get(skill).resources.push(resource)
-  })
+  return {
+    id: source.id || source.resource_id || `resource-${index + 1}-${normalizeText(title || skill || 'item')}`,
+    skill,
+    title,
+    platform: source.platform || source.source || '',
+    level: source.level || source.gap_priority || '',
+    hours: source.hours ?? source.duration ?? '',
+    url: source.url || source.link || '',
+    recommendation_score: source.recommendation_score,
+    updated: source.updated || 'Saved locally',
+  }
+}
 
-  return [...groups.values()]
+function hasStoredAdminResources() {
+  if (typeof window === 'undefined') {
+    return false
+  }
+
+  return localStorage.getItem(ADMIN_RESOURCES_STORAGE_KEY) !== null
+}
+
+function loadAdminResources() {
+  if (typeof window === 'undefined') {
+    return []
+  }
+
+  try {
+    const raw = localStorage.getItem(ADMIN_RESOURCES_STORAGE_KEY)
+    const parsed = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? parsed.map(normalizeResource) : []
+  } catch {
+    return []
+  }
+}
+
+function saveAdminResources(resources) {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  try {
+    localStorage.setItem(ADMIN_RESOURCES_STORAGE_KEY, JSON.stringify(resources))
+  } catch {
+    // Resource edits remain in component state when local storage is unavailable.
+  }
+}
+
+function createResourceId(title) {
+  const slug = normalizeText(title).replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+  return `resource-${slug || 'item'}-${Date.now()}`
 }
 
 function flattenResourceGroups(groups = []) {
@@ -228,20 +283,6 @@ function flattenResourceGroups(groups = []) {
       skill_id: resource.skill_id || group.skill_id,
     })),
   )
-}
-
-function getResourcesForSignals(resources, signals) {
-  if (!signals.length) {
-    return []
-  }
-
-  return resources.filter((resource) => {
-    const resourceSignal = normalizeText(resource.skill || resource.title)
-    return signals.some((signal) => {
-      const normalizedSignal = normalizeText(signal)
-      return resourceSignal.includes(normalizedSignal) || normalizedSignal.includes(resourceSignal)
-    })
-  })
 }
 
 function getDerivedGaps(signals) {
@@ -335,7 +376,7 @@ function getGapPriority(gap) {
 }
 
 function getResumeSectionCount(coaching) {
-  return coaching?.tips?.length || fallbackResumeTips.length
+  return coaching?.tips?.length || 0
 }
 
 function formatPercent(value, fallback = 'Pending') {
@@ -398,13 +439,13 @@ function getProfileFillItems(profile, skills) {
 
 function getQuizSummary(profile, progress) {
   const answered = Number(progress?.questions_answered ?? profile?.question_count ?? 0)
-  const estimated = Number(progress?.estimated_total ?? (answered ? Math.max(answered, 12) : fallbackQuestions.length))
+  const estimated = Number(progress?.estimated_total ?? (answered ? Math.max(answered, 12) : 0))
   const percent = Number(progress?.percent ?? (estimated ? (answered / estimated) * 100 : 0))
   const confidence = progress?.confidence ?? profile?.confidence
 
   return {
     answered: Number.isFinite(answered) ? answered : 0,
-    estimated: Number.isFinite(estimated) && estimated > 0 ? estimated : fallbackQuestions.length,
+    estimated: Number.isFinite(estimated) && estimated > 0 ? estimated : 0,
     percent: Number.isFinite(percent) ? Math.min(100, Math.round(percent)) : 0,
     confidence,
     detectedDomain: progress?.detected_domain || profile?.detected_domain,
@@ -437,7 +478,7 @@ function normalizePrompt(question, index) {
 }
 
 function getDefaultQuizPrompts() {
-  return fallbackQuestions.map((question, index) => normalizePrompt(question, index))
+  return MAIN_WORK_TYPE_PROMPTS.map((question, index) => normalizePrompt(question, index))
 }
 
 function normalizeStoredPrompt(prompt, index) {
@@ -519,11 +560,11 @@ function getAttemptWorkType(attempt) {
   )
 }
 
-function buildMatchGraphRows(attempts, fallbackJobs) {
+function buildMatchGraphRows(attempts, defaultJobs) {
   const rows = new Map()
   const sourceAttempts = attempts.length
     ? attempts
-    : [{ id: 'current-matches', jobs: fallbackJobs }]
+    : [{ id: 'current-matches', jobs: defaultJobs }]
 
   sourceAttempts.forEach((attempt) => {
     const attemptJobs = getAttemptJobs(attempt)
@@ -604,6 +645,10 @@ function Admin() {
   const [analysis, setAnalysis] = useState(() => loadStoredAnalysis())
   const [resumeCoaching, setResumeCoaching] = useState(() => loadCachedResumeTips())
   const [storedRecommendations, setStoredRecommendations] = useState(() => loadStoredRecommendations() || [])
+  const [managedResources, setManagedResources] = useState(loadAdminResources)
+  const [hasManagedResourceStore, setHasManagedResourceStore] = useState(hasStoredAdminResources)
+  const [editingResourceId, setEditingResourceId] = useState('')
+  const [resourceDraft, setResourceDraft] = useState({ ...EMPTY_RESOURCE_DRAFT })
   const [telegramState, setTelegramState] = useState({
     error: '',
     isLoading: true,
@@ -618,9 +663,7 @@ function Admin() {
 
   const currentProfileSkills = getProfileSkills(profile)
   const currentQuizSummary = getQuizSummary(profile, quizProgress)
-  const visibleRecommendations = recommendations.length
-    ? recommendations
-    : fallbackJobRecommendations
+  const visibleRecommendations = recommendations
   const currentQuizAttempt = profile || quizProgress
     ? {
         id: profile?.session_id || 'active-session',
@@ -644,7 +687,7 @@ function Admin() {
     ? 'Stored quiz history'
     : recommendations.length
       ? 'Current session'
-      : 'Demo catalog'
+      : 'Awaiting AI'
   const matchGraphRows = buildMatchGraphRows(quizAttempts, visibleRecommendations)
   const quizAttemptSummaries = quizAttempts.map((attempt, index) => {
     const attemptProfile = getAttemptProfile(attempt)
@@ -762,24 +805,24 @@ function Admin() {
   const topMissingSkills = uniqueItems(aggregateRecommendations.flatMap(getMissingSkills)).slice(0, 6)
   const derivedGaps = getDerivedGaps(topMissingSkills)
   const gaps = analysis?.gaps?.length ? analysis.gaps : derivedGaps
-  const resourcesForSignals = getResourcesForSignals(fallbackLearningResources, topMissingSkills)
-  const resourceGroups = analysis?.resources?.length
-    ? analysis.resources
-    : resourcesForSignals.length
-      ? groupFallbackResources(resourcesForSignals)
-      : groupFallbackResources(fallbackLearningResources)
-  const resources = flattenResourceGroups(resourceGroups)
+  const aiResourceRows = analysis?.resources?.length ? flattenResourceGroups(analysis.resources) : []
+  const aiResources = aiResourceRows.map(normalizeResource)
+  const resources = hasManagedResourceStore ? managedResources : aiResources
   const gapStatus = analysis?.gaps?.length ? 'AI ready' : derivedGaps.length ? 'Stored data' : 'Pending'
-  const learningStatus = analysis?.resources?.length
-    ? 'AI ready'
-    : resourcesForSignals.length
+  const learningStatus = hasManagedResourceStore
+    ? managedResources.length
       ? 'Stored data'
-      : 'Catalog'
+      : 'Needs resources'
+    : aiResourceRows.length
+      ? 'AI ready'
+      : profileSkills.length || quizAttempts.length
+        ? 'Awaiting AI'
+        : 'Needs profile'
   const resumeStatus = resumeCoaching
     ? 'AI ready'
     : profileSkills.length || quizAttempts.length
-      ? 'Ready'
-      : 'Template'
+      ? 'Awaiting AI'
+      : 'Needs profile'
   const topMatchedJobs = getTopMatchedJobs(aggregateRecommendations)
   const promptRoleOptions = uniqueItems([
     DEFAULT_QUIZ_ROLE,
@@ -963,7 +1006,7 @@ function Admin() {
     {
       label: 'Matches',
       value: `${aggregateJobCount || visibleRecommendations.length} recommendations`,
-      status: hasStoredRecommendations ? 'Stored data' : canBuildRecommendations ? 'Loading' : 'Demo',
+      status: hasStoredRecommendations ? 'Stored data' : canBuildRecommendations ? 'Loading' : 'Needs profile',
     },
     {
       label: 'Coverage gaps',
@@ -997,7 +1040,7 @@ function Admin() {
     {
       title: 'Job recommendations',
       route: '/results',
-      status: hasStoredRecommendations ? 'Stored data' : canBuildRecommendations ? 'Loading' : 'Demo',
+      status: hasStoredRecommendations ? 'Stored data' : canBuildRecommendations ? 'Loading' : 'Needs profile',
       detail: hasStoredRecommendations
         ? 'Rolls up stored AI recommendations and match scores by the broad work type selected in the main quiz.'
         : 'Uses the stored profile to request AI recommendations before falling back to demo data.',
@@ -1162,6 +1205,55 @@ function Admin() {
     })
     if (editingPromptId === promptId) {
       cancelPromptEdit()
+    }
+  }
+  const startResourceEdit = (resource) => {
+    setEditingResourceId(resource.id)
+    setResourceDraft({
+      skill: resource.skill || '',
+      title: resource.title || '',
+      platform: resource.platform || '',
+      level: resource.level || '',
+      hours: resource.hours || '',
+      url: resource.url || '',
+    })
+  }
+  const cancelResourceEdit = () => {
+    setEditingResourceId('')
+    setResourceDraft({ ...EMPTY_RESOURCE_DRAFT })
+  }
+  const saveResource = (event) => {
+    event.preventDefault()
+
+    const title = resourceDraft.title.trim()
+    if (!title) {
+      return
+    }
+
+    const resource = normalizeResource({
+      id: editingResourceId || createResourceId(title),
+      ...resourceDraft,
+      title,
+      updated: editingResourceId ? 'Updated locally' : 'Added locally',
+    }, resources.length)
+
+    const nextResources = editingResourceId
+      ? resources.map((item) => (item.id === editingResourceId ? resource : item))
+      : [resource, ...resources]
+
+    setManagedResources(nextResources)
+    saveAdminResources(nextResources)
+    setHasManagedResourceStore(true)
+    cancelResourceEdit()
+  }
+  const deleteResource = (resourceId) => {
+    const nextResources = resources.filter((resource) => resource.id !== resourceId)
+
+    setManagedResources(nextResources)
+    saveAdminResources(nextResources)
+    setHasManagedResourceStore(true)
+    if (editingResourceId === resourceId) {
+      cancelResourceEdit()
     }
   }
 
@@ -1671,6 +1763,12 @@ function Admin() {
               )
             })}
           </div>
+
+          {!filteredJobs.length && (
+            <div className="admin-empty">
+              No real recommendations are stored yet. Complete the quiz or manual profile so AI recommendations can be generated.
+            </div>
+          )}
         </section>
       )}
 
@@ -1720,25 +1818,114 @@ function Admin() {
               <strong>{learningStatus}</strong>
             </div>
 
-            <div className="resource-admin-grid">
-              {resources.slice(0, 6).map((resource) => (
-                <article
-                  className="resource-admin-card"
-                  key={`${resource.skill}-${resource.resource_id || resource.title}`}
-                >
-                  <div>
-                    <span className={statusClass(resource.gap_priority || 'Verified')}>
-                      {resource.gap_priority || resource.level || 'Verified'}
-                    </span>
-                    <h2>{resource.title}</h2>
-                    <p>
-                      {resource.platform} / {formatLabel(resource.skill)}
-                    </p>
-                  </div>
-                  <strong>{resource.recommendation_score ?? resource.hours ?? '--'}</strong>
-                </article>
-              ))}
-            </div>
+            <form className="admin-role-quiz-form" onSubmit={saveResource}>
+              <div className="admin-role-quiz-form-grid">
+                <label>
+                  Coverage area
+                  <input
+                    value={resourceDraft.skill}
+                    onChange={(event) => setResourceDraft((draft) => ({
+                      ...draft,
+                      skill: event.target.value,
+                    }))}
+                  />
+                </label>
+                <label>
+                  Resource title
+                  <input
+                    value={resourceDraft.title}
+                    onChange={(event) => setResourceDraft((draft) => ({
+                      ...draft,
+                      title: event.target.value,
+                    }))}
+                  />
+                </label>
+                <label>
+                  Platform
+                  <input
+                    value={resourceDraft.platform}
+                    onChange={(event) => setResourceDraft((draft) => ({
+                      ...draft,
+                      platform: event.target.value,
+                    }))}
+                  />
+                </label>
+                <label>
+                  Level
+                  <input
+                    value={resourceDraft.level}
+                    onChange={(event) => setResourceDraft((draft) => ({
+                      ...draft,
+                      level: event.target.value,
+                    }))}
+                  />
+                </label>
+                <label>
+                  Hours
+                  <input
+                    value={resourceDraft.hours}
+                    onChange={(event) => setResourceDraft((draft) => ({
+                      ...draft,
+                      hours: event.target.value,
+                    }))}
+                  />
+                </label>
+                <label>
+                  URL
+                  <input
+                    value={resourceDraft.url}
+                    onChange={(event) => setResourceDraft((draft) => ({
+                      ...draft,
+                      url: event.target.value,
+                    }))}
+                  />
+                </label>
+              </div>
+
+              <div className="admin-role-quiz-actions">
+                <button className="button button-primary" type="submit" disabled={!resourceDraft.title.trim()}>
+                  {editingResourceId ? 'Update resource' : 'Add resource'}
+                </button>
+                {editingResourceId && (
+                  <button className="button button-ghost" type="button" onClick={cancelResourceEdit}>
+                    Cancel
+                  </button>
+                )}
+                <small>{resources.length} resources listed</small>
+              </div>
+            </form>
+
+            {resources.length ? (
+              <div className="question-review-list">
+                {resources.map((resource) => (
+                  <article className="question-review-card" key={resource.id}>
+                    <div>
+                      <span className="chip chip-blue">{resource.level || 'Resource'}</span>
+                      <h2>{resource.title}</h2>
+                      <p>
+                        {formatLabel(resource.skill, 'General coverage')} / {resource.platform || 'AI resource'}
+                      </p>
+                      <small className="admin-small-note">
+                        {resource.hours ? `${resource.hours} hours` : resource.recommendation_score ?? 'No duration'} / {resource.updated}
+                      </small>
+                    </div>
+
+                    <div className="question-review-actions">
+                      <button className="button button-ghost" type="button" onClick={() => startResourceEdit(resource)}>
+                        Edit
+                      </button>
+                      <button className="button button-ghost" type="button" onClick={() => deleteResource(resource.id)}>
+                        Delete
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="admin-empty">
+                No learning resources are stored yet. AI-generated resources will appear here, or add one manually.
+              </div>
+            )}
           </section>
         </div>
       )}
@@ -1788,21 +1975,27 @@ function Admin() {
 
           <div className="admin-panel-divider"></div>
 
-          <div className="tips-grid">
-            {(resumeCoaching?.tips?.length ? resumeCoaching.tips : fallbackResumeTips).map((section) => (
-              <article className="tips-section" key={section.section}>
-                <div className="tips-section-title">
-                  <span>{section.icon || 'AI'}</span>
-                  <h2>{section.section}</h2>
-                </div>
-                <ul>
-                  {(section.tips || []).slice(0, 3).map((tip) => (
-                    <li key={tip}>{tip}</li>
-                  ))}
-                </ul>
-              </article>
-            ))}
-          </div>
+          {resumeCoaching?.tips?.length ? (
+            <div className="tips-grid">
+              {resumeCoaching.tips.map((section) => (
+                <article className="tips-section" key={section.section}>
+                  <div className="tips-section-title">
+                    <span>{section.icon || 'AI'}</span>
+                    <h2>{section.section}</h2>
+                  </div>
+                  <ul>
+                    {(section.tips || []).slice(0, 3).map((tip) => (
+                      <li key={tip}>{tip}</li>
+                    ))}
+                  </ul>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="admin-empty">
+              No AI resume coaching is stored yet. Admin will request it when a real profile and recommendations are available.
+            </div>
+          )}
         </section>
       )}
 

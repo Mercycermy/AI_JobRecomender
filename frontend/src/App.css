@@ -1412,6 +1412,9 @@
 .admin-status-review,
 .admin-status-pending,
 .admin-status-loading,
+.admin-status-awaiting-ai,
+.admin-status-needs-profile,
+.admin-status-needs-resources,
 .admin-status-template,
 .admin-status-catalog,
 .admin-status-medium {
