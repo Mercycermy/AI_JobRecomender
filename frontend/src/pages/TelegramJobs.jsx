@@ -47,6 +47,20 @@ function hasUsableProfile(profile) {
   return Boolean(profile && skills?.length)
 }
 
+function formatRoleLabel(value) {
+  if (!value) {
+    return 'General'
+  }
+
+  return String(value)
+    .replace(/[_-]/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
+function uniqueItems(values = []) {
+  return [...new Set(values.filter(Boolean).map((value) => String(value)))]
+}
+
 function splitPosts(rawText, channel) {
   return rawText
     .split(/\n\s*\n/)
@@ -62,6 +76,8 @@ function splitPosts(rawText, channel) {
 function TelegramJobs() {
   const [jobs, setJobs] = useState([])
   const [query, setQuery] = useState('')
+  const [roleFilter, setRoleFilter] = useState('')
+  const [roleOptions, setRoleOptions] = useState([])
   const [channel, setChannel] = useState('telegram-channel')
   const [rawPosts, setRawPosts] = useState('')
   const [summary, setSummary] = useState(null)
@@ -71,35 +87,42 @@ function TelegramJobs() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isPersonalized, setIsPersonalized] = useState(false)
 
-  const loadJobs = useCallback(async (search = '') => {
+  const loadJobs = useCallback(async (search = '', role = roleFilter) => {
     setIsLoading(true)
     setError(null)
     try {
       const profile = loadStoredProfile()
       const payload = hasUsableProfile(profile)
-        ? await fetchTelegramJobMatches(profile, { query: search, limit: 60 })
-        : await fetchTelegramJobs({ query: search, limit: 60 })
+        ? await fetchTelegramJobMatches(profile, { query: search, role, limit: 60 })
+        : await fetchTelegramJobs({ query: search, role, limit: 60 })
       setIsPersonalized(hasUsableProfile(profile))
       setJobs(payload.jobs || [])
+      setRoleOptions((current) =>
+        uniqueItems([
+          ...current,
+          ...(payload.jobs || []).map((job) => job.category || job.role),
+        ]),
+      )
     } catch (err) {
       setError(err.message || 'Could not load Telegram jobs.')
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [roleFilter])
 
   useEffect(() => {
     let cancelled = false
     const profile = loadStoredProfile()
     const request = hasUsableProfile(profile)
-      ? fetchTelegramJobMatches(profile, { query: '', limit: 60 })
-      : fetchTelegramJobs({ query: '', limit: 60 })
+      ? fetchTelegramJobMatches(profile, { query: '', role: '', limit: 60 })
+      : fetchTelegramJobs({ query: '', role: '', limit: 60 })
 
     request
       .then((payload) => {
         if (!cancelled) {
           setIsPersonalized(hasUsableProfile(profile))
           setJobs(payload.jobs || [])
+          setRoleOptions(uniqueItems((payload.jobs || []).map((job) => job.category || job.role)))
         }
       })
       .catch((err) => {
@@ -120,7 +143,13 @@ function TelegramJobs() {
 
   const handleSearch = (event) => {
     event.preventDefault()
-    loadJobs(query)
+    loadJobs(query, roleFilter)
+  }
+
+  const handleRoleChange = (event) => {
+    const nextRole = event.target.value
+    setRoleFilter(nextRole)
+    loadJobs(query, nextRole)
   }
 
   const handleIngest = async (event) => {
@@ -136,7 +165,7 @@ function TelegramJobs() {
       const payload = await ingestTelegramJobs(posts)
       setSummary(payload)
       setRawPosts('')
-      await loadJobs(query)
+      await loadJobs(query, roleFilter)
     } catch (err) {
       setError(err.message || 'Could not ingest Telegram posts.')
     } finally {
@@ -150,7 +179,7 @@ function TelegramJobs() {
     try {
       const payload = await refreshTelegramJobs(defaultChannels, 12)
       setSummary(payload)
-      await loadJobs(query)
+      await loadJobs(query, roleFilter)
     } catch (err) {
       setError(err.message || 'Could not refresh Telegram channels.')
     } finally {
@@ -223,6 +252,15 @@ function TelegramJobs() {
             <label className="field-group">
               <span>Search</span>
               <input value={query} onChange={(event) => setQuery(event.target.value)} />
+            </label>
+            <label className="field-group">
+              <span>Role</span>
+              <select value={roleFilter} onChange={handleRoleChange}>
+                <option value="">All roles</option>
+                {roleOptions.map((role) => (
+                  <option value={role} key={role}>{formatRoleLabel(role)}</option>
+                ))}
+              </select>
             </label>
             <button className="button button-ghost" type="submit" disabled={isLoading}>
               {isLoading ? 'Searching...' : 'Search'}

@@ -188,10 +188,6 @@ function getWorkTypeLabel(value, fallback = DEFAULT_QUIZ_ROLE) {
   return aliasMatch?.label || fallback
 }
 
-function getWorkTypeOptionLabels() {
-  return WORK_TYPE_OPTIONS.map((item) => item.label)
-}
-
 function loadCachedResumeTips() {
   if (typeof window === 'undefined') {
     return null
@@ -368,6 +364,24 @@ function flattenResourceGroups(groups = []) {
       skill_id: resource.skill_id || group.skill_id,
     })),
   )
+}
+
+function mergeCatalogEntries(baseItems = [], overrideItems = []) {
+  const merged = new Map()
+
+  baseItems.forEach((item) => {
+    if (item?.id) {
+      merged.set(item.id, item)
+    }
+  })
+
+  overrideItems.forEach((item) => {
+    if (item?.id) {
+      merged.set(item.id, item)
+    }
+  })
+
+  return [...merged.values()]
 }
 
 function getDerivedGaps(signals) {
@@ -556,10 +570,6 @@ function getQuizSummary(profile, progress) {
   }
 }
 
-function normalizeRole(value, fallback = DEFAULT_QUIZ_ROLE) {
-  return getWorkTypeLabel(value, fallback)
-}
-
 function parsePromptOptions(optionsText) {
   return optionsText
     .split('\n')
@@ -654,8 +664,8 @@ function normalizeStoredPrompt(prompt, index) {
   const source = prompt || {}
   const basePrompt = normalizePrompt(source, index)
 
-    return {
-      ...basePrompt,
+  return {
+    ...basePrompt,
     role: normalizeQuizRole(source.role || basePrompt.role),
     role_targets: Array.isArray(source.role_targets) ? source.role_targets : basePrompt.role_targets,
     status: source.status || basePrompt.status,
@@ -695,11 +705,6 @@ function saveAdminQuizPrompts(prompts) {
   } catch {
     // Admin prompt edits can still work for the current session if browser storage is unavailable.
   }
-}
-
-function createPromptId(role) {
-  const roleSlug = role.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-  return `prompt-${roleSlug || 'role'}-${Date.now()}`
 }
 
 function getAttemptProfile(attempt) {
@@ -886,9 +891,9 @@ function Admin() {
       }
     : null
   const quizAttempts = [
-    ...(currentQuizAttempt ? [currentQuizAttempt] : []),
-    ...quizHistory.map((attempt) => ({ ...attempt, sourceLabel: 'Saved browser quiz' })),
     ...backendQuizAttempts,
+    ...quizHistory.map((attempt) => ({ ...attempt, sourceLabel: 'Saved browser quiz' })),
+    ...(currentQuizAttempt ? [currentQuizAttempt] : []),
   ].filter((attempt, index, attempts) =>
     attempt?.id && attempts.findIndex((item) => item?.id === attempt.id) === index,
   )
@@ -1021,11 +1026,11 @@ function Admin() {
   const gaps = analysis?.gaps?.length ? analysis.gaps : derivedGaps
   const aiResourceRows = analysis?.resources?.length ? flattenResourceGroups(analysis.resources) : []
   const aiResources = aiResourceRows.map(normalizeResource)
-  const resources = hasManagedResourceStore ? managedResources : aiResources
+  const resources = mergeCatalogEntries(aiResources, managedResources)
   const aiResumeSections = (resumeCoaching?.tips || []).map((section, index) =>
     normalizeResumeSection(section, index, workTypeNames[0] || aggregateProfile.target_role || ''),
   )
-  const resumeSections = hasManagedResumeStore ? managedResumeSections : aiResumeSections
+  const resumeSections = mergeCatalogEntries(aiResumeSections, managedResumeSections)
   const learningRoleOptions = uniqueItems([
     ...workTypeNames,
     ...resources.map(getResourceRole),
@@ -1063,9 +1068,9 @@ function Admin() {
       )
   const gapStatus = analysis?.gaps?.length ? 'AI ready' : derivedGaps.length ? 'Stored data' : 'Pending'
   const learningStatus = hasManagedResourceStore
-    ? managedResources.length
-      ? 'Stored data'
-      : 'Needs resources'
+    ? aiResourceRows.length
+      ? 'AI + admin catalog'
+      : 'Admin catalog'
     : aiResourceRows.length
       ? 'AI ready'
       : profileSkills.length || quizAttempts.length
@@ -1160,7 +1165,6 @@ function Admin() {
   useEffect(() => {
     let cancelled = false
 
-    setQuizBankState((current) => ({ ...current, isLoading: true }))
     fetchAdminQuizQuestions({ status: 'active', limit: 1000 })
       .then((payload) => {
         if (cancelled) {
@@ -2331,7 +2335,10 @@ function Admin() {
               </label>
               <label>
                 Source
-                <input value={hasManagedResourceStore ? 'Admin resource catalog' : 'AI resource analysis'} readOnly />
+                <input
+                  value={hasManagedResourceStore ? 'AI + admin catalog' : 'AI resource analysis'}
+                  readOnly
+                />
               </label>
             </div>
 
@@ -2577,7 +2584,10 @@ function Admin() {
             </label>
             <label>
               Source
-              <input value={hasManagedResumeStore ? 'Admin resume playbook' : 'AI resume coaching'} readOnly />
+              <input
+                value={hasManagedResumeStore ? 'AI + admin playbook' : 'AI resume coaching'}
+                readOnly
+              />
             </label>
           </div>
 
