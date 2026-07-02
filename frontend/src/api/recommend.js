@@ -397,10 +397,13 @@ export async function generateResumeDocument(payload) {
   return response.json()
 }
 
-export async function fetchTelegramJobs({ query = '', limit = 50 } = {}) {
+export async function fetchTelegramJobs({ query = '', role = '', limit = 50 } = {}) {
   const params = new URLSearchParams({ limit: String(limit) })
   if (query.trim()) {
     params.set('q', query.trim())
+  }
+  if (role.trim()) {
+    params.set('role', role.trim())
   }
   const response = await fetch(`${API_BASE}/telegram/jobs?${params}`)
 
@@ -412,13 +415,14 @@ export async function fetchTelegramJobs({ query = '', limit = 50 } = {}) {
   return response.json()
 }
 
-export async function fetchTelegramJobMatches(profile, { query = '', limit = 60 } = {}) {
+export async function fetchTelegramJobMatches(profile, { query = '', role = '', limit = 60 } = {}) {
   const response = await fetch(`${API_BASE}/telegram/jobs/match`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       skill_profile: profile,
       query,
+      role,
       limit,
     }),
   })
@@ -426,6 +430,73 @@ export async function fetchTelegramJobMatches(profile, { query = '', limit = 60 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}))
     throw new Error(err.error || `Telegram match failed (${response.status})`)
+  }
+
+  return response.json()
+}
+
+export async function fetchAdminQuizAttempts({ limit = 100 } = {}) {
+  const params = new URLSearchParams({ limit: String(limit) })
+  const response = await fetch(`${API_BASE}/admin/quiz/attempts?${params}`)
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || `Admin quiz attempts failed (${response.status})`)
+  }
+
+  return response.json()
+}
+
+export async function fetchAdminQuizQuestions({
+  role = '',
+  query = '',
+  status = 'active',
+  limit = 500,
+} = {}) {
+  const params = new URLSearchParams({ status, limit: String(limit) })
+  if (role.trim()) {
+    params.set('role', role.trim())
+  }
+  if (query.trim()) {
+    params.set('q', query.trim())
+  }
+  const response = await fetch(`${API_BASE}/admin/quiz/questions?${params}`)
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || `Admin quiz questions failed (${response.status})`)
+  }
+
+  return response.json()
+}
+
+export async function saveAdminQuizQuestion(question) {
+  const id = question?.id
+  const response = await fetch(
+    id ? `${API_BASE}/admin/quiz/questions/${encodeURIComponent(id)}` : `${API_BASE}/admin/quiz/questions`,
+    {
+      method: id ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(question),
+    },
+  )
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || `Save quiz question failed (${response.status})`)
+  }
+
+  return response.json()
+}
+
+export async function deleteAdminQuizQuestion(questionId) {
+  const response = await fetch(`${API_BASE}/admin/quiz/questions/${encodeURIComponent(questionId)}`, {
+    method: 'DELETE',
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || `Delete quiz question failed (${response.status})`)
   }
 
   return response.json()

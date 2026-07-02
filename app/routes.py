@@ -165,7 +165,7 @@ def _add_cors_headers(response):
     if origin and origin in settings.cors_origins:
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Vary"] = "Origin"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
     response.headers["Access-Control-Allow-Headers"] = (
         "Content-Type, X-Session-Id, X-Request-Id, X-API-Key"
     )
@@ -617,11 +617,12 @@ def telegram_jobs():
         return "", 204
 
     query = request.args.get("q", "")
+    role = request.args.get("role", "")
     try:
         limit = int(request.args.get("limit", 50))
     except (TypeError, ValueError):
         limit = 50
-    return jsonify(_get_telegram_job_service().list_jobs(query=query, limit=limit))
+    return jsonify(_get_telegram_job_service().list_jobs(query=query, role=role, limit=limit))
 
 
 @app.route("/telegram/jobs/match", methods=["POST", "OPTIONS"])
@@ -637,7 +638,8 @@ def telegram_jobs_match():
         limit = int(payload.get("limit", 60))
         limit = max(1, min(limit, 100))
         query = payload.get("query", "")
-        feed = _get_telegram_job_service().list_jobs(query=query, limit=100)
+        role = payload.get("role", "")
+        feed = _get_telegram_job_service().list_jobs(query=query, role=role, limit=100)
         recommender_input = _get_profile_service().to_recommender_input(profile)
         ranked = _get_recommender().score_jobs(
             recommender_input,
@@ -672,6 +674,74 @@ def telegram_jobs_ingest():
         result = _get_telegram_job_service().ingest_posts(posts or [])
         return jsonify(result)
     except TelegramJobIngestionError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/admin/quiz/attempts", methods=["GET", "OPTIONS"])
+def admin_quiz_attempts():
+    """Return all stored quiz attempts for admin rollups."""
+    if request.method == "OPTIONS":
+        return "", 204
+
+    try:
+        limit = int(request.args.get("limit", 100))
+    except (TypeError, ValueError):
+        limit = 100
+    try:
+        return jsonify(_get_quiz_engine().list_admin_attempts(limit=limit))
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/admin/quiz/questions", methods=["GET", "POST", "OPTIONS"])
+def admin_quiz_questions():
+    """List or create live quiz-bank questions."""
+    if request.method == "OPTIONS":
+        return "", 204
+
+    try:
+        engine = _get_quiz_engine()
+        if request.method == "GET":
+            try:
+                limit = int(request.args.get("limit", 500))
+            except (TypeError, ValueError):
+                limit = 500
+            return jsonify(
+                engine.list_admin_questions(
+                    role=request.args.get("role", ""),
+                    query=request.args.get("q", ""),
+                    status=request.args.get("status", "active"),
+                    limit=limit,
+                )
+            )
+
+        payload = request.get_json(silent=True) or {}
+        return jsonify({"question": engine.upsert_admin_question(payload)}), 201
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/admin/quiz/questions/<question_id>", methods=["PUT", "DELETE", "OPTIONS"])
+def admin_quiz_question_detail(question_id):
+    """Update or soft-delete a live quiz-bank question."""
+    if request.method == "OPTIONS":
+        return "", 204
+
+    try:
+        engine = _get_quiz_engine()
+        if request.method == "DELETE":
+            deleted = engine.delete_admin_question(question_id)
+            if not deleted:
+                return jsonify({"error": f"Question not found: {question_id}"}), 404
+            return jsonify({"deleted": True, "question_id": question_id})
+
+        payload = request.get_json(silent=True) or {}
+        return jsonify({"question": engine.upsert_admin_question(payload, question_id=question_id)})
+    except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500

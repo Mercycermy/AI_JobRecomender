@@ -256,7 +256,7 @@ class TelegramJobIngestionService:
             errors.append("deadline passed")
         return errors
 
-    def list_jobs(self, query: str = "", limit: int = 50) -> Dict[str, Any]:
+    def list_jobs(self, query: str = "", limit: int = 50, role: str = "") -> Dict[str, Any]:
         feed = self._read_feed()
         jobs = [
             self._ensure_apply_target(job)
@@ -269,6 +269,9 @@ class TelegramJobIngestionService:
                 job for job in jobs
                 if query_text in self._search_blob(job)
             ]
+        role_text = self._clean(role).casefold()
+        if role_text and role_text not in {"all", "all roles", "all work types"}:
+            jobs = [job for job in jobs if self._matches_role_filter(job, role_text)]
         jobs = sorted(
             jobs,
             key=lambda job: (
@@ -908,6 +911,22 @@ class TelegramJobIngestionService:
             job.get("raw_text"),
         ]
         return " ".join(str(value or "") for value in values).casefold()
+
+    def _matches_role_filter(self, job: Dict[str, Any], role_text: str) -> bool:
+        role_values = [
+            job.get("category"),
+            job.get("role"),
+            job.get("job_title"),
+            job.get("title"),
+            job.get("company"),
+            job.get("description"),
+            " ".join(job.get("required_skill_names") or []),
+            " ".join(job.get("required_skills") or []),
+        ]
+        blob = " ".join(str(value or "") for value in role_values).casefold()
+        normalized_role = role_text.replace("_", " ").replace("-", " ")
+        normalized_blob = blob.replace("_", " ").replace("-", " ")
+        return role_text in blob or normalized_role in normalized_blob
 
     def _ensure_apply_target(self, job: Dict[str, Any]) -> Dict[str, Any]:
         output = dict(job)

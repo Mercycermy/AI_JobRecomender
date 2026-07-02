@@ -7,6 +7,7 @@ from __future__ import annotations
 import glob
 import json
 import os
+import re
 import sqlite3
 import statistics
 import uuid
@@ -1172,6 +1173,356 @@ class QuizEngine:
                 except Exception:
                     pass
         return q
+
+    def _as_json_list(self, value: Any) -> List[str]:
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return [str(item).strip() for item in value if str(item).strip()]
+        if isinstance(value, str):
+            text = value.strip()
+            if not text:
+                return []
+            try:
+                parsed = json.loads(text)
+                if isinstance(parsed, list):
+                    return [str(item).strip() for item in parsed if str(item).strip()]
+            except Exception:
+                pass
+            return [item.strip() for item in re.split(r"[,;\n]+", text) if item.strip()]
+        return [str(value).strip()] if str(value).strip() else []
+
+    def _admin_options(self, value: Any, role_targets: Optional[List[str]] = None) -> Optional[dict]:
+        role_targets = role_targets or []
+        if value is None:
+            return None
+        parsed = value
+        if isinstance(value, str):
+            text = value.strip()
+            if not text:
+                return None
+            try:
+                parsed = json.loads(text)
+            except Exception:
+                parsed = [line.strip() for line in text.splitlines() if line.strip()]
+
+        if isinstance(parsed, dict):
+            normalized = {}
+            for key, meta in parsed.items():
+                if isinstance(meta, dict):
+                    option = dict(meta)
+                    option["text"] = self._clean_admin_text(
+                        option.get("text") or option.get("label") or key,
+                        500,
+                    )
+                    option.setdefault("signals", {role_targets[0]: 5} if role_targets else {})
+                    option.setdefault("skills", [])
+                    option.setdefault("quality_level", "strong")
+                else:
+                    option = {
+                        "text": self._clean_admin_text(meta, 500),
+                        "signals": {role_targets[0]: 5} if role_targets else {},
+                        "skills": [],
+                        "quality_level": "strong",
+                    }
+                if option["text"]:
+                    normalized[str(key)] = option
+            return normalized or None
+
+        if isinstance(parsed, list):
+            normalized = {}
+            for index, item in enumerate(parsed):
+                key = chr(65 + index) if index < 26 else str(index + 1)
+                if isinstance(item, dict):
+                    text = self._clean_admin_text(
+                        item.get("text") or item.get("label") or item.get("value") or key,
+                        500,
+                    )
+                    signals = item.get("signals") or ({role_targets[0]: 5} if role_targets else {})
+                    skills = self._as_json_list(item.get("skills"))
+                    quality = item.get("quality_level") or "strong"
+                else:
+                    text = self._clean_admin_text(item, 500)
+                    signals = {role_targets[0]: 5} if role_targets else {}
+                    skills = []
+                    quality = "strong"
+                if text:
+                    normalized[key] = {
+                        "text": text,
+                        "signals": signals,
+                        "skills": skills,
+                        "quality_level": quality,
+                    }
+            return normalized or None
+
+        return None
+
+    def _clean_admin_text(self, value: Any, max_length: int = 1000) -> str:
+        if value is None:
+            return ""
+        return re.sub(r"\s+", " ", str(value)).strip()[:max_length]
+
+    def _admin_question_record(self, row) -> dict:
+        q = self._q(row) or {}
+        if "response_count" in row.keys():
+            q["response_count"] = int(row["response_count"] or 0)
+        q["is_active"] = bool(q.get("is_active", 1))
+        return q
+
+    def list_admin_questions(
+        self,
+        role: str = "",
+        query: str = "",
+        status: str = "active",
+        limit: int = 500,
+    ) -> Dict[str, Any]:
+        clauses = []
+        params: List[Any] = []
+        status_value = str(status or "active").lower()
+        if status_value == "active":
+            clauses.append("q.is_active = 1")
+        elif status_value in {"inactive", "archived", "deleted"}:
+            clauses.append("q.is_active = 0")
+
+        role_text = str(role or "").strip()
+        if role_text and role_text.lower() not in {"all", "all roles", "all work types"}:
+            clauses.append("q.role_targets LIKE ?")
+            params.append(f"%{role_text}%")
+
+        query_text = str(query or "").strip()
+        if query_text:
+            clauses.append("(q.id LIKE ? OR q.stem LIKE ? OR q.domain_scope LIKE ? OR q.role_targets LIKE ?)")
+            params.extend([f"%{query_text}%"] * 4)
+
+        where_sql = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        safe_limit = max(1, min(2000, int(limit or 500)))
+        conn = self._conn()
+        try:
+            total_row = conn.execute(
+                f"SELECT COUNT(*) FROM questions q {where_sql}",
+                params,
+            ).fetchone()
+            rows = conn.execute(
+                f"""
+                SELECT q.*, COUNT(qr.id) AS response_count
+                FROM questions q
+                LEFT JOIN quiz_responses qr ON qr.question_id = q.id
+                {where_sql}
+                GROUP BY q.id
+                ORDER BY
+                  q.is_active DESC,
+                  q.gate,
+                  CASE
+                    WHEN q.difficulty = 'beginner' THEN 0
+                    WHEN q.difficulty = 'intermediate' THEN 1
+                    WHEN q.difficulty = 'advanced' THEN 2
+                    ELSE 3
+                  END,
+                  q.id
+                LIMIT ?
+                """,
+                [*params, safe_limit],
+            ).fetchall()
+            roles = self.get_admin_roles()
+            return {
+                "questions": [self._admin_question_record(row) for row in rows],
+                "count": len(rows),
+                "total": int(total_row[0] if total_row else 0),
+                "roles": roles,
+            }
+        finally:
+            conn.close()
+
+    def get_admin_roles(self) -> List[str]:
+        conn = self._conn()
+        try:
+            rows = conn.execute("SELECT DISTINCT role_targets FROM questions").fetchall()
+            roles = set()
+            for row in rows:
+                for role in self._as_json_list(row[0]):
+                    roles.add(role)
+            return sorted(roles)
+        finally:
+            conn.close()
+
+    def upsert_admin_question(self, payload: Dict[str, Any], question_id: Optional[str] = None) -> dict:
+        if not isinstance(payload, dict):
+            raise ValueError("Question payload must be a JSON object.")
+
+        stem = self._clean_admin_text(payload.get("stem") or payload.get("text"), 2000)
+        if not stem:
+            raise ValueError("Question stem is required.")
+
+        role_targets = self._as_json_list(payload.get("role_targets") or payload.get("role"))
+        options = self._admin_options(payload.get("options") or payload.get("options_text"), role_targets)
+        answer_mode = self._clean_admin_text(
+            payload.get("answer_mode") or ("single_choice" if options else "free_text"),
+            80,
+        )
+        question_type = self._clean_admin_text(
+            payload.get("question_type") or ("multiple_choice" if options else "free_response"),
+            80,
+        )
+        difficulty = self._clean_admin_text(payload.get("difficulty") or "beginner", 40).lower()
+        if difficulty not in DIFFICULTY_LEVELS:
+            difficulty = "beginner"
+        try:
+            gate = int(payload.get("gate", 2))
+        except (TypeError, ValueError):
+            gate = 2
+        try:
+            estimated_minutes = int(payload.get("estimated_minutes") or payload.get("estimatedMinutes") or 3)
+        except (TypeError, ValueError):
+            estimated_minutes = 3
+
+        scoring = payload.get("scoring")
+        if not isinstance(scoring, dict):
+            scoring = {
+                "max_score": 100,
+                "pass_score": 70,
+                "category_weights": {role_targets[0]: 10} if role_targets else {},
+                "skill_weights": {},
+                "rubric": [],
+                "red_flags": [],
+                "partial_credit_rules": [],
+            }
+
+        qid = self._clean_admin_text(
+            question_id or payload.get("id") or f"Q_ADMIN_{uuid.uuid4().hex[:10].upper()}",
+            120,
+        ).replace(" ", "_")
+        if not qid:
+            raise ValueError("Question id is required.")
+
+        conn = self._conn()
+        try:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO questions (
+                    id, gate, domain_scope, question_type,
+                    role_targets, difficulty, experience_level_target,
+                    stem, context, answer_mode,
+                    options, practical_task, scoring,
+                    ai_evaluation_prompt, job_evidence,
+                    route_strong, route_partial, route_weak,
+                    estimated_minutes, is_active
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                """,
+                (
+                    qid,
+                    gate,
+                    self._clean_admin_text(payload.get("domain_scope") or "ALL", 80),
+                    question_type,
+                    json.dumps(role_targets),
+                    difficulty,
+                    self._clean_admin_text(payload.get("experience_level_target") or "any", 80),
+                    stem,
+                    self._clean_admin_text(payload.get("context"), 2000) or None,
+                    answer_mode,
+                    json.dumps(options) if options else None,
+                    json.dumps(payload.get("practical_task")) if payload.get("practical_task") else None,
+                    json.dumps(scoring),
+                    payload.get("ai_evaluation_prompt"),
+                    json.dumps(payload.get("job_evidence") or []),
+                    payload.get("route_strong"),
+                    payload.get("route_partial"),
+                    payload.get("route_weak"),
+                    estimated_minutes,
+                    1 if payload.get("is_active", True) else 0,
+                ),
+            )
+            conn.commit()
+            row = conn.execute("SELECT * FROM questions WHERE id = ?", (qid,)).fetchone()
+            return self._q(row) or {}
+        finally:
+            conn.close()
+
+    def delete_admin_question(self, question_id: str) -> bool:
+        conn = self._conn()
+        try:
+            cursor = conn.execute(
+                "UPDATE questions SET is_active = 0 WHERE id = ?",
+                (question_id,),
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+        finally:
+            conn.close()
+
+    def list_admin_attempts(self, limit: int = 100) -> Dict[str, Any]:
+        safe_limit = max(1, min(500, int(limit or 100)))
+        conn = self._conn()
+        try:
+            rows = conn.execute(
+                """
+                SELECT
+                    qs.*,
+                    COUNT(qr.id) AS response_count,
+                    MAX(qr.answered_at) AS last_answered_at
+                FROM quiz_sessions qs
+                LEFT JOIN quiz_responses qr ON qr.session_id = qs.id
+                GROUP BY qs.id
+                ORDER BY COALESCE(qs.completed_at, qs.started_at) DESC
+                LIMIT ?
+                """,
+                (safe_limit,),
+            ).fetchall()
+
+            attempts = []
+            for row in rows:
+                session = dict(row)
+                for field in ("domain_scores", "skill_scores", "category_scores", "questions_asked"):
+                    if session.get(field):
+                        try:
+                            session[field] = json.loads(session[field])
+                        except Exception:
+                            session[field] = {} if field != "questions_asked" else []
+                    else:
+                        session[field] = {} if field != "questions_asked" else []
+
+                answers = conn.execute(
+                    """
+                    SELECT
+                        qr.question_id,
+                        COALESCE(q.stem, qr.question_id) AS stem,
+                        qr.answer_key,
+                        qr.answer_raw,
+                        qr.performance,
+                        qr.ai_score,
+                        qr.answered_at
+                    FROM quiz_responses qr
+                    LEFT JOIN questions q ON q.id = qr.question_id
+                    WHERE qr.session_id = ?
+                    ORDER BY qr.id
+                    LIMIT 50
+                    """,
+                    (session["id"],),
+                ).fetchall()
+
+                attempts.append({
+                    "id": session["id"],
+                    "status": session.get("status"),
+                    "started_at": session.get("started_at"),
+                    "completed_at": session.get("completed_at"),
+                    "last_answered_at": session.get("last_answered_at"),
+                    "response_count": int(session.get("response_count") or 0),
+                    "profile": self._build_profile(session),
+                    "progress": self._progress(session),
+                    "answers": [dict(answer) for answer in answers],
+                })
+
+            total_row = conn.execute("SELECT COUNT(*) FROM quiz_sessions").fetchone()
+            completed_row = conn.execute(
+                "SELECT COUNT(*) FROM quiz_sessions WHERE status = 'completed'"
+            ).fetchone()
+            return {
+                "attempts": attempts,
+                "count": len(attempts),
+                "total": int(total_row[0] if total_row else 0),
+                "completed": int(completed_row[0] if completed_row else 0),
+            }
+        finally:
+            conn.close()
 
     def create_session(self, user_id: Optional[str] = None) -> dict:
         conn = self._conn()

@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
 import {
+  deleteAdminQuizQuestion,
+  fetchAdminQuizAttempts,
+  fetchAdminQuizQuestions,
   fetchAnalysis,
   fetchRecommendations,
   fetchResumeTips,
@@ -11,11 +14,14 @@ import {
   loadStoredRecommendations,
   persistAnalysis,
   persistRecommendationSession,
+  saveAdminQuizQuestion,
 } from '../api/recommend.js'
 const adminTabs = ['Overview', 'Profile', 'Matching', 'Learning', 'Resume', 'Telegram']
 const profilePages = ['Quiz Intake', 'Match Graph', 'Completion Detail', 'Quiz Prompts']
 const ADMIN_QUIZ_PROMPTS_STORAGE_KEY = 'adminQuizPrompts'
 const ADMIN_RESOURCES_STORAGE_KEY = 'adminLearningResources'
+const ADMIN_RESUME_STORAGE_KEY = 'adminResumePlaybook'
+const ALL_ROLE_FILTERS = 'All roles'
 const WORK_TYPE_OPTIONS = [
   {
     id: 'SOFTWARE',
@@ -98,14 +104,22 @@ const EMPTY_PROMPT_DRAFT = {
   role: DEFAULT_QUIZ_ROLE,
   stem: '',
   optionsText: '',
+  difficulty: 'beginner',
+  gate: '2',
 }
 const EMPTY_RESOURCE_DRAFT = {
+  role: '',
   skill: '',
   title: '',
   platform: '',
   level: '',
   hours: '',
   url: '',
+}
+const EMPTY_RESUME_DRAFT = {
+  role: '',
+  section: '',
+  tipsText: '',
 }
 const MAIN_WORK_TYPE_PROMPTS = [
   {
@@ -222,9 +236,21 @@ function normalizeResource(resource, index) {
   const source = resource || {}
   const title = source.title || source.name || ''
   const skill = source.skill || source.skill_name || source.work_type || ''
+  const role = source.role || source.role_filter || getWorkTypeLabel(
+    [
+      source.role_category,
+      source.category,
+      source.work_type,
+      source.skill,
+      source.skill_name,
+      title,
+    ].filter(Boolean).join(' '),
+    '',
+  )
 
   return {
     id: source.id || source.resource_id || `resource-${index + 1}-${normalizeText(title || skill || 'item')}`,
+    role,
     skill,
     title,
     platform: source.platform || source.source || '',
@@ -273,6 +299,65 @@ function saveAdminResources(resources) {
 function createResourceId(title) {
   const slug = normalizeText(title).replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
   return `resource-${slug || 'item'}-${Date.now()}`
+}
+
+function normalizeResumeSection(section, index, fallbackRole = '') {
+  const source = section || {}
+  const title = source.section || source.title || `Resume section ${index + 1}`
+  const tips = Array.isArray(source.tips)
+    ? source.tips
+    : String(source.tipsText || source.tip || '')
+      .split('\n')
+      .map((tip) => tip.trim())
+      .filter(Boolean)
+
+  return {
+    id: source.id || `resume-${index + 1}-${normalizeText(title).replace(/[^a-z0-9]+/g, '-')}`,
+    role: source.role || source.role_filter || fallbackRole,
+    section: title,
+    icon: source.icon || 'AI',
+    tips,
+    updated: source.updated || 'Saved locally',
+  }
+}
+
+function loadAdminResumeSections() {
+  if (typeof window === 'undefined') {
+    return []
+  }
+
+  try {
+    const raw = localStorage.getItem(ADMIN_RESUME_STORAGE_KEY)
+    const parsed = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? parsed.map(normalizeResumeSection) : []
+  } catch {
+    return []
+  }
+}
+
+function hasStoredAdminResumeSections() {
+  if (typeof window === 'undefined') {
+    return false
+  }
+
+  return localStorage.getItem(ADMIN_RESUME_STORAGE_KEY) !== null
+}
+
+function saveAdminResumeSections(sections) {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  try {
+    localStorage.setItem(ADMIN_RESUME_STORAGE_KEY, JSON.stringify(sections))
+  } catch {
+    // Resume playbook edits remain available in memory for the active admin session.
+  }
+}
+
+function createResumeSectionId(section) {
+  const slug = normalizeText(section).replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+  return `resume-${slug || 'section'}-${Date.now()}`
 }
 
 function flattenResourceGroups(groups = []) {
@@ -375,6 +460,22 @@ function getGapPriority(gap) {
   return value <= 1 ? Math.round(value * 100) : Math.round(value)
 }
 
+function getResourceRole(resource) {
+  return resource.role || getWorkTypeLabel(
+    [
+      resource.skill,
+      resource.title,
+      resource.platform,
+      resource.level,
+    ].filter(Boolean).join(' '),
+    '',
+  )
+}
+
+function getResumeRole(section, fallback = '') {
+  return section.role || fallback
+}
+
 function getResumeSectionCount(coaching) {
   return coaching?.tips?.length || 0
 }
@@ -466,14 +567,82 @@ function parsePromptOptions(optionsText) {
     .filter(Boolean)
 }
 
+function optionLabelsFromQuestionOptions(options) {
+  if (!options) {
+    return []
+  }
+
+  if (Array.isArray(options)) {
+    return options
+      .map((option) => {
+        if (option && typeof option === 'object') {
+          return option.label || option.text || option.value || option.id
+        }
+        return option
+      })
+      .filter(Boolean)
+      .map(String)
+  }
+
+  if (typeof options === 'object') {
+    return Object.entries(options)
+      .map(([key, meta]) => {
+        if (meta && typeof meta === 'object') {
+          return meta.text || meta.label || meta.value || key
+        }
+        return meta || key
+      })
+      .filter(Boolean)
+      .map(String)
+  }
+
+  return String(options)
+    .split('\n')
+    .map((option) => option.trim())
+    .filter(Boolean)
+}
+
+function normalizeQuizRole(value, fallback = DEFAULT_QUIZ_ROLE) {
+  const raw = String(value || '').trim()
+  if (!raw) {
+    return fallback
+  }
+
+  if (/[-_]/.test(raw) || raw === raw.toUpperCase()) {
+    return raw
+  }
+
+  return getWorkTypeLabel(raw, raw || fallback)
+}
+
+function getPromptRoles(prompt) {
+  const roles = Array.isArray(prompt?.role_targets) && prompt.role_targets.length
+    ? prompt.role_targets
+    : [prompt?.role]
+
+  return uniqueItems(roles.map((role) => normalizeQuizRole(role, '')).filter(Boolean))
+}
+
 function normalizePrompt(question, index) {
+  const roleTargets = Array.isArray(question.role_targets)
+    ? question.role_targets.map((role) => normalizeQuizRole(role))
+    : question.role
+      ? [normalizeQuizRole(question.role)]
+      : []
+
   return {
     id: question.id || `prompt-${index + 1}`,
-    role: normalizeRole(question.role || question.role_category || question.target_role || question.category),
+    role: roleTargets[0] || normalizeQuizRole(question.role || question.role_category || question.target_role || question.category),
+    role_targets: roleTargets,
     stem: question.stem || question.text || '',
-    options: Array.isArray(question.options) ? question.options.map(String) : [],
-    status: 'Live',
-    updated: 'Local draft',
+    options: optionLabelsFromQuestionOptions(question.options),
+    status: question.is_active === false ? 'Archived' : question.status || 'Live',
+    updated: question.updated || (question.response_count ? `${question.response_count} responses` : 'Live quiz bank'),
+    gate: question.gate ?? 2,
+    difficulty: question.difficulty || 'beginner',
+    question_type: question.question_type || 'multiple_choice',
+    answer_mode: question.answer_mode || 'single_choice',
+    response_count: question.response_count || 0,
   }
 }
 
@@ -485,9 +654,10 @@ function normalizeStoredPrompt(prompt, index) {
   const source = prompt || {}
   const basePrompt = normalizePrompt(source, index)
 
-  return {
-    ...basePrompt,
-    role: normalizeRole(source.role || basePrompt.role),
+    return {
+      ...basePrompt,
+    role: normalizeQuizRole(source.role || basePrompt.role),
+    role_targets: Array.isArray(source.role_targets) ? source.role_targets : basePrompt.role_targets,
     status: source.status || basePrompt.status,
     updated: source.updated || basePrompt.updated,
   }
@@ -542,6 +712,25 @@ function getAttemptProgress(attempt) {
 
 function getAttemptJobs(attempt) {
   return Array.isArray(attempt?.jobs) ? attempt.jobs : []
+}
+
+function normalizeAdminAttempt(attempt) {
+  const profile = attempt?.profile || {}
+  const progress = attempt?.progress || {}
+
+  return {
+    id: attempt?.id || profile.session_id || `admin-attempt-${Date.now()}`,
+    completed_at: attempt?.completed_at || attempt?.last_answered_at || attempt?.started_at || 'Stored backend attempt',
+    profile: {
+      ...profile,
+      session_id: profile.session_id || attempt?.id,
+    },
+    progress,
+    answers: attempt?.answers || [],
+    jobs: [],
+    sourceLabel: attempt?.status === 'completed' ? 'Backend completed quiz' : 'Backend in-progress quiz',
+    status: attempt?.status || 'active',
+  }
 }
 
 function getAttemptWorkType(attempt) {
@@ -642,13 +831,34 @@ function Admin() {
   const [newPromptDraft, setNewPromptDraft] = useState({ ...EMPTY_PROMPT_DRAFT })
   const [editingPromptId, setEditingPromptId] = useState('')
   const [promptDraft, setPromptDraft] = useState({ ...EMPTY_PROMPT_DRAFT })
+  const [quizBankState, setQuizBankState] = useState({
+    error: '',
+    isLoading: true,
+    roles: [],
+    total: 0,
+  })
+  const [quizCrudError, setQuizCrudError] = useState('')
+  const [adminQuizAttempts, setAdminQuizAttempts] = useState([])
+  const [adminAttemptState, setAdminAttemptState] = useState({
+    error: '',
+    isLoading: true,
+    total: 0,
+    completed: 0,
+  })
   const [analysis, setAnalysis] = useState(() => loadStoredAnalysis())
   const [resumeCoaching, setResumeCoaching] = useState(() => loadCachedResumeTips())
   const [storedRecommendations, setStoredRecommendations] = useState(() => loadStoredRecommendations() || [])
   const [managedResources, setManagedResources] = useState(loadAdminResources)
   const [hasManagedResourceStore, setHasManagedResourceStore] = useState(hasStoredAdminResources)
+  const [selectedLearningRole, setSelectedLearningRole] = useState(ALL_ROLE_FILTERS)
   const [editingResourceId, setEditingResourceId] = useState('')
   const [resourceDraft, setResourceDraft] = useState({ ...EMPTY_RESOURCE_DRAFT })
+  const [managedResumeSections, setManagedResumeSections] = useState(loadAdminResumeSections)
+  const [hasManagedResumeStore, setHasManagedResumeStore] = useState(hasStoredAdminResumeSections)
+  const [selectedResumeRole, setSelectedResumeRole] = useState(ALL_ROLE_FILTERS)
+  const [editingResumeId, setEditingResumeId] = useState('')
+  const [resumeDraft, setResumeDraft] = useState({ ...EMPTY_RESUME_DRAFT })
+  const [selectedTelegramRole, setSelectedTelegramRole] = useState(ALL_ROLE_FILTERS)
   const [telegramState, setTelegramState] = useState({
     error: '',
     isLoading: true,
@@ -660,6 +870,7 @@ function Admin() {
   const recommendations = storedRecommendations
   const quizHistory = loadStoredQuizHistory()
   const quizProgress = loadStoredQuizProgress()
+  const backendQuizAttempts = adminQuizAttempts.map(normalizeAdminAttempt)
 
   const currentProfileSkills = getProfileSkills(profile)
   const currentQuizSummary = getQuizSummary(profile, quizProgress)
@@ -676,8 +887,11 @@ function Admin() {
     : null
   const quizAttempts = [
     ...(currentQuizAttempt ? [currentQuizAttempt] : []),
-    ...quizHistory.filter((attempt) => attempt?.id !== currentQuizAttempt?.id),
-  ]
+    ...quizHistory.map((attempt) => ({ ...attempt, sourceLabel: 'Saved browser quiz' })),
+    ...backendQuizAttempts,
+  ].filter((attempt, index, attempts) =>
+    attempt?.id && attempts.findIndex((item) => item?.id === attempt.id) === index,
+  )
   const aggregateRecommendationRows = quizAttempts.flatMap(getAttemptJobs)
   const aggregateRecommendations = aggregateRecommendationRows.length
     ? aggregateRecommendationRows
@@ -701,7 +915,7 @@ function Admin() {
       id: attempt.id || `attempt-${index + 1}`,
       label: attempt.isCurrent ? 'Current session' : `Quiz ${index + 1}`,
       completedAt: attempt.completed_at || 'Saved attempt',
-      source: attempt.isCurrent ? 'Active browser session' : 'Saved local history',
+      source: attempt.isCurrent ? 'Active browser session' : attempt.sourceLabel || 'Saved quiz history',
       skills: attemptSkills.length,
       answered: summary.answered,
       estimated: summary.estimated,
@@ -808,6 +1022,45 @@ function Admin() {
   const aiResourceRows = analysis?.resources?.length ? flattenResourceGroups(analysis.resources) : []
   const aiResources = aiResourceRows.map(normalizeResource)
   const resources = hasManagedResourceStore ? managedResources : aiResources
+  const aiResumeSections = (resumeCoaching?.tips || []).map((section, index) =>
+    normalizeResumeSection(section, index, workTypeNames[0] || aggregateProfile.target_role || ''),
+  )
+  const resumeSections = hasManagedResumeStore ? managedResumeSections : aiResumeSections
+  const learningRoleOptions = uniqueItems([
+    ...workTypeNames,
+    ...resources.map(getResourceRole),
+    ...gaps.map((gap) => getWorkTypeLabel(getGapName(gap), '')),
+  ]).filter(Boolean)
+  const resumeRoleOptions = uniqueItems([
+    ...workTypeNames,
+    ...resumeSections.map((section) => getResumeRole(section, workTypeNames[0] || '')),
+  ]).filter(Boolean)
+  const telegramRoleOptions = uniqueItems(
+    telegramState.jobs.map((job) => job.category || job.role || getJobWorkType(job)),
+  ).filter(Boolean)
+  const filteredResources = selectedLearningRole === ALL_ROLE_FILTERS
+    ? resources
+    : resources.filter((resource) => getResourceRole(resource) === selectedLearningRole)
+  const filteredGaps = selectedLearningRole === ALL_ROLE_FILTERS
+    ? gaps
+    : gaps.filter((gap) =>
+        getWorkTypeLabel(getGapName(gap), '') === selectedLearningRole ||
+        getGapName(gap).toLowerCase().includes(selectedLearningRole.toLowerCase()),
+      )
+  const filteredResumeSections = selectedResumeRole === ALL_ROLE_FILTERS
+    ? resumeSections
+    : resumeSections.filter((section) =>
+        getResumeRole(section, workTypeNames[0] || '') === selectedResumeRole,
+      )
+  const filteredTelegramJobs = selectedTelegramRole === ALL_ROLE_FILTERS
+    ? telegramState.jobs
+    : telegramState.jobs.filter((job) =>
+        [job.category, job.role, getJobWorkType(job), job.job_title, job.description]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+          .includes(selectedTelegramRole.toLowerCase()),
+      )
   const gapStatus = analysis?.gaps?.length ? 'AI ready' : derivedGaps.length ? 'Stored data' : 'Pending'
   const learningStatus = hasManagedResourceStore
     ? managedResources.length
@@ -823,12 +1076,13 @@ function Admin() {
     : profileSkills.length || quizAttempts.length
       ? 'Awaiting AI'
       : 'Needs profile'
+  const resumeAdminStatus = resumeSections.length ? resumeStatus : 'Needs profile'
   const topMatchedJobs = getTopMatchedJobs(aggregateRecommendations)
   const promptRoleOptions = uniqueItems([
     DEFAULT_QUIZ_ROLE,
-    ...getWorkTypeOptionLabels(),
+    ...quizBankState.roles,
+    ...quizPrompts.flatMap(getPromptRoles),
     ...workTypeNames,
-    ...quizPrompts.map((prompt) => normalizeRole(prompt.role)),
     ...aggregateRecommendations.map(getJobWorkType),
     getWorkTypeLabel(profile?.target_role, ''),
     getWorkTypeLabel(profile?.detected_role, ''),
@@ -846,15 +1100,15 @@ function Admin() {
   })
   const filteredQuizPrompts = selectedPromptRole === ALL_QUIZ_ROLES
     ? quizPrompts
-    : quizPrompts.filter((prompt) => normalizeRole(prompt.role) === selectedPromptRole)
+    : quizPrompts.filter((prompt) => getPromptRoles(prompt).includes(selectedPromptRole))
   const promptCoverageByRole = promptRoleOptions.map((role) => ({
     role,
-    count: quizPrompts.filter((prompt) => normalizeRole(prompt.role) === role).length,
+    count: quizPrompts.filter((prompt) => getPromptRoles(prompt).includes(role)).length,
   }))
   const newPromptOptions = parsePromptOptions(newPromptDraft.optionsText)
   const canAddPrompt = Boolean(newPromptDraft.stem.trim()) && newPromptOptions.length >= 2
 
-  const filteredJobs = visibleRecommendations.filter((job) =>
+  const filteredJobs = aggregateRecommendations.filter((job) =>
     `${getJobTitle(job)} ${getJobCompany(job)} ${getJobCategory(job)} ${getJobWorkType(job)}`
       .toLowerCase()
       .includes(jobSearch.toLowerCase()),
@@ -867,6 +1121,79 @@ function Admin() {
     aggregateRecommendationsPayload,
   ].join('::')
   const canRequestAdminAi = hasStoredRecommendations && (profileSkills.length > 0 || quizAttempts.length > 0)
+
+  useEffect(() => {
+    let cancelled = false
+
+    fetchAdminQuizAttempts({ limit: 250 })
+      .then((payload) => {
+        if (cancelled) {
+          return
+        }
+
+        setAdminQuizAttempts(payload.attempts || [])
+        setAdminAttemptState({
+          error: '',
+          isLoading: false,
+          total: payload.total || 0,
+          completed: payload.completed || 0,
+        })
+      })
+      .catch((err) => {
+        if (cancelled) {
+          return
+        }
+
+        setAdminAttemptState({
+          error: err.message || 'Could not load backend quiz attempts.',
+          isLoading: false,
+          total: 0,
+          completed: 0,
+        })
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    setQuizBankState((current) => ({ ...current, isLoading: true }))
+    fetchAdminQuizQuestions({ status: 'active', limit: 1000 })
+      .then((payload) => {
+        if (cancelled) {
+          return
+        }
+
+        const questions = (payload.questions || []).map(normalizeStoredPrompt)
+        setQuizPrompts(questions.length ? questions : loadAdminQuizPrompts())
+        setQuizBankState({
+          error: '',
+          isLoading: false,
+          roles: payload.roles || [],
+          total: payload.total || questions.length,
+        })
+      })
+      .catch((err) => {
+        if (cancelled) {
+          return
+        }
+
+        setQuizPrompts(loadAdminQuizPrompts())
+        setQuizBankState({
+          error: err.message || 'Using local quiz prompts because the live quiz bank could not load.',
+          isLoading: false,
+          roles: [],
+          total: 0,
+        })
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     if (storedRecommendations.length || !canBuildRecommendations) {
@@ -964,7 +1291,7 @@ function Admin() {
   useEffect(() => {
     let cancelled = false
 
-    fetchTelegramJobs({ limit: 20 })
+    fetchTelegramJobs({ limit: 80 })
       .then((payload) => {
         if (cancelled) {
           return
@@ -1134,22 +1461,74 @@ function Admin() {
       detail: formatLabel(quizSummary.detectedRole || quizSummary.difficulty),
     },
   ]
+  const overviewGraphRows = [
+    {
+      label: 'Quiz history',
+      value: quizAttemptSummaries.length,
+      score: Math.min(100, Math.round((quizAttemptSummaries.length / Math.max(adminAttemptState.total || quizAttemptSummaries.length, 1)) * 100)),
+      detail: `${adminAttemptState.completed || quizHistory.length} completed`,
+    },
+    {
+      label: 'Profile signals',
+      value: profileSkills.length,
+      score: Math.min(100, Math.round((profileSkills.length / 12) * 100)),
+      detail: `${workTypeNames.length || 0} work types`,
+    },
+    {
+      label: 'Match quality',
+      value: averageMatch ?? 0,
+      score: averageMatch ?? 0,
+      detail: averageMatch === null ? 'Awaiting scores' : `${averageMatch}% average`,
+    },
+    {
+      label: 'Learning coverage',
+      value: filteredResources.length || resources.length,
+      score: Math.min(100, Math.round(((filteredResources.length || resources.length) / 10) * 100)),
+      detail: `${gaps.length} gaps tracked`,
+    },
+  ]
+  const learningGraphRows = [
+    ...filteredGaps.slice(0, 4).map((gap) => ({
+      label: getGapName(gap),
+      score: getGapPriority(gap) ?? 50,
+      detail: gap.priority_label || 'Gap priority',
+    })),
+    ...filteredResources.slice(0, 4).map((resource) => ({
+      label: resource.title,
+      score: Math.min(100, Number(resource.recommendation_score) || Number(resource.hours) * 8 || 60),
+      detail: getResourceRole(resource) || resource.platform || 'Resource',
+    })),
+  ].slice(0, 6)
+  const resumeGraphRows = filteredResumeSections.slice(0, 6).map((section) => ({
+    label: section.section,
+    score: Math.min(100, (section.tips?.length || 0) * 25),
+    detail: `${section.tips?.length || 0} tips`,
+  }))
+  const telegramGraphRows = countWorkTypeSignals(filteredTelegramJobs.map((job) => job.category || job.role || getJobWorkType(job)))
+    .slice(0, 6)
+    .map((item) => ({
+      label: item.workType,
+      score: Math.min(100, Math.round((item.count / Math.max(filteredTelegramJobs.length, 1)) * 100)),
+      detail: `${item.count} jobs`,
+    }))
   const startPromptEdit = (prompt) => {
     setEditingPromptId(prompt.id)
     setPromptDraft({
-      role: normalizeRole(prompt.role),
+      role: getPromptRoles(prompt)[0] || normalizeQuizRole(prompt.role),
       stem: prompt.stem,
       optionsText: prompt.options.join('\n'),
+      difficulty: prompt.difficulty || 'beginner',
+      gate: String(prompt.gate ?? 2),
     })
   }
   const cancelPromptEdit = () => {
     setEditingPromptId('')
     setPromptDraft({ ...EMPTY_PROMPT_DRAFT })
   }
-  const addPrompt = (event) => {
+  const addPrompt = async (event) => {
     event.preventDefault()
 
-    const role = normalizeRole(newPromptDraft.role)
+    const role = normalizeQuizRole(newPromptDraft.role)
     const stem = newPromptDraft.stem.trim()
     const options = parsePromptOptions(newPromptDraft.optionsText)
 
@@ -1157,59 +1536,83 @@ function Admin() {
       return
     }
 
-    const nextPrompt = {
-      id: createPromptId(role),
-      role,
-      stem,
-      options,
-      status: 'Live',
-      updated: 'Added locally',
-    }
+    setQuizCrudError('')
+    try {
+      const payload = await saveAdminQuizQuestion({
+        role_targets: [role],
+        stem,
+        options,
+        gate: Number(newPromptDraft.gate || 2),
+        difficulty: newPromptDraft.difficulty || 'beginner',
+      })
+      const nextPrompt = normalizeStoredPrompt(payload.question, 0)
 
-    setQuizPrompts((prompts) => {
-      const nextPrompts = [nextPrompt, ...prompts]
-      saveAdminQuizPrompts(nextPrompts)
-      return nextPrompts
-    })
-    setSelectedPromptRole(role)
-    setNewPromptDraft({ ...EMPTY_PROMPT_DRAFT, role })
+      setQuizPrompts((prompts) => {
+        const nextPrompts = [nextPrompt, ...prompts.filter((prompt) => prompt.id !== nextPrompt.id)]
+        saveAdminQuizPrompts(nextPrompts)
+        return nextPrompts
+      })
+      setSelectedPromptRole(role)
+      setNewPromptDraft({ ...EMPTY_PROMPT_DRAFT, role })
+      setQuizBankState((current) => ({
+        ...current,
+        roles: uniqueItems([...current.roles, role]),
+        total: current.total + 1,
+      }))
+    } catch (err) {
+      setQuizCrudError(err.message || 'Could not save quiz question.')
+    }
   }
-  const updatePrompt = () => {
-    const role = normalizeRole(promptDraft.role)
+  const updatePrompt = async () => {
+    const role = normalizeQuizRole(promptDraft.role)
     const normalizedOptions = parsePromptOptions(promptDraft.optionsText)
 
-    setQuizPrompts((prompts) => {
-      const nextPrompts = prompts.map((prompt) =>
-        prompt.id === editingPromptId
-          ? {
-              ...prompt,
-              role,
-              stem: promptDraft.stem.trim() || prompt.stem,
-              options: normalizedOptions.length ? normalizedOptions : prompt.options,
-              updated: 'Saved locally',
-            }
-          : prompt,
-      )
+    setQuizCrudError('')
+    try {
+      const payload = await saveAdminQuizQuestion({
+        id: editingPromptId,
+        role_targets: [role],
+        stem: promptDraft.stem.trim(),
+        options: normalizedOptions,
+        gate: Number(promptDraft.gate || 2),
+        difficulty: promptDraft.difficulty || 'beginner',
+      })
+      const updatedPrompt = normalizeStoredPrompt(payload.question, 0)
 
-      saveAdminQuizPrompts(nextPrompts)
-      return nextPrompts
-    })
-    setSelectedPromptRole(role)
-    cancelPromptEdit()
-  }
-  const deletePrompt = (promptId) => {
-    setQuizPrompts((prompts) => {
-      const nextPrompts = prompts.filter((prompt) => prompt.id !== promptId)
-      saveAdminQuizPrompts(nextPrompts)
-      return nextPrompts
-    })
-    if (editingPromptId === promptId) {
+      setQuizPrompts((prompts) => {
+        const nextPrompts = prompts.map((prompt) =>
+          prompt.id === editingPromptId ? updatedPrompt : prompt,
+        )
+
+        saveAdminQuizPrompts(nextPrompts)
+        return nextPrompts
+      })
+      setSelectedPromptRole(role)
       cancelPromptEdit()
+    } catch (err) {
+      setQuizCrudError(err.message || 'Could not update quiz question.')
+    }
+  }
+  const deletePrompt = async (promptId) => {
+    setQuizCrudError('')
+    try {
+      await deleteAdminQuizQuestion(promptId)
+      setQuizPrompts((prompts) => {
+        const nextPrompts = prompts.filter((prompt) => prompt.id !== promptId)
+        saveAdminQuizPrompts(nextPrompts)
+        return nextPrompts
+      })
+      if (editingPromptId === promptId) {
+        cancelPromptEdit()
+      }
+    } catch (err) {
+      setQuizCrudError(err.message || 'Could not delete quiz question.')
     }
   }
   const startResourceEdit = (resource) => {
     setEditingResourceId(resource.id)
     setResourceDraft({
+      role: resource.role || '',
       skill: resource.skill || '',
       title: resource.title || '',
       platform: resource.platform || '',
@@ -1233,6 +1636,7 @@ function Admin() {
     const resource = normalizeResource({
       id: editingResourceId || createResourceId(title),
       ...resourceDraft,
+      role: resourceDraft.role,
       title,
       updated: editingResourceId ? 'Updated locally' : 'Added locally',
     }, resources.length)
@@ -1254,6 +1658,53 @@ function Admin() {
     setHasManagedResourceStore(true)
     if (editingResourceId === resourceId) {
       cancelResourceEdit()
+    }
+  }
+  const startResumeEdit = (section) => {
+    setEditingResumeId(section.id)
+    setResumeDraft({
+      role: section.role || '',
+      section: section.section || '',
+      tipsText: (section.tips || []).join('\n'),
+    })
+  }
+  const cancelResumeEdit = () => {
+    setEditingResumeId('')
+    setResumeDraft({ ...EMPTY_RESUME_DRAFT })
+  }
+  const saveResumeSection = (event) => {
+    event.preventDefault()
+
+    const sectionTitle = resumeDraft.section.trim()
+    const tips = parsePromptOptions(resumeDraft.tipsText)
+    if (!sectionTitle || !tips.length) {
+      return
+    }
+
+    const nextSection = normalizeResumeSection({
+      id: editingResumeId || createResumeSectionId(sectionTitle),
+      role: resumeDraft.role,
+      section: sectionTitle,
+      tips,
+      updated: editingResumeId ? 'Updated locally' : 'Added locally',
+    }, resumeSections.length)
+    const nextSections = editingResumeId
+      ? resumeSections.map((section) => (section.id === editingResumeId ? nextSection : section))
+      : [nextSection, ...resumeSections]
+
+    setManagedResumeSections(nextSections)
+    saveAdminResumeSections(nextSections)
+    setHasManagedResumeStore(true)
+    cancelResumeEdit()
+  }
+  const deleteResumeSection = (sectionId) => {
+    const nextSections = resumeSections.filter((section) => section.id !== sectionId)
+
+    setManagedResumeSections(nextSections)
+    saveAdminResumeSections(nextSections)
+    setHasManagedResumeStore(true)
+    if (editingResumeId === sectionId) {
+      cancelResumeEdit()
     }
   }
 
@@ -1302,6 +1753,33 @@ function Admin() {
               </article>
             ))}
           </div>
+
+          <section className="admin-panel">
+            <div className="admin-panel-heading">
+              <span>Overall site data</span>
+              <strong>
+                {adminAttemptState.isLoading
+                  ? 'Loading quiz history'
+                  : `${adminAttemptState.total || quizAttemptSummaries.length} quiz records`}
+              </strong>
+            </div>
+
+            {adminAttemptState.error && <p className="form-error">{adminAttemptState.error}</p>}
+
+            <div className="admin-insight-grid">
+              {overviewGraphRows.map((row) => (
+                <article className="admin-insight-card" key={row.label}>
+                  <div className="admin-insight-copy">
+                    <span>{row.label}</span>
+                    <strong>{row.detail}</strong>
+                  </div>
+                  <div className="admin-graph-track" aria-label={`${row.label} ${row.score}%`}>
+                    <span style={{ width: `${Math.min(100, row.score)}%` }}></span>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
 
           <div className="admin-feature-grid">
             {featureMap.map((feature) => (
@@ -1390,7 +1868,7 @@ function Admin() {
                 <article>
                   <span>Taken quizzes</span>
                   <strong>{quizAttemptSummaries.length}</strong>
-                  <small>{quizHistory.length} saved history</small>
+                  <small>{quizHistory.length} browser / {adminAttemptState.total || 0} backend</small>
                 </article>
                 <article>
                   <span>Answered questions</span>
@@ -1544,8 +2022,15 @@ function Admin() {
             <div className="admin-profile-dashboard">
               <div className="admin-panel-heading">
                 <span>Quiz prompt coverage</span>
-                <strong>{filteredQuizPrompts.length} shown</strong>
+                <strong>
+                  {quizBankState.isLoading
+                    ? 'Loading live bank'
+                    : `${filteredQuizPrompts.length} shown / ${quizBankState.total || quizPrompts.length} live`}
+                </strong>
               </div>
+
+              {quizBankState.error && <p className="form-error">{quizBankState.error}</p>}
+              {quizCrudError && <p className="form-error">{quizCrudError}</p>}
 
               <div className="admin-role-quiz-controls">
                 <label>
@@ -1556,7 +2041,7 @@ function Admin() {
                   >
                     <option value={ALL_QUIZ_ROLES}>{ALL_QUIZ_ROLES}</option>
                     {promptRoleOptions.map((role) => (
-                      <option value={role} key={role}>{role}</option>
+                      <option value={role} key={role}>{formatLabel(role)}</option>
                     ))}
                   </select>
                 </label>
@@ -1564,7 +2049,7 @@ function Admin() {
                 <div className="admin-role-counts" aria-label="Quiz prompt coverage by work type">
                   {promptCoverageByRole.map((item) => (
                     <span className="chip chip-blue" key={item.role}>
-                      {item.role} {item.count}
+                      {formatLabel(item.role)} {item.count}
                     </span>
                   ))}
                 </div>
@@ -1582,8 +2067,32 @@ function Admin() {
                       }))}
                     >
                       {promptRoleOptions.map((role) => (
-                        <option value={role} key={role}>{role}</option>
+                        <option value={role} key={role}>{formatLabel(role)}</option>
                       ))}
+                    </select>
+                  </label>
+                  <label>
+                    Gate
+                    <input
+                      value={newPromptDraft.gate}
+                      onChange={(event) => setNewPromptDraft((draft) => ({
+                        ...draft,
+                        gate: event.target.value,
+                      }))}
+                    />
+                  </label>
+                  <label>
+                    Difficulty
+                    <select
+                      value={newPromptDraft.difficulty}
+                      onChange={(event) => setNewPromptDraft((draft) => ({
+                        ...draft,
+                        difficulty: event.target.value,
+                      }))}
+                    >
+                      <option value="beginner">Beginner</option>
+                      <option value="intermediate">Intermediate</option>
+                      <option value="advanced">Advanced</option>
                     </select>
                   </label>
                   <label>
@@ -1635,8 +2144,32 @@ function Admin() {
                               }))}
                             >
                               {promptRoleOptions.map((role) => (
-                                <option value={role} key={role}>{role}</option>
+                                <option value={role} key={role}>{formatLabel(role)}</option>
                               ))}
+                            </select>
+                          </label>
+                          <label>
+                            Gate
+                            <input
+                              value={promptDraft.gate}
+                              onChange={(event) => setPromptDraft((draft) => ({
+                                ...draft,
+                                gate: event.target.value,
+                              }))}
+                            />
+                          </label>
+                          <label>
+                            Difficulty
+                            <select
+                              value={promptDraft.difficulty}
+                              onChange={(event) => setPromptDraft((draft) => ({
+                                ...draft,
+                                difficulty: event.target.value,
+                              }))}
+                            >
+                              <option value="beginner">Beginner</option>
+                              <option value="intermediate">Intermediate</option>
+                              <option value="advanced">Advanced</option>
                             </select>
                           </label>
                           <label>
@@ -1662,10 +2195,13 @@ function Admin() {
                         </div>
                       ) : (
                         <div>
-                          <span className="chip chip-blue">{normalizeRole(prompt.role)}</span>
+                          <span className="chip chip-blue">{getPromptRoles(prompt).map(formatLabel).join(', ') || formatLabel(prompt.role)}</span>
                           <h2>{prompt.stem}</h2>
                           <p>{prompt.options.join(' / ')}</p>
                           <small className="admin-small-note">{prompt.updated}</small>
+                          <small className="admin-small-note">
+                            Gate {prompt.gate} / {formatLabel(prompt.difficulty)} / {formatLabel(prompt.question_type)}
+                          </small>
                         </div>
                       )}
 
@@ -1777,12 +2313,48 @@ function Admin() {
           <section className="admin-panel">
             <div className="admin-panel-heading">
               <span>Recommendation coverage gaps</span>
-              <strong>{gaps.length ? `${gaps.length} active gaps / ${gapStatus}` : 'Awaiting AI'}</strong>
+              <strong>{filteredGaps.length ? `${filteredGaps.length} active gaps / ${gapStatus}` : 'Awaiting AI'}</strong>
             </div>
 
-            {gaps.length ? (
+            <div className="admin-toolbar">
+              <label>
+                Role filter
+                <select
+                  value={selectedLearningRole}
+                  onChange={(event) => setSelectedLearningRole(event.target.value)}
+                >
+                  <option value={ALL_ROLE_FILTERS}>{ALL_ROLE_FILTERS}</option>
+                  {learningRoleOptions.map((role) => (
+                    <option value={role} key={role}>{formatLabel(role)}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Source
+                <input value={hasManagedResourceStore ? 'Admin resource catalog' : 'AI resource analysis'} readOnly />
+              </label>
+            </div>
+
+            {learningGraphRows.length > 0 && (
+              <div className="admin-bar-list" aria-label="Learning insight graph">
+                {learningGraphRows.map((row) => (
+                  <article className="admin-graph-row" key={`${row.label}-${row.detail}`}>
+                    <div className="admin-graph-copy">
+                      <strong>{row.label}</strong>
+                      <span>{row.detail}</span>
+                    </div>
+                    <div className="admin-graph-track" aria-label={`${row.label} ${row.score}%`}>
+                      <span style={{ width: `${Math.min(100, row.score)}%` }}></span>
+                    </div>
+                    <strong className="admin-graph-score">{Math.round(row.score)}%</strong>
+                  </article>
+                ))}
+              </div>
+            )}
+
+            {filteredGaps.length ? (
               <div className="question-review-list">
-                {gaps.map((gap) => {
+                {filteredGaps.map((gap) => {
                   const priority = getGapPriority(gap)
 
                   return (
@@ -1820,6 +2392,21 @@ function Admin() {
 
             <form className="admin-role-quiz-form" onSubmit={saveResource}>
               <div className="admin-role-quiz-form-grid">
+                <label>
+                  Role
+                  <select
+                    value={resourceDraft.role}
+                    onChange={(event) => setResourceDraft((draft) => ({
+                      ...draft,
+                      role: event.target.value,
+                    }))}
+                  >
+                    <option value="">General</option>
+                    {learningRoleOptions.map((role) => (
+                      <option value={role} key={role}>{formatLabel(role)}</option>
+                    ))}
+                  </select>
+                </label>
                 <label>
                   Coverage area
                   <input
@@ -1891,16 +2478,16 @@ function Admin() {
                     Cancel
                   </button>
                 )}
-                <small>{resources.length} resources listed</small>
+                <small>{filteredResources.length} of {resources.length} resources listed</small>
               </div>
             </form>
 
-            {resources.length ? (
+            {filteredResources.length ? (
               <div className="question-review-list">
-                {resources.map((resource) => (
+                {filteredResources.map((resource) => (
                   <article className="question-review-card" key={resource.id}>
                     <div>
-                      <span className="chip chip-blue">{resource.level || 'Resource'}</span>
+                      <span className="chip chip-blue">{formatLabel(getResourceRole(resource), resource.level || 'Resource')}</span>
                       <h2>{resource.title}</h2>
                       <p>
                         {formatLabel(resource.skill, 'General coverage')} / {resource.platform || 'AI resource'}
@@ -1934,7 +2521,7 @@ function Admin() {
         <section className="admin-panel">
           <div className="admin-panel-heading">
             <span>Resume workflow</span>
-            <strong>{resumeStatus}</strong>
+            <strong>{resumeAdminStatus}</strong>
           </div>
 
           <div className="admin-feature-grid">
@@ -1975,10 +2562,99 @@ function Admin() {
 
           <div className="admin-panel-divider"></div>
 
-          {resumeCoaching?.tips?.length ? (
+          <div className="admin-toolbar">
+            <label>
+              Role filter
+              <select
+                value={selectedResumeRole}
+                onChange={(event) => setSelectedResumeRole(event.target.value)}
+              >
+                <option value={ALL_ROLE_FILTERS}>{ALL_ROLE_FILTERS}</option>
+                {resumeRoleOptions.map((role) => (
+                  <option value={role} key={role}>{formatLabel(role)}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Source
+              <input value={hasManagedResumeStore ? 'Admin resume playbook' : 'AI resume coaching'} readOnly />
+            </label>
+          </div>
+
+          {resumeGraphRows.length > 0 && (
+            <div className="admin-bar-list" aria-label="Resume insight graph">
+              {resumeGraphRows.map((row) => (
+                <article className="admin-graph-row" key={row.label}>
+                  <div className="admin-graph-copy">
+                    <strong>{row.label}</strong>
+                    <span>{row.detail}</span>
+                  </div>
+                  <div className="admin-graph-track" aria-label={`${row.label} ${row.score}%`}>
+                    <span style={{ width: `${Math.min(100, row.score)}%` }}></span>
+                  </div>
+                  <strong className="admin-graph-score">{Math.round(row.score)}%</strong>
+                </article>
+              ))}
+            </div>
+          )}
+
+          <form className="admin-role-quiz-form" onSubmit={saveResumeSection}>
+            <div className="admin-role-quiz-form-grid">
+              <label>
+                Role
+                <select
+                  value={resumeDraft.role}
+                  onChange={(event) => setResumeDraft((draft) => ({
+                    ...draft,
+                    role: event.target.value,
+                  }))}
+                >
+                  <option value="">General</option>
+                  {resumeRoleOptions.map((role) => (
+                    <option value={role} key={role}>{formatLabel(role)}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Section
+                <input
+                  value={resumeDraft.section}
+                  onChange={(event) => setResumeDraft((draft) => ({
+                    ...draft,
+                    section: event.target.value,
+                  }))}
+                />
+              </label>
+              <label>
+                Tips
+                <textarea
+                  value={resumeDraft.tipsText}
+                  placeholder="One resume recommendation per line"
+                  onChange={(event) => setResumeDraft((draft) => ({
+                    ...draft,
+                    tipsText: event.target.value,
+                  }))}
+                />
+              </label>
+            </div>
+
+            <div className="admin-role-quiz-actions">
+              <button className="button button-primary" type="submit" disabled={!resumeDraft.section.trim() || !resumeDraft.tipsText.trim()}>
+                {editingResumeId ? 'Update resume section' : 'Add resume section'}
+              </button>
+              {editingResumeId && (
+                <button className="button button-ghost" type="button" onClick={cancelResumeEdit}>
+                  Cancel
+                </button>
+              )}
+              <small>{filteredResumeSections.length} of {resumeSections.length} sections listed</small>
+            </div>
+          </form>
+
+          {filteredResumeSections.length ? (
             <div className="tips-grid">
-              {resumeCoaching.tips.map((section) => (
-                <article className="tips-section" key={section.section}>
+              {filteredResumeSections.map((section) => (
+                <article className="tips-section" key={section.id}>
                   <div className="tips-section-title">
                     <span>{section.icon || 'AI'}</span>
                     <h2>{section.section}</h2>
@@ -1988,6 +2664,15 @@ function Admin() {
                       <li key={tip}>{tip}</li>
                     ))}
                   </ul>
+                  <div className="question-review-actions">
+                    <span className="chip chip-blue">{formatLabel(getResumeRole(section, workTypeNames[0] || ''), 'General')}</span>
+                    <button className="button button-ghost" type="button" onClick={() => startResumeEdit(section)}>
+                      Edit
+                    </button>
+                    <button className="button button-ghost" type="button" onClick={() => deleteResumeSection(section.id)}>
+                      Delete
+                    </button>
+                  </div>
                 </article>
               ))}
             </div>
@@ -2018,6 +2703,42 @@ function Admin() {
             ))}
           </div>
 
+          <div className="admin-toolbar">
+            <label>
+              Role filter
+              <select
+                value={selectedTelegramRole}
+                onChange={(event) => setSelectedTelegramRole(event.target.value)}
+              >
+                <option value={ALL_ROLE_FILTERS}>{ALL_ROLE_FILTERS}</option>
+                {telegramRoleOptions.map((role) => (
+                  <option value={role} key={role}>{formatLabel(role)}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Filtered jobs
+              <input value={`${filteredTelegramJobs.length} of ${telegramState.jobs.length}`} readOnly />
+            </label>
+          </div>
+
+          {telegramGraphRows.length > 0 && (
+            <div className="admin-bar-list" aria-label="Telegram role insight graph">
+              {telegramGraphRows.map((row) => (
+                <article className="admin-graph-row" key={row.label}>
+                  <div className="admin-graph-copy">
+                    <strong>{row.label}</strong>
+                    <span>{row.detail}</span>
+                  </div>
+                  <div className="admin-graph-track" aria-label={`${row.label} ${row.score}%`}>
+                    <span style={{ width: `${Math.min(100, row.score)}%` }}></span>
+                  </div>
+                  <strong className="admin-graph-score">{Math.round(row.score)}%</strong>
+                </article>
+              ))}
+            </div>
+          )}
+
           {telegramState.updatedAt && (
             <div className="admin-small-note">Last feed update: {telegramState.updatedAt}</div>
           )}
@@ -2033,7 +2754,7 @@ function Admin() {
               <span>Posted</span>
             </div>
 
-            {telegramState.jobs.slice(0, 8).map((job) => (
+            {filteredTelegramJobs.slice(0, 12).map((job) => (
               <div className="admin-table-row" role="row" key={job.job_id}>
                 <span>
                   <strong>{job.job_title}</strong>
@@ -2047,7 +2768,7 @@ function Admin() {
             ))}
           </div>
 
-          {!telegramState.isLoading && !telegramState.error && telegramState.jobs.length === 0 && (
+          {!telegramState.isLoading && !telegramState.error && filteredTelegramJobs.length === 0 && (
             <div className="admin-empty">No current Telegram jobs are available from the feed yet.</div>
           )}
         </section>
