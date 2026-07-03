@@ -3480,3 +3480,377 @@ button.chip {
     transform: none;
   }
 }
+
+/* ==========================================
+   PREMIUM MODERN OVERRIDES & REFINEMENTS
+   ========================================== */
+
+/* Typography & Focus states */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display) !important;
+  letter-spacing: -0.02em;
+}
+:focus-visible {
+  outline: 2px solid var(--blue) !important;
+  outline-offset: 3px !important;
+}
+
+/* Glassmorphism & Cards */
+.site-header {
+  border-bottom: 1px solid var(--line) !important;
+  background: var(--header-bg) !important;
+  backdrop-filter: blur(16px) saturate(1.8) !important;
+}
+.navbar {
+  padding-inline: 16px;
+}
+.brand-mark {
+  background: linear-gradient(135deg, var(--navy), var(--blue)) !important;
+  border: none !important;
+  box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3) !important;
+}
+
+/* Nav Links hover animations */
+.nav-links a {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+.nav-links a:hover,
+.nav-links a:focus-visible {
+  background: rgba(99, 102, 241, 0.08) !important;
+  color: var(--navy) !important;
+  border-color: rgba(99, 102, 241, 0.2) !important;
+  transform: translateY(-1px) !important;
+}
+.nav-links a[aria-current='page'] {
+  background: rgba(99, 102, 241, 0.12) !important;
+  color: var(--navy) !important;
+  border-color: rgba(99, 102, 241, 0.3) !important;
+}
+
+/* Buttons */
+.button {
+  border-radius: 8px !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  font-weight: 600 !important;
+  font-family: var(--font-display) !important;
+}
+.button-primary {
+  background: linear-gradient(135deg, var(--navy), var(--blue)) !important;
+  border: none !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 20px -10px rgba(99, 102, 241, 0.5) !important;
+}
+.button-primary:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 15px 25px -10px rgba(99, 102, 241, 0.6) !important;
+}
+.button-ghost {
+  border: 1px solid var(--line-strong) !important;
+  background: var(--surface-soft) !important;
+  color: var(--ink) !important;
+}
+.button-ghost:hover {
+  background: var(--surface) !important;
+  border-color: var(--blue) !important;
+  color: var(--blue) !important;
+  transform: translateY(-2px) !important;
+}
+
+/* General Layout Cards */
+.scan-panel,
+.match-stack,
+.stat-card,
+.manual-form,
+.quiz-card,
+.job-card,
+.gap-row,
+.resource-card,
+.tips-section,
+.admin-metric-card,
+.admin-panel,
+.admin-feature-card,
+.admin-dashboard-card,
+.question-review-card,
+.resource-admin-card {
+  border: 1px solid var(--line) !important;
+  border-radius: 16px !important;
+  background: var(--surface-soft) !important;
+  backdrop-filter: blur(12px) !important;
+  box-shadow: var(--shadow) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.job-card:hover,
+.resource-card:hover,
+.gap-row:hover,
+.admin-metric-card:hover,
+.admin-feature-card:hover {
+  transform: translateY(-4px) !important;
+  box-shadow: var(--shadow-lg) !important;
+  border-color: var(--line-strong) !important;
+}
+
+/* Forms & Inputs styling */
+input[type="text"],
+input[type="email"],
+input[type="number"],
+input[type="url"],
+select,
+textarea {
+  border: 1px solid var(--line-strong) !important;
+  border-radius: 10px !important;
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  padding: 12px 16px !important;
+  transition: all 0.2s ease !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02) !important;
+}
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="number"]:focus,
+input[type="url"]:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--blue) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15), inset 0 2px 4px rgba(0, 0, 0, 0.02) !important;
+}
+
+/* Quiz Option Select Cards */
+.option-grid {
+  gap: 12px !important;
+}
+.option-card {
+  border: 1px solid var(--line-strong) !important;
+  border-radius: 12px !important;
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  padding: 18px 24px !important;
+  text-align: left !important;
+  font-weight: 500 !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02) !important;
+}
+.option-card:hover:not(:disabled) {
+  border-color: var(--blue) !important;
+  background: rgba(99, 102, 241, 0.04) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 16px rgba(99, 102, 241, 0.08) !important;
+}
+.option-card.is-selected {
+  border-color: var(--blue) !important;
+  background: rgba(99, 102, 241, 0.1) !important;
+  color: var(--blue) !important;
+  font-weight: 600 !important;
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.15) !important;
+}
+
+/* Radar & Scanning Visual refinements */
+.radar-stage {
+  border: none !important;
+  background: 
+    radial-gradient(circle, rgba(99, 102, 241, 0.05) 0%, transparent 70%),
+    linear-gradient(90deg, transparent calc(50% - 1px), var(--line) 50%, transparent calc(50% + 1px)),
+    linear-gradient(0deg, transparent calc(50% - 1px), var(--line) 50%, transparent calc(50% + 1px)) !important;
+}
+.radar-ring {
+  border-color: var(--line) !important;
+}
+.radar-sweep {
+  background: conic-gradient(
+    from 0deg,
+    rgba(99, 102, 241, 0.2),
+    rgba(99, 102, 241, 0.01) 25%,
+    transparent 40%
+  ) !important;
+}
+.core-node {
+  background: linear-gradient(135deg, var(--navy), var(--blue)) !important;
+  border: none !important;
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.4) !important;
+}
+.node {
+  border-color: var(--line-strong) !important;
+  font-weight: 600 !important;
+}
+
+/* Table rows styling */
+.admin-table-row {
+  border-radius: 8px !important;
+  border: 1px solid var(--line) !important;
+  background: var(--surface) !important;
+  transition: all 0.2s ease !important;
+}
+.admin-table-row:hover:not(.admin-table-head) {
+  border-color: var(--blue) !important;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05) !important;
+  transform: translateX(4px) !important;
+}
+.admin-table-head {
+  background: var(--paper-warm) !important;
+  border-color: var(--line-strong) !important;
+}
+
+/* Badges & Status pills */
+.admin-status, .match-badge {
+  font-family: var(--font-sans) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em !important;
+  border-radius: 999px !important;
+}
+.admin-status-published, .admin-status-live, .admin-status-verified, .admin-status-ready, .admin-status-current, .admin-status-all-quizzes, .admin-status-ai-ready, .admin-status-stored-data, .admin-status-personalized, .admin-status-low, .match-high {
+  background: rgba(16, 185, 129, 0.12) !important;
+  color: var(--mint) !important;
+}
+.admin-status-needs-review, .admin-status-review, .admin-status-pending, .admin-status-loading, .admin-status-awaiting-ai, .admin-status-needs-profile, .admin-status-needs-resources, .admin-status-template, .admin-status-catalog, .admin-status-medium, .match-mid {
+  background: rgba(245, 158, 11, 0.12) !important;
+  color: var(--amber) !important;
+}
+.admin-status-draft, .admin-status-demo, .admin-status-high, .match-low {
+  background: rgba(244, 63, 94, 0.12) !important;
+  color: var(--coral) !important;
+}
+
+/* Admin Tabs Pill Styling */
+.admin-tabs {
+  background: var(--paper-warm) !important;
+  padding: 6px !important;
+  border-radius: 12px !important;
+  border: 1px solid var(--line) !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 4px !important;
+}
+.admin-tabs button {
+  flex: 1 1 auto !important;
+  border: none !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  color: var(--muted) !important;
+  transition: all 0.2s ease !important;
+  font-family: var(--font-display) !important;
+  min-height: 38px !important;
+}
+.admin-tabs button:hover {
+  background: rgba(99, 102, 241, 0.05) !important;
+  color: var(--navy) !important;
+}
+.admin-tabs button.is-active {
+  background: var(--surface) !important;
+  color: var(--navy) !important;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.05) !important;
+}
+
+/* Flow Progress bar */
+.flow-step {
+  border-radius: 10px !important;
+  transition: all 0.2s ease !important;
+}
+.flow-step:hover {
+  transform: translateY(-2px) !important;
+}
+.flow-step.is-active {
+  border-color: var(--blue) !important;
+  background: rgba(99, 102, 241, 0.05) !important;
+  color: var(--navy) !important;
+}
+.flow-step.is-complete .flow-index {
+  background: var(--mint) !important;
+  border-color: var(--mint) !important;
+  color: white !important;
+}
+
+/* Custom Skill tag chips */
+.chip {
+  border-radius: 6px !important;
+  font-weight: 500 !important;
+  font-size: 12px !important;
+  padding: 4px 10px !important;
+  transition: all 0.2s ease !important;
+}
+.chip-blue {
+  background: rgba(99, 102, 241, 0.08) !important;
+  color: var(--navy) !important;
+  border: 1px solid rgba(99, 102, 241, 0.15) !important;
+}
+.chip-coral {
+  background: rgba(244, 63, 94, 0.08) !important;
+  color: var(--coral) !important;
+  border: 1px solid rgba(244, 63, 94, 0.15) !important;
+}
+
+/* Custom Readiness Circle gauge */
+.readiness-ring {
+  background: radial-gradient(closest-side, var(--surface) 79%, transparent 80% 100%), conic-gradient(var(--blue) var(--score), var(--line) 0) !important;
+  box-shadow: var(--shadow) !important;
+  width: 140px !important;
+  height: 140px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+.readiness-ring strong {
+  font-size: 32px !important;
+  color: var(--ink) !important;
+}
+.readiness-ring span {
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  color: var(--muted) !important;
+}
+
+/* Profile summary grid dashboard elements */
+.profile-summary-grid article {
+  padding: 20px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+}
+.profile-summary-grid article span {
+  font-size: 10px !important;
+  text-transform: uppercase !important;
+  color: var(--muted) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em !important;
+}
+.profile-summary-grid article strong {
+  font-size: 20px !important;
+  color: var(--ink) !important;
+}
+.profile-summary-grid article a {
+  color: var(--blue) !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  text-decoration: none !important;
+  margin-top: 4px !important;
+}
+.profile-summary-grid article a:hover {
+  text-decoration: underline !important;
+}
+
+/* Skill level progress bar in results gap analysis */
+.gap-bar {
+  background: var(--line) !important;
+  border-radius: 999px !important;
+  height: 8px !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+.gap-current {
+  background: var(--blue) !important;
+  height: 100% !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+  width: var(--current) !important;
+  border-radius: 999px !important;
+}
+.gap-required {
+  border-right: 2px solid var(--coral) !important;
+  height: 100% !important;
+  position: absolute !important;
+  left: var(--required) !important;
+  top: 0 !important;
+}
