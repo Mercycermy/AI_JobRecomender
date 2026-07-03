@@ -1860,6 +1860,10 @@ function Admin() {
             Enter the admin access key to view quiz management, recommendation data,
             and Telegram job tools.
           </p>
+          <p className="admin-login-hint">
+            Local development defaults to <strong>admin-local-access</strong> unless you set
+            <strong> ADMIN_ACCESS_KEY</strong> in the backend environment.
+          </p>
 
           <form className="admin-login-form" onSubmit={handleAdminLogin}>
             <label className="field-group">

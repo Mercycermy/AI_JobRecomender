@@ -1,94 +1,146 @@
 # AI Job Recommender
 
-An intelligent, full-stack application designed to match users with job postings based on their skills, generate personalized learning paths, and provide actionable resume feedback. Job matching uses **Sentence Transformers** (`all-MiniLM-L6-v2`) with **FAISS** dense retrieval and a multi-factor hybrid ranker; an adaptive quiz agent builds the skill profile.
+An intelligent, full-stack application designed to match users with job postings based on their skills, generate personalized learning paths, and provide actionable resume feedback. 
 
-## Features
-- **Smart Recommendations:** Uses precomputed job vectors to find the best job matches based on your unique skill set.
-- **Skill Gap Analyzer:** Employs an AI-powered agent to calculate skill gaps and prioritize what you need to learn.
-- **Adaptive Questioning:** An AI agent system actively queries and evaluates user inputs.
-- **Modern User Interface:** Built with React and Vite for blazing-fast performance.
-- **Scalable Backend:** Python-based REST API serving recommendations, tracking user context, and interacting with LLMs.
+This project features an **Adaptive Skill Assessment Quiz** that builds a user profile, a **Hybrid Recommendation Engine** using **Sentence Transformers** (`all-MiniLM-L6-v2`) with a **FAISS** dense retrieval index for semantic similarity and multi-factor reranking, and an AI-powered resume review agent.
+
+---
+
+## Key Features
+
+1. **Adaptive Skill Quiz:** An intelligent questioning engine that routes users through different paths (software, data/AI, business, creative) based on their answers, dynamically adjusting question difficulty and stopping once a high confidence score is reached.
+2. **Manual Profile Entry:** An alternative profile builder allowing users to manually select and rate their skills, with live taxonomy suggestions.
+3. **Smart Job Matching:** Hybrid scoring that combines vector search similarity, exact skill overlaps, experience level mapping, category matching, and location parameters.
+4. **Skill Gap Analysis:** Computes current vs. required proficiency levels across top job matches, ranking gaps by priority.
+5. **Personalized Learning Paths:** Maps curated online courses, documentation, and tutorials to the user's biggest skill gaps.
+6. **Resume Coaching:** Uses LLMs (or static fallbacks) to suggest resume section edits and a 4-week study roadmap to prepare for the target roles.
+
+---
 
 ## Tech Stack
-- **Frontend:** React, Vite
-- **Backend:** Python (Flask/FastAPI)
-- **Database:** SQLite
-- **Machine Learning:** Sentence Transformers, FAISS (`faiss-cpu`), hybrid scoring (`app/recommender.py`)
-- **Assessment:** Adaptive quiz agent (`app/agent.py`)
 
-## File Structure
+*   **Frontend:** React 19, Vite 8, Vanilla CSS (with responsive grid and custom design tokens for light/dark themes).
+*   **Backend:** Python 3.11+, Flask (REST API endpoints with CORS support).
+*   **Database:** SQLite (local database for job listings, taxonomy, and sessions).
+*   **Vector Engine & ML:** Sentence Transformers, FAISS (`faiss-cpu`) for dense embeddings and indexing.
+*   **AI Integration:** Anthropic Claude API for personalized resume reviews.
+
+---
+
+## Project Structure
+
 ```text
-├── app/               # Main Python application files
-├── data/              # SQLite DB and raw JSON/CSV datasets
-├── docs/              # Proprietary Internal system documentation (Git ignored)
-├── frontend/          # React frontend (Vite source code)
-├── models/            # Legacy pickle vectors (optional; superseded by FAISS index)
-├── scripts/           # Python scripts for data seeding and model-building
-├── tests/             # Unit and integration tests
-└── README.md          # You are here
+├── app/                      # Main Python Flask application
+│   ├── agent.py              # Adaptive quiz logic & state machine
+│   ├── ai_client.py          # Anthropic Claude API client
+│   ├── gap_analyzer.py       # Skill gap calculator
+│   ├── learning_path.py      # Learning resources matching
+│   ├── recommender.py        # FAISS & SQL recommendation engine
+│   ├── resume_tips.py        # Resume tips & fallback generator
+│   ├── routes.py             # Flask API blueprints & routing
+│   └── skill_normalizer.py   # Skill canonical name mapping
+├── data/                     # Data folder (contains SQLite DB and datasets)
+│   ├── db.sqlite3            # Seeding target SQLite database (Git ignored)
+│   ├── jobs.csv              # Main job listings dataset
+│   ├── learning_resources.json # Course catalog mapped to skills
+│   ├── questions_part1-5.json # Segmented quiz questions database
+│   └── skills_taxonomy.json  # 246 canonical skills and aliases
+├── frontend/                 # React frontend (Vite source code)
+│   ├── public/               # Favicons and sprite SVGs
+│   └── src/
+│       ├── api/              # API communications client
+│       ├── components/       # Layout page wrap components
+│       ├── data/             # Mock data for offline execution
+│       ├── pages/            # View pages (Home, Quiz, Results, Admin, etc.)
+│       ├── App.jsx           # Routing mapping & root component
+│       ├── index.css         # Styling colors and global resets
+│       └── App.css           # UI layout and styling properties
+├── scripts/                  # Seeding, vector construction, & validation scripts
+│   ├── build_quiz_bank.py    # Generates quiz JSON data for testing
+│   ├── build_vectors.py      # Creates FAISS semantic vector index
+│   ├── clean_data.py         # Performs data validation checks
+│   ├── seed_db.py            # Sets up and seeds the database
+│   └── ...                   # Other processing scripts
+├── tests/                    # Unit and integration test suites
+│   ├── test_agent.py         # Validates quiz logic
+│   ├── test_recommender.py   # Validates recommendation weights
+│   └── ...                   # Other unit tests
+├── requirements.txt          # Python dependencies
+├── project_roadmap.txt       # Master build roadmap document
+├── step1_scope.txt to step6_manual_profile.txt # Architecture planning logs
+└── README.md                 # You are here
 ```
+
+---
 
 ## Getting Started
 
-### 1. Backend Setup
-1. Open a terminal and navigate to the project directory.
+### 1. Backend Setup & Data Seeding
+
+1. Open your terminal and navigate to the project directory.
 2. Create and activate a Python virtual environment:
    ```bash
-   python -m venv venv
+   python -m venv .venv
+   
    # Windows:
-   venv\Scripts\activate
+   .venv\Scripts\activate
+   
    # Mac/Linux:
-   source venv/bin/activate
+   source .venv/bin/activate
    ```
 3. Install the dependencies:
    ```bash
    pip install -r requirements.txt
    ```
-4. Configure your `.env` file with any required API keys (e.g., Groq, Anthropic, OpenAI).
-   Add `ADMIN_ACCESS_KEY` to control access to `/admin`.
-5. Seed the database, quiz bank, and FAISS index:
+4. Copy the environment template and insert your API keys:
    ```bash
-   python scripts/seed_db.py
-   python scripts/build_quiz_bank.py
-   python scripts/build_vectors.py
-   python scripts/build_faiss_index.py
+   copy .env.example .env
+   # Edit .env and enter: ANTHROPIC_API_KEY=your-api-key
    ```
-   See `skills.md` for architecture details and `recommendation_phases.md` for the roadmap.
-6. Start the Flask API:
+5. Initialize and seed the database, quiz banks, and FAISS vectors:
+   ```bash
+   # 1. Clean and validate data files
+   python scripts/clean_data.py
+   
+   # 2. Seed SQLite database
+   python scripts/seed_db.py
+   
+   # 3. Build FAISS vector index
+   python scripts/build_vectors.py
+   ```
+6. Launch the Flask API server:
    ```bash
    python app/routes.py
    ```
-7. Run tests:
-   ```bash
-   python -m pytest tests/ -q
-   ```
-
-### Learning resources + resume tips (Groq + FAISS)
-Set `GROQ_API_KEY` in your environment to enable AI resume tips and summaries. Build the learning-resource FAISS index once with `scripts/build_faiss_index.py`. After a user completes the adaptive quiz, call:
-
-```bash
-curl -X POST http://127.0.0.1:5000/recommendations \
-   -H "Content-Type: application/json" \
-   -d '{"session_id": "<quiz-session-id>"}'
-```
-
-The API returns a summary, resource list (FAISS ranked), and resume tips powered by Groq.
+   *The server will start on `http://127.0.0.1:5000`.*
 
 ### 2. Frontend Setup
-1. Open a new terminal instance and change into the frontend directory:
+
+1. Open a new terminal window and navigate to the `frontend/` directory:
    ```bash
    cd frontend
    ```
-2. Install NodeJS dependencies:
+2. Install npm dependencies:
    ```bash
    npm install
    ```
-3. Update `frontend/.env` to point to your local Python server (e.g., `VITE_API_URL=http://127.0.0.1:5000`).
-4. Start the frontend development server:
+3. Copy environment settings and specify your local API URL:
+   ```bash
+   copy .env.example .env
+   # Ensure VITE_API_URL is set to http://127.0.0.1:5000
+   ```
+4. Start the frontend developer server:
    ```bash
    npm run dev
    ```
-5. Open your browser to the URL provided (usually `http://localhost:5173`).
+   *The application will open on `http://localhost:5173`.*
 
-## Hosting
-Detailed deployment constraints and cloud deployment instructions are tracked internally in `hosting_guide.md`. Recommended stacks include PythonAnywhere (Free) or Vercel + Render.
+---
+
+## Running Tests
+
+To run the Python test suite, execute:
+```bash
+python -m pytest tests/ -v
+```
+This runs checks verifying the adaptive assessment engine, skill mapping calculations, and fallback mechanisms.
