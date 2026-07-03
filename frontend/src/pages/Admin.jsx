@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import {
   deleteAdminQuizQuestion,
+  clearStoredAdminAccessKey,
   fetchAdminQuizAttempts,
   fetchAdminQuizQuestions,
   fetchAnalysis,
   fetchRecommendations,
   fetchResumeTips,
   fetchTelegramJobs,
+  getStoredAdminAccessKey,
   loadStoredAnalysis,
   loadStoredProfile,
   loadStoredQuizHistory,
@@ -15,6 +17,8 @@ import {
   persistAnalysis,
   persistRecommendationSession,
   saveAdminQuizQuestion,
+  setStoredAdminAccessKey,
+  verifyAdminAccess,
 } from '../api/recommend.js'
 const adminTabs = ['Overview', 'Profile', 'Matching', 'Learning', 'Resume', 'Telegram']
 const profilePages = ['Quiz Intake', 'Match Graph', 'Completion Detail', 'Quiz Prompts']
@@ -22,6 +26,7 @@ const ADMIN_QUIZ_PROMPTS_STORAGE_KEY = 'adminQuizPrompts'
 const ADMIN_RESOURCES_STORAGE_KEY = 'adminLearningResources'
 const ADMIN_RESUME_STORAGE_KEY = 'adminResumePlaybook'
 const ALL_ROLE_FILTERS = 'All roles'
+const ADMIN_LOGIN_TITLE = 'Admin access required'
 const WORK_TYPE_OPTIONS = [
   {
     id: 'SOFTWARE',
@@ -828,6 +833,12 @@ function countWorkTypeSignals(values) {
 }
 
 function Admin() {
+  const [adminAccessKey, setAdminAccessKeyInput] = useState('')
+  const [adminAuthState, setAdminAuthState] = useState({
+    error: '',
+    isAuthorized: false,
+    isLoading: true,
+  })
   const [activeTab, setActiveTab] = useState(adminTabs[0])
   const [activeProfilePage, setActiveProfilePage] = useState(profilePages[0])
   const [jobSearch, setJobSearch] = useState('')
@@ -870,6 +881,54 @@ function Admin() {
     jobs: [],
     updatedAt: '',
   })
+
+  useEffect(() => {
+    let cancelled = false
+    const storedKey = getStoredAdminAccessKey()
+
+    if (!storedKey) {
+      setAdminAuthState({
+        error: '',
+        isAuthorized: false,
+        isLoading: false,
+      })
+      return () => {
+        cancelled = true
+      }
+    }
+
+    setAdminAccessKeyInput(storedKey)
+
+    verifyAdminAccess(storedKey)
+      .then(() => {
+        if (cancelled) {
+          return
+        }
+
+        setAdminAuthState({
+          error: '',
+          isAuthorized: true,
+          isLoading: false,
+        })
+      })
+      .catch((err) => {
+        if (cancelled) {
+          return
+        }
+
+        clearStoredAdminAccessKey()
+        setAdminAccessKeyInput('')
+        setAdminAuthState({
+          error: err.message || 'Admin access key is invalid.',
+          isAuthorized: false,
+          isLoading: false,
+        })
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const profile = loadStoredProfile()
   const recommendations = storedRecommendations
@@ -1128,6 +1187,10 @@ function Admin() {
   const canRequestAdminAi = hasStoredRecommendations && (profileSkills.length > 0 || quizAttempts.length > 0)
 
   useEffect(() => {
+    if (!adminAuthState.isAuthorized) {
+      return
+    }
+
     let cancelled = false
 
     fetchAdminQuizAttempts({ limit: 250 })
@@ -1160,9 +1223,13 @@ function Admin() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [adminAuthState.isAuthorized])
 
   useEffect(() => {
+    if (!adminAuthState.isAuthorized) {
+      return
+    }
+
     let cancelled = false
 
     fetchAdminQuizQuestions({ status: 'active', limit: 1000 })
@@ -1197,9 +1264,13 @@ function Admin() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [adminAuthState.isAuthorized])
 
   useEffect(() => {
+    if (!adminAuthState.isAuthorized) {
+      return
+    }
+
     if (storedRecommendations.length || !canBuildRecommendations) {
       return
     }
@@ -1223,9 +1294,19 @@ function Admin() {
     return () => {
       cancelled = true
     }
-  }, [adminAiRequestKey, aggregateProfilePayload, canBuildRecommendations, storedRecommendations.length])
+  }, [
+    adminAuthState.isAuthorized,
+    adminAiRequestKey,
+    aggregateProfilePayload,
+    canBuildRecommendations,
+    storedRecommendations.length,
+  ])
 
   useEffect(() => {
+    if (!adminAuthState.isAuthorized) {
+      return
+    }
+
     if (!canRequestAdminAi || analysis?.gaps?.length || analysis?.resources?.length) {
       return
     }
@@ -1251,6 +1332,7 @@ function Admin() {
       cancelled = true
     }
   }, [
+    adminAuthState.isAuthorized,
     adminAiRequestKey,
     aggregateProfilePayload,
     aggregateRecommendationsPayload,
@@ -1260,6 +1342,10 @@ function Admin() {
   ])
 
   useEffect(() => {
+    if (!adminAuthState.isAuthorized) {
+      return
+    }
+
     if (!canRequestAdminAi || resumeCoaching) {
       return
     }
@@ -1285,6 +1371,7 @@ function Admin() {
       cancelled = true
     }
   }, [
+    adminAuthState.isAuthorized,
     adminAiRequestKey,
     aggregateProfilePayload,
     aggregateRecommendationsPayload,
@@ -1293,6 +1380,10 @@ function Admin() {
   ])
 
   useEffect(() => {
+    if (!adminAuthState.isAuthorized) {
+      return
+    }
+
     let cancelled = false
 
     fetchTelegramJobs({ limit: 80 })
@@ -1324,7 +1415,54 @@ function Admin() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [adminAuthState.isAuthorized])
+
+  const handleAdminLogin = async (event) => {
+    event.preventDefault()
+    const trimmedKey = adminAccessKey.trim()
+
+    if (!trimmedKey) {
+      setAdminAuthState({
+        error: 'Enter the admin access key.',
+        isAuthorized: false,
+        isLoading: false,
+      })
+      return
+    }
+
+    setAdminAuthState((current) => ({
+      ...current,
+      error: '',
+      isLoading: true,
+    }))
+
+    try {
+      await verifyAdminAccess(trimmedKey)
+      setStoredAdminAccessKey(trimmedKey)
+      setAdminAuthState({
+        error: '',
+        isAuthorized: true,
+        isLoading: false,
+      })
+    } catch (err) {
+      clearStoredAdminAccessKey()
+      setAdminAuthState({
+        error: err.message || 'Admin access key is invalid.',
+        isAuthorized: false,
+        isLoading: false,
+      })
+    }
+  }
+
+  const handleAdminLogout = () => {
+    clearStoredAdminAccessKey()
+    setAdminAccessKeyInput('')
+    setAdminAuthState({
+      error: '',
+      isAuthorized: false,
+      isLoading: false,
+    })
+  }
 
   const metrics = [
     {
@@ -1712,6 +1850,40 @@ function Admin() {
     }
   }
 
+  if (adminAuthState.isLoading || !adminAuthState.isAuthorized) {
+    return (
+      <section className="admin-page admin-login-page">
+        <div className="admin-login-card">
+          <p className="eyebrow">{ADMIN_LOGIN_TITLE}</p>
+          <h1>Sign in to open the admin console.</h1>
+          <p>
+            Enter the admin access key to view quiz management, recommendation data,
+            and Telegram job tools.
+          </p>
+
+          <form className="admin-login-form" onSubmit={handleAdminLogin}>
+            <label className="field-group">
+              <span>Access key</span>
+              <input
+                type="password"
+                value={adminAccessKey}
+                onChange={(event) => setAdminAccessKeyInput(event.target.value)}
+                placeholder="Enter admin access key"
+                autoComplete="current-password"
+              />
+            </label>
+
+            {adminAuthState.error && <p className="form-error">{adminAuthState.error}</p>}
+
+            <button type="submit" className="button button-primary" disabled={adminAuthState.isLoading}>
+              {adminAuthState.isLoading ? 'Verifying...' : 'Open admin'}
+            </button>
+          </form>
+        </div>
+      </section>
+    )
+  }
+
   return (
     <section className="admin-page">
       <div className="admin-header">
@@ -1727,7 +1899,11 @@ function Admin() {
         <div className="admin-route-note" aria-label="Admin access mode">
           <span>Access</span>
           <strong>/admin</strong>
-          <small>Hidden from primary navigation</small>
+          <small>
+            <button type="button" className="button button-ghost admin-logout-link" onClick={handleAdminLogout}>
+              Sign out
+            </button>
+          </small>
         </div>
       </div>
 

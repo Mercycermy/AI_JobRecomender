@@ -7,6 +7,7 @@ export const ANALYSIS_STORAGE_KEY = 'recommendationAnalysis'
 export const QUIZ_SESSION_STORAGE_KEY = 'quizSessionId'
 export const QUIZ_PROGRESS_STORAGE_KEY = 'quizProgress'
 export const QUIZ_HISTORY_STORAGE_KEY = 'quizAttemptHistory'
+export const ADMIN_ACCESS_STORAGE_KEY = 'adminAccessKey'
 
 const EXPERIENCE_MAP = {
   Internship: 'intern',
@@ -21,6 +22,68 @@ const CATEGORY_MAP = {
   'Data Science': 'data-scientist',
   Product: 'software-engineer',
   Marketing: 'business-analyst',
+}
+
+function readStoredValue(storage, key) {
+  try {
+    return storage.getItem(key) || ''
+  } catch {
+    return ''
+  }
+}
+
+export function getStoredAdminAccessKey() {
+  if (typeof window === 'undefined') {
+    return ''
+  }
+
+  return readStoredValue(sessionStorage, ADMIN_ACCESS_STORAGE_KEY) || readStoredValue(localStorage, ADMIN_ACCESS_STORAGE_KEY)
+}
+
+export function setStoredAdminAccessKey(accessKey) {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  try {
+    sessionStorage.setItem(ADMIN_ACCESS_STORAGE_KEY, accessKey)
+    localStorage.setItem(ADMIN_ACCESS_STORAGE_KEY, accessKey)
+  } catch {
+    // Session storage still keeps the active admin login available.
+  }
+}
+
+export function clearStoredAdminAccessKey() {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  sessionStorage.removeItem(ADMIN_ACCESS_STORAGE_KEY)
+  try {
+    localStorage.removeItem(ADMIN_ACCESS_STORAGE_KEY)
+  } catch {
+    // The active session is still cleared even if local storage is unavailable.
+  }
+}
+
+function getAdminHeaders() {
+  const accessKey = getStoredAdminAccessKey()
+  return accessKey ? { 'X-Admin-Key': accessKey } : {}
+}
+
+export async function verifyAdminAccess(accessKey) {
+  const response = await fetch(`${API_BASE}/admin/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ access_key: accessKey }),
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || `Admin login failed (${response.status})`)
+  }
+
+  return response.json()
 }
 
 export function toApiProfile({
@@ -437,7 +500,9 @@ export async function fetchTelegramJobMatches(profile, { query = '', role = '', 
 
 export async function fetchAdminQuizAttempts({ limit = 100 } = {}) {
   const params = new URLSearchParams({ limit: String(limit) })
-  const response = await fetch(`${API_BASE}/admin/quiz/attempts?${params}`)
+  const response = await fetch(`${API_BASE}/admin/quiz/attempts?${params}`, {
+    headers: getAdminHeaders(),
+  })
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}))
@@ -460,7 +525,9 @@ export async function fetchAdminQuizQuestions({
   if (query.trim()) {
     params.set('q', query.trim())
   }
-  const response = await fetch(`${API_BASE}/admin/quiz/questions?${params}`)
+  const response = await fetch(`${API_BASE}/admin/quiz/questions?${params}`, {
+    headers: getAdminHeaders(),
+  })
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}))
@@ -476,7 +543,7 @@ export async function saveAdminQuizQuestion(question) {
     id ? `${API_BASE}/admin/quiz/questions/${encodeURIComponent(id)}` : `${API_BASE}/admin/quiz/questions`,
     {
       method: id ? 'PUT' : 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAdminHeaders() },
       body: JSON.stringify(question),
     },
   )
@@ -492,6 +559,7 @@ export async function saveAdminQuizQuestion(question) {
 export async function deleteAdminQuizQuestion(questionId) {
   const response = await fetch(`${API_BASE}/admin/quiz/questions/${encodeURIComponent(questionId)}`, {
     method: 'DELETE',
+    headers: getAdminHeaders(),
   })
 
   if (!response.ok) {

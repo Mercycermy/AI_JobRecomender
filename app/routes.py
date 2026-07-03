@@ -42,6 +42,7 @@ app.config["SECRET_KEY"] = settings.effective_secret_key
 app.config["MAX_CONTENT_LENGTH"] = settings.max_content_length
 app.config["API_KEY"] = settings.api_key
 app.config["REQUIRE_API_KEY"] = settings.require_api_key
+app.config["ADMIN_ACCESS_KEY"] = settings.admin_access_key
 app.config["RATE_LIMIT_ENABLED"] = settings.rate_limit_enabled
 app.config["RATE_LIMIT_PUBLIC_PER_MINUTE"] = settings.rate_limit_public_per_minute
 app.config["RATE_LIMIT_WRITE_PER_MINUTE"] = settings.rate_limit_write_per_minute
@@ -167,7 +168,7 @@ def _add_cors_headers(response):
         response.headers["Vary"] = "Origin"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
     response.headers["Access-Control-Allow-Headers"] = (
-        "Content-Type, X-Session-Id, X-Request-Id, X-API-Key"
+        "Content-Type, X-Session-Id, X-Request-Id, X-API-Key, X-Admin-Key"
     )
     response.headers["Access-Control-Expose-Headers"] = (
         "X-Session-Id, X-Request-Id, X-RateLimit-Remaining"
@@ -301,6 +302,42 @@ def _format_question(q: dict, number: int, total: int) -> dict:
 
 def _session_id() -> str:
     return request.headers.get("X-Session-Id") or request.args.get("session_id") or ""
+
+
+def _admin_access_key() -> str:
+    return app.config.get("ADMIN_ACCESS_KEY", "")
+
+
+def _admin_key_from_request() -> str:
+    return request.headers.get("X-Admin-Key") or ""
+
+
+def _admin_authorized() -> bool:
+    expected_key = _admin_access_key()
+    if not expected_key:
+        return True
+    return _admin_key_from_request() == expected_key
+
+
+def _admin_unauthorized_response():
+    return jsonify({"error": "Admin access key is required."}), 401
+
+
+def _require_admin_access():
+    if request.method == "OPTIONS" or request.path == "/admin/login":
+        return None
+    if not request.path.startswith("/admin"):
+        return None
+    if _admin_authorized():
+        return None
+    return _admin_unauthorized_response()
+
+
+@app.before_request
+def admin_auth_before_request():
+    auth_response = _require_admin_access()
+    if auth_response is not None:
+        return auth_response
 
 
 @app.route("/quiz", methods=["GET", "OPTIONS"])
@@ -677,6 +714,20 @@ def telegram_jobs_ingest():
         return jsonify({"error": str(exc)}), 400
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/admin/login", methods=["POST", "OPTIONS"])
+def admin_login():
+    if request.method == "OPTIONS":
+        return "", 204
+
+    body = request.get_json(silent=True) or {}
+    access_key = body.get("access_key") or body.get("accessKey") or request.headers.get("X-Admin-Key") or ""
+
+    if not access_key or access_key != _admin_access_key():
+        return _admin_unauthorized_response()
+
+    return jsonify({"authorized": True})
 
 
 @app.route("/admin/quiz/attempts", methods=["GET", "OPTIONS"])

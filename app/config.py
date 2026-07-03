@@ -99,6 +99,9 @@ class AppConfig:
         default_factory=lambda: os.environ.get("FLASK_SECRET_KEY", "")
     )
     api_key: str = field(default_factory=lambda: os.environ.get("API_KEY", ""))
+    admin_access_key: str = field(
+        default_factory=lambda: os.environ.get("ADMIN_ACCESS_KEY", "admin-local-access")
+    )
     require_api_key: bool = field(
         default_factory=lambda: _bool_env("REQUIRE_API_KEY", False)
     )
@@ -152,6 +155,8 @@ class AppConfig:
             errors.append("FLASK_SECRET_KEY must be set in production.")
         if self.is_production and "*" in self.cors_origins:
             errors.append("CORS_ORIGINS cannot contain '*' in production.")
+        if self.is_production and not self.admin_access_key:
+            errors.append("ADMIN_ACCESS_KEY must be set in production.")
         if self.require_api_key and not self.api_key:
             errors.append("API_KEY must be set when REQUIRE_API_KEY=1.")
         if self.rate_limit_public_per_minute < 1:

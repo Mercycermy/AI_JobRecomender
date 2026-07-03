@@ -45,6 +45,7 @@ An intelligent, full-stack application designed to match users with job postings
    pip install -r requirements.txt
    ```
 4. Configure your `.env` file with any required API keys (e.g., Groq, Anthropic, OpenAI).
+   Add `ADMIN_ACCESS_KEY` to control access to `/admin`.
 5. Seed the database, quiz bank, and FAISS index:
    ```bash
    python scripts/seed_db.py
