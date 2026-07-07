@@ -500,16 +500,6 @@ function getResumeSectionCount(coaching) {
   return coaching?.tips?.length || 0
 }
 
-function formatPercent(value, fallback = 'Pending') {
-  const numeric = Number(value)
-
-  if (!Number.isFinite(numeric)) {
-    return fallback
-  }
-
-  return `${Math.round(numeric <= 1 ? numeric * 100 : numeric)}%`
-}
-
 function getTopMatchedJobs(jobs, limit = 3) {
   return [...jobs]
     .sort((left, right) => (getJobMatch(right) ?? -1) - (getJobMatch(left) ?? -1))
@@ -954,10 +944,6 @@ function Admin() {
     }
   })
   const totalQuizAnswers = quizAttemptSummaries.reduce((total, attempt) => total + attempt.answered, 0)
-  const totalEstimatedQuizAnswers = quizAttemptSummaries.reduce(
-    (total, attempt) => total + Math.max(attempt.estimated, attempt.answered),
-    0,
-  )
   const profilesWithSkills = quizAttemptSummaries.filter((attempt) => attempt.skills > 0).length
   const quizProfiles = quizAttempts.map(getAttemptProfile).filter((attemptProfile) =>
     Object.keys(attemptProfile).length,
@@ -1017,21 +1003,6 @@ function Admin() {
     question_count: totalQuizAnswers || currentQuizSummary.answered,
     confidence: aggregateConfidence,
     detected_domain: quizDomains[0] || currentQuizSummary.detectedDomain,
-  }
-  const quizSummary = {
-    ...currentQuizSummary,
-    answered: totalQuizAnswers || currentQuizSummary.answered,
-    estimated: totalEstimatedQuizAnswers || currentQuizSummary.estimated,
-    percent: totalEstimatedQuizAnswers
-      ? Math.min(100, Math.round((totalQuizAnswers / totalEstimatedQuizAnswers) * 100))
-      : currentQuizSummary.percent,
-    confidence: aggregateConfidence,
-    detectedDomain: quizDomains.length > 1
-      ? `${quizDomains.length} domains`
-      : quizDomains[0] || currentQuizSummary.detectedDomain,
-    detectedRole: workTypeNames.length > 1
-      ? `${workTypeNames.length} work types`
-      : workTypeNames[0] || currentQuizSummary.detectedRole,
   }
   const aggregateJobCount = uniqueItems(aggregateRecommendations.map(getJobTitle)).length
   const averageMatch = getAverageMatch(aggregateRecommendations)
@@ -1096,7 +1067,6 @@ function Admin() {
       ? 'Awaiting AI'
       : 'Needs profile'
   const resumeAdminStatus = resumeSections.length ? resumeStatus : 'Needs profile'
-  const topMatchedJobs = getTopMatchedJobs(aggregateRecommendations)
   const promptRoleOptions = uniqueItems([
     DEFAULT_QUIZ_ROLE,
     ...quizBankState.roles,
@@ -1439,16 +1409,6 @@ function Admin() {
         isLoading: false,
       })
     }
-  }
-
-  const handleAdminLogout = () => {
-    clearStoredAdminAccessKey()
-    setAdminAccessKeyInput('')
-    setAdminAuthState({
-      error: '',
-      isAuthorized: false,
-      isLoading: false,
-    })
   }
 
   const analyticsTotals = adminAnalytics?.totals || {}
@@ -1808,16 +1768,6 @@ function Admin() {
           <p className="eyebrow">Admin command center</p>
           <h1>Workflow overview and content controls.</h1>
         </div>
-
-        <div className="admin-route-note" aria-label="Admin access mode">
-          <span>Access</span>
-          <strong>/admin</strong>
-          <small>
-            <button type="button" className="button button-ghost admin-logout-link" onClick={handleAdminLogout}>
-              Sign out
-            </button>
-          </small>
-        </div>
       </div>
 
       <div className="admin-tabs" role="tablist" aria-label="Admin sections">
@@ -1981,62 +1931,6 @@ function Admin() {
             </section>
           </div>
 
-          <div className="admin-feature-grid">
-            {featureMap.map((feature) => (
-              <article className="admin-feature-card" key={feature.title}>
-                <div className="admin-card-kicker">
-                  <span>{feature.route}</span>
-                  <strong className={statusClass(feature.status)}>{feature.status}</strong>
-                </div>
-                <h2>{feature.title}</h2>
-                <p>{feature.detail}</p>
-              </article>
-            ))}
-          </div>
-
-          <div className="admin-grid">
-            <section className="admin-panel">
-              <div className="admin-panel-heading">
-                <span>Workflow coverage</span>
-                <strong>{overviewCompletion}% complete</strong>
-              </div>
-
-              <div className="pipeline-list">
-                <div>
-                  <span>Profile intake</span>
-                  <strong>{quizAttempts.length ? `${quizAttempts.length} quizzes / ${workTypeNames.length || 1} work types` : 'Pending'}</strong>
-                </div>
-                <div>
-                  <span>Matching engine</span>
-                  <strong>{aggregateJobCount || visibleRecommendations.length} recommendations across work types</strong>
-                </div>
-                <div>
-                  <span>Analysis layer</span>
-                  <strong>{gaps.length ? 'Generated' : 'Pending'}</strong>
-                </div>
-                <div>
-                  <span>Resume support</span>
-                  <strong>{getResumeSectionCount(resumeCoaching)} guidance sections</strong>
-                </div>
-              </div>
-            </section>
-
-            <section className="admin-panel">
-              <div className="admin-panel-heading">
-                <span>Feature readiness</span>
-                <strong>{readyFeatureCount} / {featureMap.length} live</strong>
-              </div>
-
-              <div className="pipeline-list">
-                {featureMap.map((feature) => (
-                  <div key={feature.title}>
-                    <span>{feature.title}</span>
-                    <strong className={statusClass(feature.status)}>{feature.status}</strong>
-                  </div>
-                ))}
-              </div>
-            </section>
-          </div>
         </div>
       )}
 
@@ -2157,64 +2051,6 @@ function Admin() {
                   No work-type match scores are available yet. Run quizzes or recommendations to populate this graph.
                 </div>
               )}
-            </div>
-          )}
-
-          {activeProfilePage === 'Completion Detail' && (
-            <div className="admin-profile-dashboard">
-              <div className="admin-dashboard-grid">
-                <section className="admin-dashboard-card">
-                  <div className="admin-panel-heading">
-                    <span>Most filled quiz or recommendations</span>
-                    <strong>{mostFilledItem ? `${mostFilledItem.score}%` : 'Pending'}</strong>
-                  </div>
-
-                  <div className="admin-progress-list">
-                    {completionItems.map((item) => (
-                      <div className="admin-progress-row" key={item.label}>
-                        <div>
-                          <span>{item.label}</span>
-                          <strong>{item.value}</strong>
-                        </div>
-                        <div className="admin-progress-meter" aria-label={`${item.label} ${item.score}%`}>
-                          <span style={{ width: `${item.score}%` }}></span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-
-                <section className="admin-dashboard-card">
-                  <div className="admin-panel-heading">
-                    <span>Profile field detail</span>
-                    <strong>{filledProfileFields} / {profileFillItems.length} filled</strong>
-                  </div>
-
-                  <div className="admin-progress-list">
-                    {profileFillItems.map((item) => (
-                      <div className="admin-progress-row" key={item.label}>
-                        <div>
-                          <span>{item.label}</span>
-                          <strong>{item.value}</strong>
-                        </div>
-                        <div className="admin-progress-meter" aria-label={`${item.label} ${item.score}%`}>
-                          <span style={{ width: `${item.score}%` }}></span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              </div>
-
-              <div className="admin-analysis-list">
-                {analysisNotes.map((item) => (
-                  <article key={item.label}>
-                    <span>{item.label}</span>
-                    <strong>{item.value}</strong>
-                    <small>{item.detail}</small>
-                  </article>
-                ))}
-              </div>
             </div>
           )}
 

@@ -126,6 +126,25 @@
   background: linear-gradient(90deg, currentColor 50%, transparent 50%);
 }
 
+.admin-signout-button {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  border-radius: 8px;
+  color: var(--coral);
+  background: rgba(244, 63, 94, 0.1);
+  font-weight: 800;
+}
+
+.admin-signout-button:hover,
+.admin-signout-button:focus-visible {
+  border-color: var(--coral);
+  background: rgba(244, 63, 94, 0.16);
+}
+
 .nav-toggle {
   width: 46px;
   display: none;
@@ -925,19 +944,6 @@
   padding: 20px;
 }
 
-.admin-route-note {
-  min-width: 220px;
-  display: grid;
-  gap: 6px;
-  padding: 18px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface-soft);
-  box-shadow: 0 16px 38px rgba(13, 34, 51, 0.08);
-}
-
-.admin-route-note span,
-.admin-route-note small,
 .admin-card-kicker span,
 .admin-small-note {
   color: var(--muted);
@@ -945,27 +951,6 @@
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
-}
-
-.admin-route-note strong {
-  color: var(--navy);
-  font-family: var(--font-mono);
-  font-size: 26px;
-}
-
-.admin-logout-link {
-  padding: 0;
-  border: 0;
-  color: inherit;
-  background: transparent;
-  font: inherit;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.admin-logout-link:hover,
-.admin-logout-link:focus-visible {
-  color: var(--navy);
 }
 
 .metric-label,
@@ -2706,9 +2691,9 @@ button.chip {
 .resume-repeat-item {
   display: grid;
   gap: 14px;
-  border: 1px solid rgba(46, 134, 193, 0.14);
+  border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--surface-soft);
   padding: 16px;
 }
 
@@ -2734,6 +2719,16 @@ button.chip {
   border-radius: 8px;
   background: #f5f9fd;
   padding: 18px;
+}
+
+.resume-ready-banner {
+  border: 1px solid rgba(34, 168, 120, 0.35);
+  border-radius: 8px;
+  background: rgba(34, 168, 120, 0.1);
+  color: var(--ink);
+  padding: 12px 14px;
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .generated-resume-template {
@@ -2867,7 +2862,6 @@ button.chip {
   top: 96px;
 }
 
-.telegram-summary,
 .telegram-channel-list,
 .telegram-meta {
   display: flex;
@@ -2875,7 +2869,6 @@ button.chip {
   gap: 8px;
 }
 
-.telegram-summary span,
 .telegram-channel-list span,
 .telegram-meta span {
   border-radius: 6px;
@@ -3855,21 +3848,6 @@ textarea:focus {
   top: 0 !important;
 }
 
-.header-job-link {
-  min-height: 40px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 14px;
-  border: 1px solid rgba(34, 168, 120, 0.35);
-  border-radius: 999px;
-  color: var(--navy);
-  background: rgba(34, 168, 120, 0.1);
-  font-size: 13px;
-  font-weight: 800;
-  text-decoration: none;
-}
-
 .analysis-summary-panel,
 .current-jobs-panel {
   position: relative;
@@ -4021,10 +3999,6 @@ textarea:focus {
 }
 
 @media (max-width: 760px) {
-  .header-job-link {
-    display: none;
-  }
-
   .analysis-summary-panel,
   .compact-job-grid,
   .current-job-row {

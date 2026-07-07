@@ -8,6 +8,7 @@ import numpy as np
 
 from app.gap_analyzer import get_session_gaps
 from app.learning_path import LearningPath
+from app.skill_normalizer import SkillNormalizer
 
 try:
 	import faiss
@@ -41,6 +42,7 @@ class ResourceRecommender:
 		self._id_map: List[str] = []
 		self._meta: Dict[str, Dict[str, Any]] = {}
 		self._load_error: Optional[str] = None
+		self._normalizer = SkillNormalizer()
 		self._learning_path: Optional[LearningPath] = None
 		self._learning_path_error: Optional[str] = None
 
@@ -127,7 +129,7 @@ class ResourceRecommender:
 
 	def recommend(self, session: Dict[str, Any]) -> List[Dict[str, Any]]:
 		"""Return (gap, resource) pairs for AI summaries and recommendations."""
-		gaps = get_session_gaps(session)
+		gaps = get_session_gaps(session, self._normalizer)
 		if not gaps:
 			return []
 
@@ -148,7 +150,7 @@ class ResourceRecommender:
 
 	def recommend_grouped(self, session: Dict[str, Any]) -> List[Dict[str, Any]]:
 		"""Return grouped learning resources for UI consumption."""
-		gaps = get_session_gaps(session)
+		gaps = get_session_gaps(session, self._normalizer)
 		if not gaps:
 			return []
 

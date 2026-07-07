@@ -255,7 +255,7 @@ class GapAnalyzer:
 				continue
 			resolved = self.normalizer.to_skill_id(text) or text
 			if self.normalizer.is_match_skill(resolved):
-				filtered.append(resolved)
+				filtered.append(text)
 		return filtered
 
 	def _job_summary(self, rec: Dict[str, Any], rank: int) -> Dict[str, Any]:

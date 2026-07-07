@@ -917,7 +917,7 @@ def recommendations():
         return jsonify({"error": "Quiz not yet completed"}), 400
 
     try:
-        gaps = format_gaps_for_ui(session)
+        gaps = format_gaps_for_ui(session, _get_skill_normalizer())
         recs = _get_resource_recommender().recommend(session)
         ai_payload = _get_ai_resume_coach().generate(session, recs, gaps=gaps)
 
