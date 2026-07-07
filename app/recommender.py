@@ -1087,13 +1087,21 @@ class RecommendationEngine:
         semantic_context: Optional[Dict[str, Any]] = None,
         candidate_meta: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
+        match_user_skills = {
+            skill_id for skill_id in user_skills if self.normalizer.is_match_skill(skill_id)
+        }
+        match_required_skills = {
+            skill_id
+            for skill_id in required_skills
+            if self.normalizer.is_match_skill(skill_id)
+        }
         skill_fit, skill_overlap, skill_proficiency = self._skill_fit(
-            user_skills,
+            match_user_skills,
             skill_scores,
-            required_skills,
+            match_required_skills,
         )
         lexical_semantic = self._lexical_semantic_score(
-            sorted(user_skills),
+            sorted(match_user_skills),
             target_role,
             job,
             context=semantic_context,
@@ -1126,14 +1134,14 @@ class RecommendationEngine:
         }
         final_score = sum(contributions.values())
         matched_skills = sorted(
-            user_skills & required_skills,
+            match_user_skills & match_required_skills,
             key=lambda skill_id: (
                 -self.normalizer.weight_for(skill_id),
                 self.normalizer.name_for(skill_id),
             ),
         )
         missing_skills = sorted(
-            required_skills - user_skills,
+            match_required_skills - match_user_skills,
             key=lambda skill_id: (
                 -self.normalizer.weight_for(skill_id),
                 self.normalizer.name_for(skill_id),
@@ -1224,7 +1232,7 @@ class RecommendationEngine:
             ],
             "missing_skills": missing_skills,
             "missing_skill_count": len(missing_skills),
-            "required_skill_count": len(required_skills),
+            "required_skill_count": len(match_required_skills),
             "missing_skill_names": [
                 self.normalizer.name_for(skill_id)
                 for skill_id in missing_skills
@@ -1337,7 +1345,15 @@ class RecommendationEngine:
                     ]
                 )
             )
-            overlap_count = len(user_skills & required_skills)
+            match_user_skills = {
+                skill_id for skill_id in user_skills if self.normalizer.is_match_skill(skill_id)
+            }
+            match_required_skills = {
+                skill_id
+                for skill_id in required_skills
+                if self.normalizer.is_match_skill(skill_id)
+            }
+            overlap_count = len(match_user_skills & match_required_skills)
             ranked.append(
                 self._score_job(
                     job=job_payload,

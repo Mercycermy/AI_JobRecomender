@@ -54,6 +54,8 @@ class LearningPath:
 			resolved = self.normalizer.to_skill_id(skill_id) or str(skill_id or "").strip()
 			if not resolved or resolved in seen:
 				continue
+			if not self.normalizer.is_match_skill(resolved):
+				continue
 			seen.add(resolved)
 			gap["skill_id"] = resolved
 			gap.setdefault("skill", self.normalizer.name_for(resolved))

@@ -230,6 +230,22 @@ class SkillNormalizer:
         )
         return list(self._id_to_tags.get(resolved, ()))
 
+    def is_match_skill(self, skill_id: Optional[str]) -> bool:
+        """Return true for hard skills that should drive matching and gaps."""
+        if not skill_id:
+            return False
+        item = self.metadata_for(skill_id)
+        if not item:
+            return True
+        category = normalize_skill_text(item.get("category"))
+        domain = normalize_skill_text(item.get("domain"))
+        tags = {normalize_skill_text(tag) for tag in item.get("differentiation_tags", [])}
+        return not (
+            category in {"soft skills", "languages"}
+            or domain in {"soft skills", "soft skills and languages"}
+            or "language" in tags
+        )
+
     def extract_matches(self, text: Optional[str]) -> List[SkillMatch]:
         if not text or self._extract_pattern is None:
             return []

@@ -107,17 +107,23 @@ def _learning_path(
 	]
 
 
-def get_session_gaps(session: Dict[str, Any]) -> List[Dict[str, Any]]:
+def get_session_gaps(
+	session: Dict[str, Any],
+	normalizer: Optional[SkillNormalizer] = None,
+) -> List[Dict[str, Any]]:
 	"""Return ranked skill gaps from a completed quiz session.
 
 	Each gap is shaped as: {skill_id, score, query}.
 	"""
+	normalizer = normalizer or SkillNormalizer()
 	skill_scores = session.get("skill_scores", {}) or {}
 	if not isinstance(skill_scores, dict):
 		return []
 
 	gaps: List[Dict[str, Any]] = []
 	for skill_id, score in skill_scores.items():
+		if not normalizer.is_match_skill(str(skill_id)):
+			continue
 		if score is None:
 			continue
 		avg = sum(score) / len(score) if isinstance(score, list) and score else score
@@ -146,7 +152,7 @@ def format_gaps_for_ui(
 	normalizer = normalizer or SkillNormalizer()
 	formatted: List[Dict[str, Any]] = []
 
-	for gap in get_session_gaps(session):
+	for gap in get_session_gaps(session, normalizer):
 		score = float(gap.get("score", 0.0))
 		current = max(5, min(99, round(score * 100)))
 		required = min(95, max(current + 20, 75))
@@ -200,10 +206,12 @@ class GapAnalyzer:
 			text = str(skill or "").strip()
 			if not text:
 				continue
-			skills.add(text)
 			resolved = self.normalizer.to_skill_id(text)
-			if resolved:
+			if resolved and self.normalizer.is_match_skill(resolved):
 				skills.add(resolved)
+				continue
+			if self.normalizer.is_match_skill(text):
+				skills.add(text)
 		return skills
 
 	def _skill_score(
@@ -240,7 +248,15 @@ class GapAnalyzer:
 			]
 		if not isinstance(missing, list):
 			return []
-		return [str(skill_id) for skill_id in missing if str(skill_id or "").strip()]
+		filtered: List[str] = []
+		for skill_id in missing:
+			text = str(skill_id or "").strip()
+			if not text:
+				continue
+			resolved = self.normalizer.to_skill_id(text) or text
+			if self.normalizer.is_match_skill(resolved):
+				filtered.append(resolved)
+		return filtered
 
 	def _job_summary(self, rec: Dict[str, Any], rank: int) -> Dict[str, Any]:
 		return {
