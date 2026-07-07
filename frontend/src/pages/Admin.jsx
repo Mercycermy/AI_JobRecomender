@@ -22,7 +22,7 @@ import {
   verifyAdminAccess,
 } from '../api/recommend.js'
 const adminTabs = ['Overview', 'Profile', 'Matching', 'Learning', 'Resume', 'Telegram']
-const profilePages = ['Quiz Intake', 'Match Graph', 'Completion Detail', 'Quiz Prompts']
+const profilePages = ['Quiz Intake', 'Match Graph', 'Quiz Prompts']
 const ADMIN_QUIZ_PROMPTS_STORAGE_KEY = 'adminQuizPrompts'
 const ADMIN_RESOURCES_STORAGE_KEY = 'adminLearningResources'
 const ADMIN_RESUME_STORAGE_KEY = 'adminResumePlaybook'
@@ -514,48 +514,6 @@ function getTopMatchedJobs(jobs, limit = 3) {
   return [...jobs]
     .sort((left, right) => (getJobMatch(right) ?? -1) - (getJobMatch(left) ?? -1))
     .slice(0, limit)
-}
-
-function getProfileFillItems(profile, skills) {
-  const evidence = profile?.evidence || {}
-  const targetRole = profile?.role_count > 1
-    ? `${profile.role_count} work types`
-    : profile?.target_role || profile?.top_category || profile?.category || profile?.detected_role
-  const hasExperience = Boolean(profile?.experience_level || profile?.experience)
-  const hasLocation = Boolean(profile?.location)
-  const hasEvidence = Boolean(
-    evidence.experience_years !== null && evidence.experience_years !== undefined ||
-      evidence.has_projects ||
-      evidence.portfolio_url,
-  )
-
-  return [
-    {
-      label: 'Supporting signals',
-      value: skills.length ? `${skills.length} signals` : 'Missing',
-      score: Math.min(100, Math.round((skills.length / 6) * 100)),
-    },
-    {
-      label: 'Work type',
-      value: formatLabel(targetRole),
-      score: targetRole ? 100 : 0,
-    },
-    {
-      label: 'Experience',
-      value: formatLabel(profile?.experience_level || profile?.experience),
-      score: hasExperience ? 100 : 0,
-    },
-    {
-      label: 'Evidence',
-      value: hasEvidence ? 'Added' : 'Light',
-      score: hasEvidence ? 100 : profile ? 35 : 0,
-    },
-    {
-      label: 'Location',
-      value: formatLabel(profile?.location, 'Remote-friendly'),
-      score: hasLocation ? 100 : profile ? 65 : 0,
-    },
-  ]
 }
 
 function getQuizSummary(profile, progress) {
@@ -1060,8 +1018,6 @@ function Admin() {
     confidence: aggregateConfidence,
     detected_domain: quizDomains[0] || currentQuizSummary.detectedDomain,
   }
-  const profileFillItems = getProfileFillItems(aggregateProfile, profileSkills)
-  const filledProfileFields = profileFillItems.filter((item) => item.score >= 100).length
   const quizSummary = {
     ...currentQuizSummary,
     answered: totalQuizAnswers || currentQuizSummary.answered,
@@ -1556,110 +1512,6 @@ function Admin() {
     },
   ]
 
-  const featureMap = [
-    {
-      title: 'Quiz and manual profile',
-      route: '/quiz, /manual',
-      status: profileSkills.length || quizAttempts.length ? 'Ready' : 'Pending',
-      detail: 'Aggregates every main quiz attempt, work-type signal, and answer row into the admin profile.',
-    },
-    {
-      title: 'Job recommendations',
-      route: '/results',
-      status: hasStoredRecommendations ? 'Stored data' : canBuildRecommendations ? 'Loading' : 'Needs profile',
-      detail: hasStoredRecommendations
-        ? 'Rolls up stored AI recommendations and match scores by the broad work type selected in the main quiz.'
-        : 'Uses the stored profile to request AI recommendations before falling back to demo data.',
-    },
-    {
-      title: 'Recommendation gap analysis',
-      route: '/results/gap/:jobId',
-      status: gapStatus,
-      detail: analysis?.gaps?.length
-        ? 'Uses cached AI analysis for recommendation coverage gaps.'
-        : 'Derives coverage gaps from stored recommendation data while AI analysis loads.',
-    },
-    {
-      title: 'Learning resources',
-      route: '/results/resources',
-      status: learningStatus,
-      detail: analysis?.resources?.length
-        ? 'Uses AI resource recommendations from the learner-facing study map.'
-        : 'Uses stored recommendation gaps to choose the closest resources before AI resources are available.',
-    },
-    {
-      title: 'Resume coaching and builder',
-      route: '/results/resume, /resume-builder',
-      status: resumeStatus,
-      detail: resumeCoaching
-        ? 'Mirrors AI resume tips, upload readiness, and generated resume coverage.'
-        : 'Uses the stored profile and recommendations while AI resume coaching loads.',
-    },
-    {
-      title: 'Telegram jobs',
-      route: '/telegram-jobs',
-      status: telegramState.isLoading ? 'Loading' : telegramState.error ? 'Review' : 'Live',
-      detail: 'Monitors the same current-job feed that can be ranked against the active profile.',
-    },
-  ]
-
-  const completionItems = [
-    {
-      label: 'Quiz answers',
-      value: `${quizSummary.answered}/${quizSummary.estimated}`,
-      score: quizSummary.percent,
-    },
-    {
-      label: 'Profile fields',
-      value: `${filledProfileFields}/${profileFillItems.length}`,
-      score: Math.round((filledProfileFields / profileFillItems.length) * 100),
-    },
-    {
-      label: 'AI recommendations',
-      value: `${aggregateJobCount || visibleRecommendations.length} items`,
-      score: Math.min(100, Math.round(((aggregateJobCount || visibleRecommendations.length) / 10) * 100)),
-    },
-    {
-      label: 'Gap analysis',
-      value: gaps.length ? `${gaps.length} gaps` : 'Pending',
-      score: gaps.length ? 100 : 0,
-    },
-    {
-      label: 'Learning resources',
-      value: `${resources.length} resources`,
-      score: Math.min(100, Math.round((resources.length / 6) * 100)),
-    },
-  ]
-  const overviewCompletion = Math.round(
-    completionItems.reduce((total, item) => total + item.score, 0) / completionItems.length,
-  )
-  const readyFeatureCount = featureMap.filter(
-    (feature) => !['Pending', 'Review', 'Loading', 'Fix'].includes(feature.status),
-  ).length
-  const mostFilledItem = [...completionItems].sort((left, right) => right.score - left.score)[0]
-  const topGap = gaps[0]
-  const analysisNotes = [
-    {
-      label: 'Best all-quiz match',
-      value: topMatchedJobs[0] ? getJobTitle(topMatchedJobs[0]) : 'No match yet',
-      detail: topMatchedJobs[0] ? `${getJobMatch(topMatchedJobs[0]) ?? '--'}% match` : 'Run profile scoring',
-    },
-    {
-      label: 'Most complete',
-      value: mostFilledItem?.label || 'Pending',
-      detail: mostFilledItem ? `${mostFilledItem.value} / ${mostFilledItem.score}%` : 'No coverage yet',
-    },
-    {
-      label: 'Main gap',
-      value: topGap ? getGapName(topGap) : formatLabel(topMissingSkills[0], 'No repeated gap'),
-      detail: topGap ? `${getGapPriority(topGap) ?? '--'} priority` : 'Based on all quiz matches',
-    },
-    {
-      label: 'Quiz confidence',
-      value: formatPercent(quizSummary.confidence),
-      detail: formatLabel(quizSummary.detectedRole || quizSummary.difficulty),
-    },
-  ]
   const overviewGraphRows = [
     {
       label: 'Daily intakes',

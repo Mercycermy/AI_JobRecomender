@@ -22,6 +22,7 @@ import {
 import LearningResources from './LearningResources.jsx'
 import ResumeTips from './ResumeTips.jsx'
 import SkillGap from './SkillGap.jsx'
+import { getProfileRoleFilter } from '../utils/roleFilters.js'
 
 const tabs = ['Skill Gap', 'Learning Resources', 'Resume Tips']
 const matchFactors = [
@@ -201,7 +202,7 @@ function Results({ navigate }) {
       }
     }
 
-    fetchTelegramJobMatches(profile, { limit: 6 })
+    fetchTelegramJobMatches(profile, { role: getProfileRoleFilter(profile), limit: 6 })
       .then((payload) => {
         if (!isMounted) {
           return

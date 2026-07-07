@@ -523,20 +523,33 @@ def analysis():
 
     body = request.get_json(silent=True) or {}
     session_id = body.get("session_id")
+    profile_payload = body.get("skill_profile") or body.get("profile")
+    recommendations = body.get("recommendations") or []
+    has_recommendation_context = bool(recommendations) and isinstance(profile_payload, dict)
 
     try:
-        if session_id:
+        if has_recommendation_context:
+            profile = _get_profile_service().from_payload(
+                profile_payload,
+                source_hint="quiz" if session_id else None,
+            )
+            profile_data = _get_profile_service().serialize(profile)
+            gaps = _get_gap_analyzer().analyze(profile_data, recommendations)
+            resources = _get_learning_path().recommend_resources(gaps)
+            ai_payload = _get_ai_resume_coach().generate_analysis(
+                profile_data, gaps, resources
+            )
+        elif session_id:
             session = _get_quiz_engine().load_session(session_id)
-            gaps = format_gaps_for_ui(session)
+            gaps = format_gaps_for_ui(session, _get_skill_normalizer())
             resources = _get_resource_recommender().recommend_grouped(session)
             ai_payload = _get_ai_resume_coach().generate_analysis(
                 session, gaps, resources
             )
         else:
             profile = _get_profile_service().from_payload(
-                body.get("skill_profile") or body.get("profile") or {}
+                profile_payload or {}
             )
-            recommendations = body.get("recommendations") or []
             profile_data = _get_profile_service().serialize(profile)
             gaps = _get_gap_analyzer().analyze(profile_data, recommendations)
             resources = _get_learning_path().recommend_resources(
@@ -563,11 +576,36 @@ def resume_tips():
 
     body = request.get_json(silent=True) or {}
     session_id = body.get("session_id")
+    profile_payload = body.get("skill_profile") or body.get("profile")
+    recommendations = body.get("recommendations") or []
+    has_recommendation_context = bool(recommendations) and isinstance(profile_payload, dict)
 
     try:
-        if session_id:
+        if has_recommendation_context:
+            profile = _get_profile_service().from_payload(
+                profile_payload,
+                source_hint="quiz" if session_id else None,
+            )
+            profile_data = _get_profile_service().serialize(profile)
+            gaps = _get_gap_analyzer().analyze(profile_data, recommendations)
+            coaching = _get_resume_coach().get_coaching(profile_data, gaps)
+            ai_payload = _get_ai_resume_coach().generate_coaching(
+                profile_data,
+                gaps,
+                resource_groups=_get_learning_path().recommend_resources(gaps),
+            )
+            if not ai_payload.get("tips"):
+                ai_payload = {
+                "summary": "Use these recommendations to align your resume with your target role.",
+                "tips": coaching.get("tips", []),
+                "schedule": coaching.get("schedule", []),
+                "resume_tips": [],
+                "resource_explanations": {},
+                "is_ai": coaching.get("is_ai", False),
+                }
+        elif session_id:
             session = _get_quiz_engine().load_session(session_id)
-            gaps = format_gaps_for_ui(session)
+            gaps = format_gaps_for_ui(session, _get_skill_normalizer())
             resource_groups = _get_resource_recommender().recommend_grouped(session)
             recs = _get_resource_recommender().recommend(session)
             ai_payload = _get_ai_resume_coach().generate_coaching(
@@ -578,9 +616,8 @@ def resume_tips():
             )
         else:
             profile = _get_profile_service().from_payload(
-                body.get("skill_profile") or body.get("profile") or {}
+                profile_payload or {}
             )
-            recommendations = body.get("recommendations") or []
             profile_data = _get_profile_service().serialize(profile)
             gaps = _get_gap_analyzer().analyze(profile_data, recommendations)
             coaching = _get_resume_coach().get_coaching(profile_data, gaps)

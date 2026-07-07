@@ -453,7 +453,7 @@ function ResumeBuilder() {
 
           {error && <p className="form-error">{error}</p>}
           <button className="button button-primary manual-submit" type="submit" disabled={isGenerating}>
-            {isGenerating ? 'Generating...' : 'Generate Resume'}
+            {isGenerating ? 'Building...' : 'Build Ready-to-Use Resume'}
           </button>
         </form>
 
@@ -466,10 +466,15 @@ function ResumeBuilder() {
             </div>
           </div>
           {generated ? (
-            <div className="resume-preview-frame" dangerouslySetInnerHTML={{ __html: generated.html }} />
+            <>
+              <div className="resume-ready-banner">
+                Improved resume is ready. Download as PDF or PNG and apply to the matched job.
+              </div>
+              <div className="resume-preview-frame" dangerouslySetInnerHTML={{ __html: generated.html }} />
+            </>
           ) : (
             <div className="empty-state">
-              <p>Generate a resume to preview and download it.</p>
+              <p>Build a ready-to-use resume to preview and download it.</p>
             </div>
           )}
         </aside>

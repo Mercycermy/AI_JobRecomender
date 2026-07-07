@@ -1,18 +1,5 @@
 import FlowProgress from '../components/FlowProgress.jsx'
 import { loadStoredAnalysis } from '../api/recommend.js'
-import { learningResources as fallbackLearningResources } from '../data/mockData.js'
-
-function groupFallbackResources(resources) {
-  const groups = new Map()
-  resources.forEach((resource) => {
-    const skill = resource.skill || 'Recommended'
-    if (!groups.has(skill)) {
-      groups.set(skill, { skill, resources: [] })
-    }
-    groups.get(skill).resources.push(resource)
-  })
-  return [...groups.values()]
-}
 
 function LearningResources({ standalone = false, resources: providedResources, isLoading = false, error = null }) {
   const stored = loadStoredAnalysis()
@@ -59,9 +46,7 @@ function LearningResources({ standalone = false, resources: providedResources, i
       ? []
       : stored?.resources?.length
         ? stored.resources
-        : hasStoredResourceContext
-          ? []
-          : groupFallbackResources(fallbackLearningResources)
+        : []
 
   if (!resolvedResources.length) {
     return (

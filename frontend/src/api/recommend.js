@@ -328,14 +328,16 @@ export function clearStoredRecommendations() {
 }
 
 export async function fetchAnalysis(sessionId, profile = null, recommendations = null) {
+  const body = {
+    ...(sessionId ? { session_id: sessionId } : {}),
+    ...(profile ? { skill_profile: profile } : {}),
+    ...(recommendations ? { recommendations } : {}),
+  }
+
   const response = await fetch(`${API_BASE}/analysis`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(
-      sessionId
-        ? { session_id: sessionId }
-        : { skill_profile: profile, recommendations },
-    ),
+    body: JSON.stringify(body),
   })
 
   if (!response.ok) {
@@ -361,14 +363,16 @@ function mapFlatTipsToSections(flatTips) {
 }
 
 export async function fetchResumeTips(sessionId, profile = null, recommendations = null) {
+  const body = {
+    ...(sessionId ? { session_id: sessionId } : {}),
+    ...(profile ? { skill_profile: profile } : {}),
+    ...(recommendations ? { recommendations } : {}),
+  }
+
   const response = await fetch(`${API_BASE}/resume-tips`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(
-      sessionId
-        ? { session_id: sessionId }
-        : { skill_profile: profile, recommendations },
-    ),
+    body: JSON.stringify(body),
   })
 
   if (!response.ok) {

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { clearStoredAdminAccessKey } from '../api/recommend.js'
 
 function Layout({ children, currentPath }) {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -10,12 +11,12 @@ function Layout({ children, currentPath }) {
 
   const closeMenu = () => setMenuOpen(false)
   const isDark = theme === 'dark'
+  const isAdminRoute = String(currentPath || '').startsWith('/admin')
   const nextTheme = isDark ? 'light' : 'dark'
   const navItems = [
     { href: '/', label: 'Home', exact: true },
     { href: '/quiz', label: 'Quiz' },
     { href: '/manual', label: 'Manual' },
-    { href: '/telegram-jobs', label: 'Telegram Jobs' },
   ]
   const isCurrent = (item) => {
     if (item.match) {
@@ -33,6 +34,12 @@ function Layout({ children, currentPath }) {
     document.documentElement.dataset.theme = theme
     localStorage.setItem('ai-job-theme', theme)
   }, [theme])
+
+  const handleAdminSignOut = () => {
+    clearStoredAdminAccessKey()
+    closeMenu()
+    window.location.assign('/admin')
+  }
 
   return (
     <div className="app-shell">
@@ -56,9 +63,15 @@ function Layout({ children, currentPath }) {
               <span className="theme-icon" aria-hidden="true"></span>
               {isDark ? 'Dark' : 'Light'}
             </button>
-            <a className="header-job-link" href="/telegram-jobs" onClick={closeMenu}>
-              Current jobs
-            </a>
+            {isAdminRoute && (
+              <button
+                className="admin-signout-button"
+                type="button"
+                onClick={handleAdminSignOut}
+              >
+                Sign out
+              </button>
+            )}
 
             <button
               className="nav-toggle"

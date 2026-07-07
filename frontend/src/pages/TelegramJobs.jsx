@@ -8,6 +8,7 @@ import {
   loadStoredSessionId,
   recordFlowEvent,
 } from '../api/recommend.js'
+import { formatRoleFilterLabel, getProfileRoleFilter } from '../utils/roleFilters.js'
 
 function getBadgeClass(match) {
   if (match >= 75) {
@@ -29,16 +30,6 @@ function hasUsableProfile(profile) {
   return Boolean(profile && skills?.length)
 }
 
-function formatRoleLabel(value) {
-  if (!value) {
-    return 'General'
-  }
-
-  return String(value)
-    .replace(/[_-]/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase())
-}
-
 function uniqueItems(values = []) {
   return [...new Set(values.filter(Boolean).map((value) => String(value)))]
 }
@@ -52,28 +43,30 @@ function sourceForProfile(profile) {
 function TelegramJobs() {
   const [jobs, setJobs] = useState([])
   const [query, setQuery] = useState('')
-  const [roleFilter, setRoleFilter] = useState('')
-  const [roleOptions, setRoleOptions] = useState([])
+  const [roleFilter, setRoleFilter] = useState(() => getProfileRoleFilter(loadStoredProfile()))
+  const [roleOptions, setRoleOptions] = useState(() =>
+    uniqueItems([getProfileRoleFilter(loadStoredProfile())]),
+  )
   const [error, setError] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [isPersonalized, setIsPersonalized] = useState(false)
-  const [updatedAt, setUpdatedAt] = useState('')
 
-  const loadJobs = useCallback(async (search = '', role = '') => {
+  const loadJobs = useCallback(async (search = '', role = undefined) => {
     setIsLoading(true)
     setError(null)
     try {
       const profile = loadStoredProfile()
       const personalized = hasUsableProfile(profile)
+      const profileRole = getProfileRoleFilter(profile)
+      const activeRole = role ?? profileRole
       const payload = personalized
-        ? await fetchTelegramJobMatches(profile, { query: search, role, limit: 80 })
-        : await fetchTelegramJobs({ query: search, role, limit: 80 })
+        ? await fetchTelegramJobMatches(profile, { query: search, role: activeRole, limit: 80 })
+        : await fetchTelegramJobs({ query: search, role: activeRole, limit: 80 })
 
-      setIsPersonalized(personalized)
       setJobs(payload.jobs || [])
-      setUpdatedAt(payload.updated_at || '')
       setRoleOptions((current) =>
         uniqueItems([
+          profileRole,
+          activeRole,
           ...current,
           ...(payload.jobs || []).map((job) => job.category || job.role),
         ]),
@@ -86,7 +79,8 @@ function TelegramJobs() {
   }, [])
 
   useEffect(() => {
-    const timer = window.setTimeout(() => loadJobs('', ''), 0)
+    const initialRole = getProfileRoleFilter(loadStoredProfile())
+    const timer = window.setTimeout(() => loadJobs('', initialRole), 0)
     return () => window.clearTimeout(timer)
   }, [loadJobs])
 
@@ -145,7 +139,7 @@ function TelegramJobs() {
             <select value={roleFilter} onChange={handleRoleChange}>
               <option value="">All roles</option>
               {roleOptions.map((role) => (
-                <option value={role} key={role}>{formatRoleLabel(role)}</option>
+                <option value={role} key={role}>{formatRoleFilterLabel(role)}</option>
               ))}
             </select>
           </label>
@@ -153,13 +147,6 @@ function TelegramJobs() {
             {isLoading ? 'Searching...' : 'Search'}
           </button>
         </form>
-
-        <div className="telegram-summary">
-          <span>{isPersonalized ? 'Profile-ranked' : 'All active jobs'}</span>
-          <span>{jobs.length} open jobs</span>
-          <span>Expired deadlines hidden</span>
-          {updatedAt && <span>Updated {updatedAt}</span>}
-        </div>
 
         {error && <p className="form-error">{error}</p>}
 

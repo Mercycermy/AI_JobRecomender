@@ -39,6 +39,17 @@ const skillLevels = [
   ['expert', 'Expert'],
 ]
 
+const locationOptions = [
+  ['remote', 'Remote'],
+  ['hybrid', 'Hybrid'],
+  ['onsite', 'On-site'],
+  ['addis-ababa', 'Addis Ababa'],
+  ['nairobi', 'Nairobi'],
+  ['lagos', 'Lagos'],
+  ['johannesburg', 'Johannesburg'],
+  ['flexible', 'Flexible / any location'],
+]
+
 function ManualInput({ navigate }) {
   const [skillInput, setSkillInput] = useState('')
   const [skills, setSkills] = useState([])
@@ -323,12 +334,17 @@ function ManualInput({ navigate }) {
 
           <div className="field-group">
             <label htmlFor="location">Preferred location</label>
-            <input
+            <select
               id="location"
               value={location}
-              placeholder="Remote, Nairobi, Addis Ababa..."
               onChange={(event) => setLocation(event.target.value)}
-            />
+            >
+              {locationOptions.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
