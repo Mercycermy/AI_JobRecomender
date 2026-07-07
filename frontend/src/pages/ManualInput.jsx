@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import { experienceLevels } from '../data/mockData.js'
 import FlowProgress from '../components/FlowProgress.jsx'
 import {
+  clearStoredRecommendations,
   fetchRecommendations,
   fetchSkillSuggestions,
   normalizeSkillValues,
   persistRecommendationSession,
+  recordFlowEvent,
   toApiProfile,
 } from '../api/recommend.js'
 
@@ -51,6 +53,10 @@ function ManualInput({ navigate }) {
   const [portfolioUrl, setPortfolioUrl] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    clearStoredRecommendations()
+  }, [])
 
   useEffect(() => {
     const query = skillInput.trim()
@@ -165,7 +171,19 @@ function ManualInput({ navigate }) {
     try {
       const result = await fetchRecommendations(profile)
       persistRecommendationSession(result.profile, result.jobs, result.rawRecs)
-      navigate('/results')
+      const topJob = result.jobs[0]
+      recordFlowEvent({
+        event_type: 'intake_completed',
+        source: 'manual',
+        profile_id: result.profile?.profile_id,
+        role: result.profile?.target_role || result.profile?.top_category || category,
+        job_id: topJob?.id,
+        job_title: topJob?.title,
+        match_score: topJob?.match,
+        matched_skills: result.jobs.flatMap((job) => job.matchedSkillNames || job.skills || []).slice(0, 16),
+        gap_skills: result.jobs.flatMap((job) => job.missingSkillNames || job.missing_skills || []).slice(0, 16),
+      }).catch(() => {})
+      navigate('/results', { replace: true })
     } catch (err) {
       setError(err.message || 'Could not reach the recommendation API.')
     } finally {

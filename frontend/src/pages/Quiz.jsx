@@ -8,6 +8,7 @@ import {
   persistQuizProgress,
   persistQuizSessionId,
   persistRecommendationSession,
+  recordFlowEvent,
 } from '../api/recommend.js'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000'
@@ -138,10 +139,23 @@ function Quiz({ navigate }) {
         if (profile) {
           persistRecommendationSession(profile, jobs, rawRecs)
           persistQuizAttempt(profile, payload.progress || null, jobs)
+          const topJob = jobs[0]
+          recordFlowEvent({
+            event_type: 'intake_completed',
+            source: 'quiz',
+            session_id: sessionIdRef.current || profile.session_id,
+            profile_id: profile.profile_id,
+            role: profile.detected_role || profile.top_category || profile.detected_domain,
+            job_id: topJob?.id,
+            job_title: topJob?.title,
+            match_score: topJob?.match,
+            matched_skills: jobs.flatMap((job) => job.matchedSkillNames || job.skills || []).slice(0, 16),
+            gap_skills: jobs.flatMap((job) => job.missingSkillNames || job.missing_skills || []).slice(0, 16),
+          }).catch(() => {})
         }
         persistQuizSessionId(sessionIdRef.current)
         persistQuizProgress(payload.progress || null)
-        navigate('/results')
+        navigate('/results', { replace: true })
         return
       }
 

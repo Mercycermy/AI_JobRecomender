@@ -66,9 +66,38 @@ def _telegram_posts(conn: sqlite3.Connection) -> None:
     )
 
 
+def _user_flow_events(conn: sqlite3.Connection) -> None:
+    _executescript(
+        conn,
+        """
+        CREATE TABLE IF NOT EXISTS user_flow_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_type TEXT NOT NULL,
+            source TEXT,
+            session_id TEXT,
+            role TEXT,
+            job_id TEXT,
+            job_title TEXT,
+            match_score REAL,
+            matched_skills TEXT DEFAULT '[]',
+            gap_skills TEXT DEFAULT '[]',
+            payload TEXT DEFAULT '{}',
+            created_at TEXT DEFAULT (datetime('now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_user_flow_events_type_date
+            ON user_flow_events(event_type, created_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_user_flow_events_source_date
+            ON user_flow_events(source, created_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_user_flow_events_job
+            ON user_flow_events(job_title, created_at DESC);
+        """,
+    )
+
+
 MIGRATIONS: Iterable[Migration] = (
     ("001_jobs_lookup_indexes", _jobs_indexes),
     ("002_telegram_post_audit_table", _telegram_posts),
+    ("003_user_flow_event_analytics", _user_flow_events),
 )
 
 

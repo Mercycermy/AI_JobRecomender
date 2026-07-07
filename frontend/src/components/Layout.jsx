@@ -15,6 +15,7 @@ function Layout({ children, currentPath }) {
     { href: '/', label: 'Home', exact: true },
     { href: '/quiz', label: 'Quiz' },
     { href: '/manual', label: 'Manual' },
+    { href: '/telegram-jobs', label: 'Telegram Jobs' },
   ]
   const isCurrent = (item) => {
     if (item.match) {
@@ -55,6 +56,9 @@ function Layout({ children, currentPath }) {
               <span className="theme-icon" aria-hidden="true"></span>
               {isDark ? 'Dark' : 'Light'}
             </button>
+            <a className="header-job-link" href="/telegram-jobs" onClick={closeMenu}>
+              Current jobs
+            </a>
 
             <button
               className="nav-toggle"

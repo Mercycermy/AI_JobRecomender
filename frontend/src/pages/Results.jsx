@@ -2,13 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   categories,
   experienceLevels,
-  jobRecommendations as mockJobRecommendations,
 } from '../data/mockData.js'
 import FlowProgress from '../components/FlowProgress.jsx'
 import {
+  clearStoredRecommendations,
   fetchAnalysis,
   fetchRecommendations,
   fetchResumeTips,
+  fetchTelegramJobMatches,
   loadStoredAnalysis,
   loadStoredProfile,
   loadStoredRecommendations,
@@ -16,6 +17,7 @@ import {
   loadStoredSessionId,
   persistAnalysis,
   persistRecommendationSession,
+  recordFlowEvent,
 } from '../api/recommend.js'
 import LearningResources from './LearningResources.jsx'
 import ResumeTips from './ResumeTips.jsx'
@@ -101,6 +103,28 @@ function getTargetRole(profile) {
   )
 }
 
+function sourceForProfile(profile) {
+  return profile?.source === 'adaptive_quiz' || profile?.source === 'quiz'
+    ? 'quiz'
+    : 'manual'
+}
+
+function buildFallbackSummary(profile, topJob, topGap) {
+  if (!profile || !topJob) {
+    return 'Finish the quiz or manual skill input to generate your match dashboard, current jobs, gap reasons, learning resources, and resume actions.'
+  }
+
+  const target = getTargetRole(profile)
+  const matched = uniqueItems(topJob.matchedSkillNames || topJob.skills || []).slice(0, 3)
+  const missing = uniqueItems(topJob.missingSkillNames || topJob.missing_skills || []).slice(0, 2)
+  const matchedText = matched.length ? `Your strongest signals are ${matched.join(', ')}.` : 'Your strongest signals are still being calibrated.'
+  const missingText = missing.length || topGap
+    ? `To win more roles in the current market, close ${[...missing, topGap?.skill].filter(Boolean).slice(0, 2).join(', ')} first.`
+    : 'Keep applying to high-fit roles while building proof projects around your matched skills.'
+
+  return `${target} is the clearest direction from your input, with ${topJob.title} as the highest current fit. ${matchedText} ${missingText}`
+}
+
 function Results({ navigate }) {
   const [category, setCategory] = useState('All categories')
   const [experience, setExperience] = useState('All experience')
@@ -127,9 +151,14 @@ function Results({ navigate }) {
     if (stored?.length) {
       return stored
     }
-    return loadStoredProfile() ? [] : mockJobRecommendations
+    return []
   })
   const [jobsError, setJobsError] = useState(null)
+  const [currentJobState, setCurrentJobState] = useState({
+    error: null,
+    isLoading: Boolean(loadStoredProfile()),
+    jobs: [],
+  })
 
   useEffect(() => {
     let isMounted = true
@@ -163,6 +192,41 @@ function Results({ navigate }) {
       isMounted = false
     }
   }, [])
+
+  useEffect(() => {
+    let isMounted = true
+    if (!profile) {
+      return () => {
+        isMounted = false
+      }
+    }
+
+    fetchTelegramJobMatches(profile, { limit: 6 })
+      .then((payload) => {
+        if (!isMounted) {
+          return
+        }
+        setCurrentJobState({
+          error: null,
+          isLoading: false,
+          jobs: payload.jobs || [],
+        })
+      })
+      .catch((err) => {
+        if (!isMounted) {
+          return
+        }
+        setCurrentJobState({
+          error: err.message || 'Could not load current Telegram matches.',
+          isLoading: false,
+          jobs: [],
+        })
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [profile])
 
   useEffect(() => {
     let isMounted = true
@@ -270,7 +334,8 @@ function Results({ navigate }) {
     [analysis?.gaps],
   )
   const topGap = sortedGaps[0]
-  const topJob = jobRecommendations[0]
+  const topJob = filteredJobs[0]
+  const otherJobs = filteredJobs.slice(1)
   const skillLevelLabel = averageSkillScore !== null
     ? `${averageSkillScore}%`
     : profileSkills.length
@@ -279,6 +344,30 @@ function Results({ navigate }) {
   const nextLearningAction =
     topGap?.skill || topJob?.missingSkillNames?.[0] || topJob?.missing_skills?.[0] || 'Review gaps'
   const resumeAction = resumeTipsData?.tips?.length ? 'Tips ready' : profile ? 'Review resume' : 'Add profile'
+  const marketSummary = analysis?.summary || buildFallbackSummary(profile, jobRecommendations[0], topGap)
+
+  const handleStartNew = () => {
+    clearStoredRecommendations()
+    navigate('/', { replace: true })
+  }
+
+  const trackJobView = (job, surface = 'results') => {
+    if (!job) {
+      return
+    }
+    recordFlowEvent({
+      event_type: 'job_viewed',
+      source: sourceForProfile(profile),
+      session_id: loadStoredSessionId() || profile?.session_id,
+      role: profile?.target_role || profile?.top_category || profile?.detected_role,
+      job_id: job.id || job.job_id,
+      job_title: job.title || job.job_title,
+      match_score: job.match ?? job.match_score,
+      matched_skills: job.matchedSkillNames || job.matched_skill_names || job.skills || [],
+      gap_skills: job.missingSkillNames || job.missing_skill_names || job.missing_skills || [],
+      summary: surface,
+    }).catch(() => {})
+  }
 
   const lowerPanel = {
     'Skill Gap': (
@@ -314,7 +403,7 @@ function Results({ navigate }) {
         <button
           className="button button-ghost"
           type="button"
-          onClick={() => navigate('/')}
+          onClick={handleStartNew}
         >
           Start New Assessment
         </button>
@@ -395,81 +484,166 @@ function Results({ navigate }) {
         </div>
       )}
 
-      <div className="job-grid">
-        {filteredJobs.map((job) => {
-          const missingSkills = job.missingSkillNames || job.missing_skills || []
+      <section className="analysis-summary-panel" aria-label="AI user summary">
+        <div>
+          <p className="eyebrow">{analysis?.is_ai ? 'AI market summary' : 'Market summary'}</p>
+          <h2>How your input reads against collected jobs</h2>
+        </div>
+        <p>{marketSummary}</p>
+      </section>
 
-          return (
-            <article className="job-card" key={job.id}>
-            <div className="job-card-top">
-              <div>
-                <h2>{job.title}</h2>
-                <p>{job.company}</p>
-              </div>
-              <span className={`match-badge ${getBadgeClass(job.match)}`}>
-                {job.match}% match
-              </span>
+      {topJob && (
+        <article className="job-card is-top-match">
+          <div className="job-card-top">
+            <div>
+              <span className="chip chip-blue">Highest match</span>
+              <h2><strong>{topJob.title}</strong></h2>
+              <p>{topJob.company}</p>
             </div>
+            <span className={`match-badge ${getBadgeClass(topJob.match)}`}>
+              {topJob.match}% match
+            </span>
+          </div>
 
-            <div className="skill-pills">
-              {job.skills.slice(0, 3).map((skill) => (
-                <span className="chip chip-blue" key={skill}>
-                {skill}
-                </span>
-              ))}
-            </div>
+          <div className="skill-pills">
+            {uniqueItems(topJob.matchedSkillNames || topJob.skills || []).slice(0, 6).map((skill) => (
+              <span className="chip chip-blue" key={skill}>{skill}</span>
+            ))}
+          </div>
 
-            {missingSkills.length > 0 && (
-              <div className="missing-skill-strip">
-                <span>Missing skills</span>
-                <div className="skill-pills">
-                  {missingSkills.slice(0, 4).map((skill) => (
-                    <span className="chip chip-coral" key={`${job.id}-${skill}`}>
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {job.explanation && (
-              <p className="match-explanation">{job.explanation}</p>
-            )}
-
-            <details className="match-details">
-              <summary>Score breakdown</summary>
-              <div className="match-breakdown-grid">
-                {matchFactors.map(([key, label]) => (
-                  <div key={key}>
-                    <span>{label}</span>
-                    <strong>{Math.round(job.breakdown?.[key] ?? 0)}%</strong>
-                    <small>{job.scoreWeights?.[key] ?? 0}% weight</small>
-                  </div>
+          {uniqueItems(topJob.missingSkillNames || topJob.missing_skills || []).length > 0 && (
+            <div className="missing-skill-strip">
+              <span>Gap to close</span>
+              <div className="skill-pills">
+                {uniqueItems(topJob.missingSkillNames || topJob.missing_skills || []).slice(0, 5).map((skill) => (
+                  <span className="chip chip-coral" key={`${topJob.id}-${skill}`}>{skill}</span>
                 ))}
               </div>
-            </details>
-
-            <div className="job-card-actions">
-              <a className="details-link" href={`/results/gap/${job.id}`}>
-                Gap details
-              </a>
-              <a className="details-link" href="/results/resources">
-                Learning
-              </a>
-              <a className="details-link" href="/results/resume">
-                Resume
-              </a>
             </div>
-          </article>
+          )}
+
+          {topJob.explanation && <p className="match-explanation">{topJob.explanation}</p>}
+
+          <details className="match-details" open>
+            <summary>Why this is the best fit</summary>
+            <div className="match-breakdown-grid">
+              {matchFactors.map(([key, label]) => (
+                <div key={key}>
+                  <span>{label}</span>
+                  <strong>{Math.round(topJob.breakdown?.[key] ?? 0)}%</strong>
+                  <small>{topJob.scoreWeights?.[key] ?? 0}% weight</small>
+                </div>
+              ))}
+            </div>
+          </details>
+
+          <div className="job-card-actions">
+            <a className="details-link" href={`/results/gap/${topJob.id}`} onClick={() => trackJobView(topJob, 'gap_details')}>
+              See gap reason
+            </a>
+            <a className="details-link" href="/results/resources" onClick={() => trackJobView(topJob, 'learning')}>
+              Learning resources
+            </a>
+            <a className="details-link" href="/resume-builder" onClick={() => trackJobView(topJob, 'resume_builder')}>
+              Build resume
+            </a>
+          </div>
+        </article>
+      )}
+
+      <div className="job-grid compact-job-grid">
+        {otherJobs.map((job) => {
+          const missingSkills = uniqueItems(job.missingSkillNames || job.missing_skills || [])
+          const shownSkills = uniqueItems(job.matchedSkillNames || job.skills || missingSkills)
+
+          return (
+            <article className="job-card job-card-compact" key={job.id}>
+              <div className="job-card-top">
+                <div>
+                  <h2>{job.title}</h2>
+                  <p>{shownSkills.slice(0, 4).join(', ') || job.company}</p>
+                </div>
+                <span className={`match-badge ${getBadgeClass(job.match)}`}>
+                  {job.match}% match
+                </span>
+              </div>
+
+              <div className="skill-pills">
+                {shownSkills.slice(0, 5).map((skill) => (
+                  <span className="chip chip-blue" key={`${job.id}-${skill}`}>{skill}</span>
+                ))}
+              </div>
+
+              {missingSkills.length > 0 && (
+                <details className="match-details">
+                  <summary>Gap and why</summary>
+                  <div className="skill-pills">
+                    {missingSkills.slice(0, 5).map((skill) => (
+                      <span className="chip chip-coral" key={`${job.id}-gap-${skill}`}>{skill}</span>
+                    ))}
+                  </div>
+                  {job.explanation && <p className="match-explanation">{job.explanation}</p>}
+                </details>
+              )}
+
+              <div className="job-card-actions">
+                <a className="details-link" href={`/results/gap/${job.id}`} onClick={() => trackJobView(job, 'gap_details')}>
+                  Gap
+                </a>
+                <a className="details-link" href="/resume-builder" onClick={() => trackJobView(job, 'resume_builder')}>
+                  Resume
+                </a>
+              </div>
+            </article>
           )
         })}
       </div>
 
       {filteredJobs.length === 0 && (
         <div className="empty-state">
-          No jobs match those filters yet. Try a broader category or experience level.
+          {profile
+            ? 'No jobs match those filters yet. Try a broader category or experience level.'
+            : 'Start with the quiz or manual skill input to generate a fresh recommendation dashboard.'}
         </div>
       )}
+
+      <section className="current-jobs-panel">
+        <div className="admin-panel-heading">
+          <span>Current Telegram matches</span>
+          <strong>{currentJobState.isLoading ? 'Loading' : `${currentJobState.jobs.length} active jobs`}</strong>
+        </div>
+        {currentJobState.error && <p className="form-error">{currentJobState.error}</p>}
+        <div className="current-job-list">
+          {currentJobState.jobs.slice(0, 5).map((job) => {
+            const matchedSkills = uniqueItems(job.matched_skill_names || job.required_skill_names || [])
+            return (
+              <article className="current-job-row" key={job.job_id}>
+                <div>
+                  <strong>{job.job_title}</strong>
+                  <span>{matchedSkills.slice(0, 4).join(', ') || job.category || 'Current opening'}</span>
+                </div>
+                <span className={`match-badge ${getBadgeClass(job.match_score || 0)}`}>
+                  {Math.round(job.match_score || 0)}%
+                </span>
+                <a
+                  href={job.apply_link || '/telegram-jobs'}
+                  target={job.apply_link ? '_blank' : undefined}
+                  rel={job.apply_link ? 'noreferrer' : undefined}
+                  onClick={() => trackJobView(job, 'telegram_current_job')}
+                >
+                  View
+                </a>
+              </article>
+            )
+          })}
+        </div>
+        {!currentJobState.isLoading && currentJobState.jobs.length === 0 && (
+          <div className="empty-state">No active Telegram jobs matched this profile yet.</div>
+        )}
+        <a className="button button-ghost current-jobs-link" href="/telegram-jobs">
+          Open Telegram job feed
+        </a>
+      </section>
 
       <div className="bottom-tabs" role="tablist" aria-label="Recommendation panels">
         {tabs.map((tab) => (
@@ -485,29 +659,6 @@ function Results({ navigate }) {
           </button>
         ))}
       </div>
-
-      {analysis?.summary && (
-        <p
-          className="analysis-summary"
-          style={{
-            margin: '0 0 16px',
-            padding: '14px 18px',
-            borderRadius: '10px',
-            background: 'rgba(46, 134, 193, 0.08)',
-            border: '1px solid rgba(46, 134, 193, 0.2)',
-            color: 'var(--slate)',
-            fontSize: '14px',
-            lineHeight: 1.6,
-          }}
-        >
-          {analysis.is_ai && (
-            <strong style={{ display: 'block', marginBottom: '6px', color: 'var(--blue)' }}>
-              AI analysis
-            </strong>
-          )}
-          {analysis.summary}
-        </p>
-      )}
 
       <div className="tab-panel">{lowerPanel}</div>
     </section>

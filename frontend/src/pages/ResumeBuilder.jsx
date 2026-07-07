@@ -1,7 +1,13 @@
 import { useState } from 'react'
 
 import FlowProgress from '../components/FlowProgress.jsx'
-import { generateResumeDocument, loadStoredProfile } from '../api/recommend.js'
+import {
+  generateResumeDocument,
+  loadStoredProfile,
+  loadStoredRecommendations,
+  loadStoredSessionId,
+  recordFlowEvent,
+} from '../api/recommend.js'
 
 const emptyExperience = () => ({
   title: '',
@@ -38,9 +44,28 @@ function splitLines(value) {
     .filter(Boolean)
 }
 
+function uniqueItems(values = []) {
+  return [...new Set(values.filter(Boolean).map((value) => String(value)))]
+}
+
+function sourceForProfile(profile) {
+  return profile?.source === 'adaptive_quiz' || profile?.source === 'quiz'
+    ? 'quiz'
+    : 'manual'
+}
+
 function initialResume() {
   const profile = loadStoredProfile()
-  const title = profile?.target_role || profile?.top_category || profile?.category || ''
+  const recommendations = loadStoredRecommendations() || []
+  const targetJob = recommendations[0]
+  const title = targetJob?.title || profile?.target_role || profile?.top_category || profile?.category || ''
+  const skills = uniqueItems([
+    ...(targetJob?.matchedSkillNames || targetJob?.skills || []),
+    ...(profile?.detected_skills || profile?.skill_ids || profile?.skills || []),
+  ]).slice(0, 14)
+  const summary = targetJob
+    ? `Targeting ${targetJob.title}. Emphasize ${skills.slice(0, 4).join(', ') || 'the strongest matched skills'} and add measurable proof for the highest-fit job.`
+    : ''
 
   return {
     name: '',
@@ -48,8 +73,8 @@ function initialResume() {
     email: '',
     phone: '',
     location: '',
-    summary: '',
-    skills: '',
+    summary,
+    skills: skills.join(', '),
     certifications: '',
     experience: [emptyExperience()],
     education: [emptyEducation()],
@@ -103,6 +128,7 @@ function pdfBlobFromBase64(value) {
 
 function ResumeBuilder() {
   const [form, setForm] = useState(initialResume)
+  const [targetJob] = useState(() => (loadStoredRecommendations() || [])[0] || null)
   const [generated, setGenerated] = useState(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState(null)
@@ -138,6 +164,18 @@ function ResumeBuilder() {
     try {
       const payload = await generateResumeDocument(buildPayload(form))
       setGenerated(payload)
+      const profile = loadStoredProfile()
+      recordFlowEvent({
+        event_type: 'resume_generated',
+        source: sourceForProfile(profile),
+        session_id: loadStoredSessionId() || profile?.session_id,
+        role: form.title || profile?.target_role || profile?.top_category,
+        job_id: targetJob?.id,
+        job_title: targetJob?.title,
+        match_score: targetJob?.match,
+        matched_skills: uniqueItems(targetJob?.matchedSkillNames || targetJob?.skills || splitLines(form.skills)),
+        gap_skills: uniqueItems(targetJob?.missingSkillNames || targetJob?.missing_skills || []),
+      }).catch(() => {})
     } catch (err) {
       setError(err.message || 'Could not generate resume.')
     } finally {
@@ -194,14 +232,30 @@ function ResumeBuilder() {
     <section className="detail-page resume-builder-page">
       <div className="page-heading">
         <p className="eyebrow">Resume builder</p>
-        <h1>Build a clean resume and export it.</h1>
-        <p>Fill the sections, generate the preview, then download the same layout.</p>
+        <h1>Build a job-targeted resume and export it.</h1>
+        <p>
+          The builder uses your latest match context to seed the title, skills,
+          and summary. Generate the preview, then download the same layout.
+        </p>
       </div>
 
       <FlowProgress currentPath="/resume-builder" />
 
       <div className="resume-builder-layout">
         <form className="resume-builder-form" onSubmit={handleSubmit}>
+          <section className="resume-builder-section">
+            <div className="resume-builder-section-title">
+              <h2>Target</h2>
+            </div>
+            {targetJob && (
+              <div className="resume-target-job">
+                <span className="chip chip-blue">{targetJob.match}% match</span>
+                <strong>{targetJob.title}</strong>
+                <p>{uniqueItems(targetJob.matchedSkillNames || targetJob.skills || []).slice(0, 5).join(', ')}</p>
+              </div>
+            )}
+          </section>
+
           <section className="resume-builder-section">
             <div className="resume-builder-section-title">
               <h2>Contact</h2>

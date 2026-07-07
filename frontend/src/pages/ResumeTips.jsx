@@ -4,6 +4,8 @@ import FlowProgress from '../components/FlowProgress.jsx'
 import {
   loadStoredProfile,
   loadStoredRawRecommendations,
+  loadStoredSessionId,
+  recordFlowEvent,
   uploadResumeForTips,
 } from '../api/recommend.js'
 import { resumeTips as fallbackResumeTips } from '../data/mockData.js'
@@ -35,6 +37,12 @@ function emphasizeTip(tip) {
   })
 }
 
+function sourceForProfile(profile) {
+  return profile?.source === 'adaptive_quiz' || profile?.source === 'quiz'
+    ? 'quiz'
+    : 'manual'
+}
+
 function ResumeTips({ standalone = false, coaching = null, isLoading = false, error = null }) {
   const [resumeFile, setResumeFile] = useState(null)
   const [uploadResult, setUploadResult] = useState(null)
@@ -54,6 +62,14 @@ function ResumeTips({ standalone = false, coaching = null, isLoading = false, er
       const rawRecommendations = loadStoredRawRecommendations()
       const payload = await uploadResumeForTips(resumeFile, profile, rawRecommendations)
       setUploadResult(payload)
+      recordFlowEvent({
+        event_type: 'resume_uploaded',
+        source: sourceForProfile(profile),
+        session_id: loadStoredSessionId() || profile?.session_id,
+        role: profile?.target_role || profile?.top_category || profile?.detected_role,
+        matched_skills: payload.detected_skills?.map((skill) => skill.skill || skill.skill_id) || [],
+        gap_skills: payload.missing_keywords?.map((keyword) => keyword.skill || keyword.skill_id) || [],
+      }).catch(() => {})
     } catch (err) {
       setUploadError(err.message || 'Resume upload failed.')
     } finally {

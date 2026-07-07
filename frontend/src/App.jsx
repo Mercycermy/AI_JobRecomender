@@ -10,7 +10,6 @@ import ResumeBuilder from './pages/ResumeBuilder.jsx'
 import ResumeTips from './pages/ResumeTips.jsx'
 import SkillGap from './pages/SkillGap.jsx'
 import TelegramJobs from './pages/TelegramJobs.jsx'
-import { jobRecommendations as mockJobRecommendations } from './data/mockData.js'
 import { loadStoredRecommendations } from './api/recommend.js'
 import './App.css'
 
@@ -19,8 +18,9 @@ const getPath = () => window.location.pathname
 function App() {
   const [path, setPath] = useState(getPath)
 
-  const navigate = useCallback((to) => {
-    window.history.pushState({}, '', to)
+  const navigate = useCallback((to, options = {}) => {
+    const method = options.replace ? 'replaceState' : 'pushState'
+    window.history[method]({}, '', to)
     setPath(getPath())
     window.scrollTo({ top: 0, left: 0 })
   }, [])
@@ -79,7 +79,7 @@ function App() {
     if (path.startsWith('/results/gap/')) {
       const jobId = path.split('/').filter(Boolean).at(-1)
       const stored = loadStoredRecommendations()
-      const jobs = stored?.length ? stored : mockJobRecommendations
+      const jobs = stored?.length ? stored : []
       const job = jobs.find((item) => item.id === jobId)
 
       return <SkillGap job={job} standalone />

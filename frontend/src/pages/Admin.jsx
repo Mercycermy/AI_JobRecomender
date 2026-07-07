@@ -3,6 +3,7 @@ import {
   deleteAdminQuizQuestion,
   clearStoredAdminAccessKey,
   fetchAdminQuizAttempts,
+  fetchAdminAnalytics,
   fetchAdminQuizQuestions,
   fetchAnalysis,
   fetchRecommendations,
@@ -833,12 +834,12 @@ function countWorkTypeSignals(values) {
 }
 
 function Admin() {
-  const [adminAccessKey, setAdminAccessKeyInput] = useState('')
-  const [adminAuthState, setAdminAuthState] = useState({
+  const [adminAccessKey, setAdminAccessKeyInput] = useState(() => getStoredAdminAccessKey())
+  const [adminAuthState, setAdminAuthState] = useState(() => ({
     error: '',
     isAuthorized: false,
-    isLoading: true,
-  })
+    isLoading: Boolean(getStoredAdminAccessKey()),
+  }))
   const [activeTab, setActiveTab] = useState(adminTabs[0])
   const [activeProfilePage, setActiveProfilePage] = useState(profilePages[0])
   const [jobSearch, setJobSearch] = useState('')
@@ -860,6 +861,11 @@ function Admin() {
     isLoading: true,
     total: 0,
     completed: 0,
+  })
+  const [adminAnalytics, setAdminAnalytics] = useState(null)
+  const [adminAnalyticsState, setAdminAnalyticsState] = useState({
+    error: '',
+    isLoading: true,
   })
   const [analysis, setAnalysis] = useState(() => loadStoredAnalysis())
   const [resumeCoaching, setResumeCoaching] = useState(() => loadCachedResumeTips())
@@ -887,17 +893,10 @@ function Admin() {
     const storedKey = getStoredAdminAccessKey()
 
     if (!storedKey) {
-      setAdminAuthState({
-        error: '',
-        isAuthorized: false,
-        isLoading: false,
-      })
       return () => {
         cancelled = true
       }
     }
-
-    setAdminAccessKeyInput(storedKey)
 
     verifyAdminAccess(storedKey)
       .then(() => {
@@ -1232,6 +1231,38 @@ function Admin() {
 
     let cancelled = false
 
+    fetchAdminAnalytics({ limit: 1500 })
+      .then((payload) => {
+        if (cancelled) {
+          return
+        }
+
+        setAdminAnalytics(payload)
+        setAdminAnalyticsState({ error: '', isLoading: false })
+      })
+      .catch((err) => {
+        if (cancelled) {
+          return
+        }
+
+        setAdminAnalyticsState({
+          error: err.message || 'Could not load admin analytics.',
+          isLoading: false,
+        })
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [adminAuthState.isAuthorized])
+
+  useEffect(() => {
+    if (!adminAuthState.isAuthorized) {
+      return
+    }
+
+    let cancelled = false
+
     fetchAdminQuizQuestions({ status: 'active', limit: 1000 })
       .then((payload) => {
         if (cancelled) {
@@ -1464,7 +1495,33 @@ function Admin() {
     })
   }
 
+  const analyticsTotals = adminAnalytics?.totals || {}
+  const analyticsPeriods = adminAnalytics?.periods || {}
+  const analyticsRoleRows = adminAnalytics?.roles || []
+  const analyticsMatchedSkillRows = adminAnalytics?.matched_skills || []
+  const analyticsGapRows = adminAnalytics?.gaps || []
+  const analyticsWatchedJobRows = adminAnalytics?.watched_jobs || []
+  const intakePeriodRows = [
+    { label: 'Daily', count: analyticsPeriods.daily || 0 },
+    { label: 'Weekly', count: analyticsPeriods.weekly || 0 },
+    { label: 'Monthly', count: analyticsPeriods.monthly || 0 },
+    { label: 'Yearly', count: analyticsPeriods.yearly || 0 },
+  ]
+  const analyticsIntakeCount = analyticsTotals.intakes || quizAttemptSummaries.length
+  const manualIntakeCount = analyticsTotals.manual_intakes || 0
+  const quizIntakeCount = analyticsTotals.quiz_intakes || adminAttemptState.completed || quizAttemptSummaries.length
+
   const metrics = [
+    {
+      label: 'Users assessed',
+      value: `${analyticsIntakeCount} total`,
+      status: analyticsIntakeCount ? 'Ready' : 'Pending',
+    },
+    {
+      label: 'Quiz / manual',
+      value: `${quizIntakeCount} / ${manualIntakeCount}`,
+      status: analyticsIntakeCount ? 'Ready' : 'Pending',
+    },
     {
       label: 'Profile',
       value: workTypeNames.length || quizAttempts.length
@@ -1577,7 +1634,7 @@ function Admin() {
     completionItems.reduce((total, item) => total + item.score, 0) / completionItems.length,
   )
   const readyFeatureCount = featureMap.filter(
-    (feature) => !['Pending', 'Review', 'Loading'].includes(feature.status),
+    (feature) => !['Pending', 'Review', 'Loading', 'Fix'].includes(feature.status),
   ).length
   const mostFilledItem = [...completionItems].sort((left, right) => right.score - left.score)[0]
   const topGap = gaps[0]
@@ -1605,10 +1662,22 @@ function Admin() {
   ]
   const overviewGraphRows = [
     {
+      label: 'Daily intakes',
+      value: analyticsPeriods.daily || 0,
+      score: Math.min(100, Math.round(((analyticsPeriods.daily || 0) / Math.max(analyticsIntakeCount, 1)) * 100)),
+      detail: `${analyticsPeriods.weekly || 0} this week`,
+    },
+    {
       label: 'Quiz history',
-      value: quizAttemptSummaries.length,
-      score: Math.min(100, Math.round((quizAttemptSummaries.length / Math.max(adminAttemptState.total || quizAttemptSummaries.length, 1)) * 100)),
+      value: quizIntakeCount,
+      score: Math.min(100, Math.round((quizIntakeCount / Math.max(analyticsIntakeCount || adminAttemptState.total || quizAttemptSummaries.length, 1)) * 100)),
       detail: `${adminAttemptState.completed || quizHistory.length} completed`,
+    },
+    {
+      label: 'Manual input',
+      value: manualIntakeCount,
+      score: Math.min(100, Math.round((manualIntakeCount / Math.max(analyticsIntakeCount, 1)) * 100)),
+      detail: `${analyticsIntakeCount} total intakes`,
     },
     {
       label: 'Profile signals',
@@ -1855,15 +1924,7 @@ function Admin() {
       <section className="admin-page admin-login-page">
         <div className="admin-login-card">
           <p className="eyebrow">{ADMIN_LOGIN_TITLE}</p>
-          <h1>Sign in to open the admin console.</h1>
-          <p>
-            Enter the admin access key to view quiz management, recommendation data,
-            and Telegram job tools.
-          </p>
-          <p className="admin-login-hint">
-            Local development defaults to <strong>admin-local-access</strong> unless you set
-            <strong> ADMIN_ACCESS_KEY</strong> in the backend environment.
-          </p>
+          <h1>Admin portal</h1>
 
           <form className="admin-login-form" onSubmit={handleAdminLogin}>
             <label className="field-group">
@@ -1893,11 +1954,7 @@ function Admin() {
       <div className="admin-header">
         <div>
           <p className="eyebrow">Admin command center</p>
-          <h1>Feature operations for the active career workflow.</h1>
-          <p>
-            Admin now rolls up all main quiz attempts into the same flow: profile,
-            matches, gaps, learning, resume, and current jobs. Use the direct path <code>/admin</code>.
-          </p>
+          <h1>Workflow overview and content controls.</h1>
         </div>
 
         <div className="admin-route-note" aria-label="Admin access mode">
@@ -1949,6 +2006,7 @@ function Admin() {
             </div>
 
             {adminAttemptState.error && <p className="form-error">{adminAttemptState.error}</p>}
+            {adminAnalyticsState.error && <p className="form-error">{adminAnalyticsState.error}</p>}
 
             <div className="admin-insight-grid">
               {overviewGraphRows.map((row) => (
@@ -1964,6 +2022,112 @@ function Admin() {
               ))}
             </div>
           </section>
+
+          <div className="admin-grid">
+            <section className="admin-panel">
+              <div className="admin-panel-heading">
+                <span>Quiz and manual intake volume</span>
+                <strong>{adminAnalyticsState.isLoading ? 'Loading' : `${analyticsIntakeCount} users`}</strong>
+              </div>
+
+              <div className="admin-stat-grid">
+                {intakePeriodRows.map((row) => (
+                  <article className="admin-dashboard-card" key={row.label}>
+                    <span className="metric-label">{row.label}</span>
+                    <strong>{row.count}</strong>
+                    <small className="admin-small-note">completed intakes</small>
+                  </article>
+                ))}
+              </div>
+            </section>
+
+            <section className="admin-panel">
+              <div className="admin-panel-heading">
+                <span>All role demand</span>
+                <strong>{analyticsRoleRows.length ? `${analyticsRoleRows.length} roles` : 'No role data'}</strong>
+              </div>
+
+              <div className="admin-bar-list" aria-label="All roles graph">
+                {(analyticsRoleRows.length ? analyticsRoleRows : workTypeCoverage.map((item) => ({
+                  label: item.workType,
+                  count: item.count,
+                }))).slice(0, 8).map((row) => (
+                  <article className="admin-graph-row" key={row.label}>
+                    <div className="admin-graph-copy">
+                      <strong>{formatLabel(row.label)}</strong>
+                      <span>{row.count} users</span>
+                    </div>
+                    <div className="admin-graph-track" aria-label={`${row.label} ${row.count}`}>
+                      <span style={{ width: `${Math.min(100, Math.round((row.count / Math.max(analyticsIntakeCount, 1)) * 100))}%` }}></span>
+                    </div>
+                    <strong className="admin-graph-score">{row.count}</strong>
+                  </article>
+                ))}
+              </div>
+            </section>
+          </div>
+
+          <div className="admin-grid">
+            <section className="admin-panel">
+              <div className="admin-panel-heading">
+                <span>Highest matched skills</span>
+                <strong>{analyticsMatchedSkillRows.length ? 'Recorded' : 'Awaiting matches'}</strong>
+              </div>
+              <div className="admin-bar-list" aria-label="Highest matched skills graph">
+                {(analyticsMatchedSkillRows.length ? analyticsMatchedSkillRows : profileSkills.map((skill) => ({
+                  label: skill,
+                  count: 1,
+                }))).slice(0, 8).map((row) => (
+                  <article className="admin-graph-row" key={row.label}>
+                    <div className="admin-graph-copy">
+                      <strong>{formatLabel(row.label)}</strong>
+                      <span>{row.count} matches</span>
+                    </div>
+                    <div className="admin-graph-track" aria-label={`${row.label} ${row.count}`}>
+                      <span style={{ width: `${Math.min(100, row.count * 18)}%` }}></span>
+                    </div>
+                    <strong className="admin-graph-score">{row.count}</strong>
+                  </article>
+                ))}
+              </div>
+            </section>
+
+            <section className="admin-panel">
+              <div className="admin-panel-heading">
+                <span>Top gaps and watched jobs</span>
+                <strong>{analyticsWatchedJobRows.length ? `${analyticsWatchedJobRows.length} watched` : 'No views yet'}</strong>
+              </div>
+              <div className="admin-bar-list" aria-label="Top gaps graph">
+                {analyticsGapRows.slice(0, 4).map((row) => (
+                  <article className="admin-graph-row" key={`gap-${row.label}`}>
+                    <div className="admin-graph-copy">
+                      <strong>{formatLabel(row.label)}</strong>
+                      <span>{row.count} gap signals</span>
+                    </div>
+                    <div className="admin-graph-track" aria-label={`${row.label} ${row.count}`}>
+                      <span style={{ width: `${Math.min(100, row.count * 18)}%` }}></span>
+                    </div>
+                    <strong className="admin-graph-score">{row.count}</strong>
+                  </article>
+                ))}
+                {analyticsWatchedJobRows.slice(0, 4).map((row) => (
+                  <article className="admin-graph-row" key={`job-${row.label}`}>
+                    <div className="admin-graph-copy">
+                      <strong>{row.label}</strong>
+                      <span>{row.count} views</span>
+                    </div>
+                    <div className="admin-graph-track" aria-label={`${row.label} ${row.count}`}>
+                      <span style={{ width: `${Math.min(100, row.count * 18)}%` }}></span>
+                    </div>
+                    <strong className="admin-graph-score">{row.count}</strong>
+                  </article>
+                ))}
+              </div>
+              {!analyticsGapRows.length && !analyticsWatchedJobRows.length && (
+                <div className="admin-empty">Gap and job-view records will appear after users open matched jobs.</div>
+              )}
+            </section>
+          </div>
 
           <div className="admin-feature-grid">
             {featureMap.map((feature) => (

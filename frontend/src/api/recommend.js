@@ -163,6 +163,10 @@ export function mapJobToCard(job) {
     explanationPoints: job.explanation_points,
     location: job.location,
     dateAdded: job.date_added,
+    deadlineDate: job.deadline_date || job.deadline,
+    postedAt: job.posted_at,
+    sourceChannel: job.source_channel,
+    applyLink: job.apply_link,
     requiredSkillCount: job.required_skill_count,
   }
 }
@@ -192,19 +196,8 @@ export async function fetchRecommendations(profile, topN = 10) {
 export function persistRecommendationSession(profile, jobs, rawRecs = null) {
   sessionStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile))
   sessionStorage.setItem(RECOMMENDATIONS_STORAGE_KEY, JSON.stringify(jobs))
-  try {
-    localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile))
-    localStorage.setItem(RECOMMENDATIONS_STORAGE_KEY, JSON.stringify(jobs))
-  } catch {
-    // Session storage still keeps the active recommendation flow available.
-  }
   if (rawRecs) {
     sessionStorage.setItem(RAW_RECOMMENDATIONS_STORAGE_KEY, JSON.stringify(rawRecs))
-    try {
-      localStorage.setItem(RAW_RECOMMENDATIONS_STORAGE_KEY, JSON.stringify(rawRecs))
-    } catch {
-      // Raw recommendations are optional for the current session.
-    }
   } else {
     sessionStorage.removeItem(RAW_RECOMMENDATIONS_STORAGE_KEY)
   }
@@ -232,43 +225,21 @@ export function persistQuizProgress(progress) {
 
 export function loadStoredQuizHistory() {
   try {
-    const raw = localStorage.getItem(QUIZ_HISTORY_STORAGE_KEY)
-    const parsed = raw ? JSON.parse(raw) : []
-    return Array.isArray(parsed) ? parsed : []
+    localStorage.removeItem(QUIZ_HISTORY_STORAGE_KEY)
   } catch {
-    return []
+    // Old browser history is intentionally discarded for the main website flow.
   }
+  return []
 }
 
 export function persistQuizAttempt(profile, progress = null, jobs = []) {
-  if (!profile) {
-    return
-  }
-
-  const history = loadStoredQuizHistory()
-  const id = profile.session_id || progress?.session_id || `quiz-${Date.now()}`
-  const entry = {
-    id,
-    completed_at: new Date().toISOString(),
-    profile,
-    progress,
-    jobs,
-  }
-  const nextHistory = [
-    entry,
-    ...history.filter((item) => item?.id !== id),
-  ].slice(0, 25)
-
-  localStorage.setItem(QUIZ_HISTORY_STORAGE_KEY, JSON.stringify(nextHistory))
+  void profile
+  void progress
+  void jobs
 }
 
 export function persistAnalysis(analysis) {
   sessionStorage.setItem(ANALYSIS_STORAGE_KEY, JSON.stringify(analysis))
-  try {
-    localStorage.setItem(ANALYSIS_STORAGE_KEY, JSON.stringify(analysis))
-  } catch {
-    // Session storage still keeps analysis available for the current flow.
-  }
 }
 
 export function loadStoredRecommendations() {
@@ -277,9 +248,7 @@ export function loadStoredRecommendations() {
     if (raw) {
       return JSON.parse(raw)
     }
-
-    const localRaw = localStorage.getItem(RECOMMENDATIONS_STORAGE_KEY)
-    return localRaw ? JSON.parse(localRaw) : null
+    return null
   } catch {
     return null
   }
@@ -291,9 +260,7 @@ export function loadStoredProfile() {
     if (raw) {
       return JSON.parse(raw)
     }
-
-    const localRaw = localStorage.getItem(PROFILE_STORAGE_KEY)
-    return localRaw ? JSON.parse(localRaw) : null
+    return null
   } catch {
     return null
   }
@@ -305,9 +272,7 @@ export function loadStoredAnalysis() {
     if (raw) {
       return JSON.parse(raw)
     }
-
-    const localRaw = localStorage.getItem(ANALYSIS_STORAGE_KEY)
-    return localRaw ? JSON.parse(localRaw) : null
+    return null
   } catch {
     return null
   }
@@ -336,9 +301,7 @@ export function loadStoredRawRecommendations() {
     if (raw) {
       return JSON.parse(raw)
     }
-
-    const localRaw = localStorage.getItem(RAW_RECOMMENDATIONS_STORAGE_KEY)
-    return localRaw ? JSON.parse(localRaw) : null
+    return null
   } catch {
     return null
   }
@@ -352,6 +315,16 @@ export function clearStoredRecommendations() {
   sessionStorage.removeItem('resumeTipsCoaching')
   sessionStorage.removeItem(QUIZ_SESSION_STORAGE_KEY)
   sessionStorage.removeItem(QUIZ_PROGRESS_STORAGE_KEY)
+  try {
+    localStorage.removeItem(PROFILE_STORAGE_KEY)
+    localStorage.removeItem(RECOMMENDATIONS_STORAGE_KEY)
+    localStorage.removeItem(RAW_RECOMMENDATIONS_STORAGE_KEY)
+    localStorage.removeItem(ANALYSIS_STORAGE_KEY)
+    localStorage.removeItem(QUIZ_HISTORY_STORAGE_KEY)
+    localStorage.removeItem('resumeTipsCoaching')
+  } catch {
+    // Clearing session storage is enough for the active flow.
+  }
 }
 
 export async function fetchAnalysis(sessionId, profile = null, recommendations = null) {
@@ -493,6 +466,35 @@ export async function fetchTelegramJobMatches(profile, { query = '', role = '', 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}))
     throw new Error(err.error || `Telegram match failed (${response.status})`)
+  }
+
+  return response.json()
+}
+
+export async function recordFlowEvent(payload) {
+  const response = await fetch(`${API_BASE}/analytics/event`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || `Analytics event failed (${response.status})`)
+  }
+
+  return response.json()
+}
+
+export async function fetchAdminAnalytics({ limit = 1000 } = {}) {
+  const params = new URLSearchParams({ limit: String(limit) })
+  const response = await fetch(`${API_BASE}/admin/analytics?${params}`, {
+    headers: getAdminHeaders(),
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || `Admin analytics failed (${response.status})`)
   }
 
   return response.json()

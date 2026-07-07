@@ -11,6 +11,7 @@ from werkzeug.exceptions import HTTPException
 
 from app.ai_tips import GroqResumeCoach
 from app.answer_evaluator import evaluate, evaluate_mcq
+from app.analytics import AnalyticsService
 from app.config import settings
 from app.gap_analyzer import GapAnalyzer, format_gaps_for_ui
 from app.learning_path import LearningPath
@@ -69,6 +70,7 @@ _quiz_engine: Optional[QuizEngine] = None
 _resource_recommender: Optional[ResourceRecommender] = None
 _ai_resume_coach: Optional[GroqResumeCoach] = None
 _telegram_job_service: Optional[TelegramJobIngestionService] = None
+_analytics_service: Optional[AnalyticsService] = None
 
 
 def _get_recommender() -> RecommendationEngine:
@@ -159,6 +161,13 @@ def _get_telegram_job_service() -> TelegramJobIngestionService:
             ai_extractor=_get_ai_resume_coach(),
         )
     return _telegram_job_service
+
+
+def _get_analytics_service() -> AnalyticsService:
+    global _analytics_service
+    if _analytics_service is None:
+        _analytics_service = AnalyticsService()
+    return _analytics_service
 
 
 def _add_cors_headers(response):
@@ -716,6 +725,21 @@ def telegram_jobs_ingest():
         return jsonify({"error": str(exc)}), 500
 
 
+@app.route("/analytics/event", methods=["POST", "OPTIONS"])
+def analytics_event():
+    """Record anonymous flow events for admin rollups."""
+    if request.method == "OPTIONS":
+        return "", 204
+
+    try:
+        payload = request.get_json(silent=True) or {}
+        return jsonify(_get_analytics_service().record_event(payload)), 201
+    except (TypeError, ValueError) as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
 @app.route("/admin/login", methods=["POST", "OPTIONS"])
 def admin_login():
     if request.method == "OPTIONS":
@@ -742,6 +766,22 @@ def admin_quiz_attempts():
         limit = 100
     try:
         return jsonify(_get_quiz_engine().list_admin_attempts(limit=limit))
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/admin/analytics", methods=["GET", "OPTIONS"])
+def admin_analytics():
+    """Return anonymous intake, match, gap, and job-view rollups."""
+    if request.method == "OPTIONS":
+        return "", 204
+
+    try:
+        limit = int(request.args.get("limit", 1000))
+    except (TypeError, ValueError):
+        limit = 1000
+    try:
+        return jsonify(_get_analytics_service().summary(limit=limit))
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 

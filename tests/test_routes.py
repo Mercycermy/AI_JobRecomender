@@ -273,3 +273,35 @@ def test_resume_tips_fallback(client):
     assert data["is_ai"] is False  # No GROQ_API_KEY in test environment
 
 
+def test_analytics_event_and_admin_summary(client, tmp_path):
+    from app import routes
+    from app.analytics import AnalyticsService
+
+    routes._analytics_service = AnalyticsService(tmp_path / "analytics.db")
+
+    response = client.post(
+        "/analytics/event",
+        json={
+            "event_type": "intake_completed",
+            "source": "manual",
+            "role": "backend-dev",
+            "job_title": "Backend Developer",
+            "match_score": 82,
+            "matched_skills": ["Python", "SQL"],
+            "gap_skills": ["Docker"],
+        },
+    )
+    assert response.status_code == 201
+    assert response.get_json()["recorded"] is True
+
+    summary = client.get(
+        "/admin/analytics",
+        headers={"X-Admin-Key": app.config["ADMIN_ACCESS_KEY"]},
+    )
+    assert summary.status_code == 200
+    data = summary.get_json()
+    assert data["totals"]["manual_intakes"] == 1
+    assert data["matched_skills"][0]["label"] == "Python"
+    assert data["gaps"][0]["label"] == "Docker"
+
+
