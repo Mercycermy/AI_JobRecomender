@@ -273,11 +273,15 @@ def test_resume_tips_fallback(client):
     assert data["is_ai"] is False  # No GROQ_API_KEY in test environment
 
 
-def test_analytics_event_and_admin_summary(client, tmp_path):
+def test_analytics_event_and_admin_summary(client, tmp_path, monkeypatch):
     from app import routes
     from app.analytics import AnalyticsService
 
-    routes._analytics_service = AnalyticsService(tmp_path / "analytics.db")
+    monkeypatch.setattr(
+        routes,
+        "_analytics_service",
+        AnalyticsService(tmp_path / "analytics.db"),
+    )
 
     response = client.post(
         "/analytics/event",
@@ -294,6 +298,18 @@ def test_analytics_event_and_admin_summary(client, tmp_path):
     assert response.status_code == 201
     assert response.get_json()["recorded"] is True
 
+    auto_response = client.post(
+        "/recommend",
+        headers={"X-Session-Id": "visitor-test-session"},
+        json={
+            "skills": ["Python", "SQL"],
+            "experience": "junior",
+            "category": "backend-dev",
+            "top_n": 1,
+        },
+    )
+    assert auto_response.status_code == 200
+
     summary = client.get(
         "/admin/analytics",
         headers={"X-Admin-Key": app.config["ADMIN_ACCESS_KEY"]},
@@ -301,7 +317,14 @@ def test_analytics_event_and_admin_summary(client, tmp_path):
     assert summary.status_code == 200
     data = summary.get_json()
     assert data["totals"]["manual_intakes"] == 1
+    assert data["totals"]["api_requests"] == 1
     assert data["matched_skills"][0]["label"] == "Python"
     assert data["gaps"][0]["label"] == "Docker"
+    assert data["event_types"][0]["count"] >= 1
+    assert any(
+        event["event_type"] == "recommendations_generated"
+        and event["session_id"] == "visitor-test-session"
+        for event in data["recent_events"]
+    )
 
 

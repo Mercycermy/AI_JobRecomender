@@ -4,7 +4,7 @@ Flask API — adaptive quiz and semantic job recommendations.
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional
 
 from flask import Flask, jsonify, request
 from werkzeug.exceptions import HTTPException
@@ -200,6 +200,12 @@ def cors_after_request(response):
     return _add_cors_headers(response)
 
 
+@app.after_request
+def analytics_after_request(response):
+    _record_public_activity(response)
+    return response
+
+
 @app.errorhandler(HTTPException)
 def handle_http_error(error):
     return json_http_error(error)
@@ -314,6 +320,198 @@ def _format_question(q: dict, number: int, total: int) -> dict:
 
 def _session_id() -> str:
     return request.headers.get("X-Session-Id") or request.args.get("session_id") or ""
+
+
+_PUBLIC_ACTIVITY_LABELS = {
+    "/quiz": ("quiz_started", "Quiz started"),
+    "/quiz/answer": ("quiz_answered", "Quiz answer submitted"),
+    "/recommend": ("recommendations_generated", "Recommendations generated"),
+    "/profile/normalize": ("profile_normalized", "Profile normalized"),
+    "/skills/normalize": ("skills_normalized", "Skills normalized"),
+    "/analysis": ("analysis_generated", "Skill gap analysis generated"),
+    "/resume-tips": ("resume_tips_generated", "Resume tips generated"),
+    "/resume/upload": ("resume_uploaded", "Resume uploaded"),
+    "/resume/generate": ("resume_generated", "Resume generated"),
+    "/telegram/jobs": ("telegram_jobs_loaded", "Telegram jobs loaded"),
+    "/telegram/jobs/match": ("telegram_matches_loaded", "Telegram matches loaded"),
+    "/telegram/jobs/refresh": ("telegram_jobs_refreshed", "Telegram jobs refreshed"),
+    "/recommendations": ("learning_resources_generated", "Learning resources generated"),
+}
+
+
+def _safe_request_json() -> dict:
+    if not request.is_json:
+        return {}
+    body = request.get_json(silent=True)
+    return body if isinstance(body, dict) else {}
+
+
+def _safe_response_json(response) -> dict:
+    if not response.is_json:
+        return {}
+    try:
+        body = response.get_json(silent=True)
+    except Exception:
+        return {}
+    return body if isinstance(body, dict) else {}
+
+
+def _first_mapping(values: Any) -> dict:
+    if isinstance(values, list) and values and isinstance(values[0], dict):
+        return values[0]
+    return {}
+
+
+def _unique_short_texts(values: Any, limit: int = 16) -> list:
+    if not isinstance(values, list):
+        return []
+    cleaned = []
+    for value in values:
+        text = str(value or "").strip()
+        if text and text not in cleaned:
+            cleaned.append(text)
+        if len(cleaned) >= limit:
+            break
+    return cleaned
+
+
+def _profile_from_activity_payload(body: dict, response_body: dict) -> dict:
+    profile = (
+        body.get("skill_profile")
+        or body.get("profile")
+        or response_body.get("skill_profile")
+        or {}
+    )
+    if isinstance(profile, dict) and profile:
+        return profile
+    profile_keys = {
+        "skills",
+        "detected_skills",
+        "skill_ids",
+        "skill_scores",
+        "category",
+        "top_category",
+        "target_role",
+        "detected_role",
+    }
+    if profile_keys.intersection(body.keys()):
+        return body
+    return {}
+
+
+def _source_for_activity(event_type: str, profile: dict) -> str:
+    source = str(profile.get("source") or "").strip()
+    if source in {"adaptive_quiz", "quiz"} or event_type.startswith("quiz_"):
+        return "quiz"
+    if event_type.startswith("telegram_"):
+        return "telegram"
+    if source:
+        return source
+    if profile:
+        return "manual"
+    return "website"
+
+
+def _role_for_activity(body: dict, response_body: dict, profile: dict, top_item: dict) -> str:
+    return (
+        profile.get("target_role")
+        or profile.get("top_category")
+        or profile.get("detected_role")
+        or profile.get("detected_domain")
+        or body.get("role")
+        or body.get("target_role")
+        or response_body.get("role")
+        or request.args.get("role")
+        or top_item.get("category")
+        or top_item.get("role_category")
+        or ""
+    )
+
+
+def _skills_for_activity(response_body: dict, top_item: dict) -> tuple[list, list]:
+    matched = (
+        top_item.get("matched_skill_names")
+        or top_item.get("matchedSkillNames")
+        or top_item.get("required_skill_names")
+        or top_item.get("skills")
+        or []
+    )
+    gaps = (
+        top_item.get("missing_skill_names")
+        or top_item.get("missingSkillNames")
+        or top_item.get("missing_skills")
+        or []
+    )
+    if not matched:
+        matched = [
+            item.get("skill") or item.get("skill_id")
+            for item in response_body.get("detected_skills", [])
+            if isinstance(item, dict)
+        ]
+    if not gaps:
+        gaps = [
+            item.get("skill") or item.get("skill_id")
+            for item in response_body.get("missing_keywords", [])
+            if isinstance(item, dict)
+        ]
+    return _unique_short_texts(matched), _unique_short_texts(gaps)
+
+
+def _activity_event_type(response_body: dict) -> tuple[Optional[str], str]:
+    event = _PUBLIC_ACTIVITY_LABELS.get(request.path)
+    if not event:
+        return None, ""
+    event_type, label = event
+    if request.path == "/quiz/answer" and response_body.get("done"):
+        return "intake_completed", "Quiz completed"
+    return event_type, label
+
+
+def _record_public_activity(response) -> None:
+    if request.method == "OPTIONS" or response.status_code >= 400:
+        return
+    if request.path.startswith("/admin") or request.path in {"/health", "/analytics/event"}:
+        return
+    if app.config.get("TESTING") and _analytics_service is None:
+        return
+
+    response_body = _safe_response_json(response)
+    event_type, label = _activity_event_type(response_body)
+    if not event_type:
+        return
+
+    body = _safe_request_json()
+    if request.path == "/resume/upload" and not body:
+        body = {"profile": loads_json_field(request.form.get("profile"), {})}
+
+    top_item = _first_mapping(
+        response_body.get("recommendations")
+        or response_body.get("jobs")
+        or body.get("recommendations")
+    )
+    profile = _profile_from_activity_payload(body, response_body)
+    matched_skills, gap_skills = _skills_for_activity(response_body, top_item)
+    payload = {
+        "event_type": event_type,
+        "source": _source_for_activity(event_type, profile),
+        "session_id": _session_id() or response.headers.get("X-Session-Id") or profile.get("session_id"),
+        "profile_id": profile.get("profile_id"),
+        "role": _role_for_activity(body, response_body, profile, top_item),
+        "job_id": top_item.get("job_id") or top_item.get("id"),
+        "job_title": top_item.get("job_title") or top_item.get("title"),
+        "match_score": top_item.get("match_score") or top_item.get("match"),
+        "matched_skills": matched_skills,
+        "gap_skills": gap_skills,
+        "summary": label,
+        "path": request.path,
+        "method": request.method,
+        "status": response.status_code,
+    }
+
+    try:
+        _get_analytics_service().record_event(payload)
+    except Exception:
+        app.logger.debug("Could not record public activity.", exc_info=True)
 
 
 def _admin_access_key() -> str:

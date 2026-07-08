@@ -781,6 +781,29 @@ function countWorkTypeSignals(values) {
     .sort((left, right) => right.count - left.count || left.workType.localeCompare(right.workType))
 }
 
+function formatActivityTime(value) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return 'Recorded'
+  }
+
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}
+
+function getActivityDetail(event) {
+  return [
+    event.summary,
+    event.job_title,
+    event.role ? formatLabel(event.role) : '',
+    event.path,
+  ].filter(Boolean).join(' | ') || 'Website activity'
+}
+
 function Admin() {
   const [adminAccessKey, setAdminAccessKeyInput] = useState(() => getStoredAdminAccessKey())
   const [adminAuthState, setAdminAuthState] = useState(() => ({
@@ -1417,17 +1440,32 @@ function Admin() {
   const analyticsMatchedSkillRows = adminAnalytics?.matched_skills || []
   const analyticsGapRows = adminAnalytics?.gaps || []
   const analyticsWatchedJobRows = adminAnalytics?.watched_jobs || []
+  const analyticsRecentEvents = adminAnalytics?.recent_events || []
+  const analyticsEventTypeRows = adminAnalytics?.event_types || []
+  const analyticsActivityPeriods = adminAnalytics?.activity_periods || {}
   const intakePeriodRows = [
     { label: 'Daily', count: analyticsPeriods.daily || 0 },
     { label: 'Weekly', count: analyticsPeriods.weekly || 0 },
     { label: 'Monthly', count: analyticsPeriods.monthly || 0 },
     { label: 'Yearly', count: analyticsPeriods.yearly || 0 },
   ]
+  const activityPeriodRows = [
+    { label: 'Daily', count: analyticsActivityPeriods.daily || 0 },
+    { label: 'Weekly', count: analyticsActivityPeriods.weekly || 0 },
+    { label: 'Monthly', count: analyticsActivityPeriods.monthly || 0 },
+    { label: 'Yearly', count: analyticsActivityPeriods.yearly || 0 },
+  ]
+  const analyticsActivityCount = analyticsTotals.events || 0
   const analyticsIntakeCount = analyticsTotals.intakes || quizAttemptSummaries.length
   const manualIntakeCount = analyticsTotals.manual_intakes || 0
   const quizIntakeCount = analyticsTotals.quiz_intakes || adminAttemptState.completed || quizAttemptSummaries.length
 
   const metrics = [
+    {
+      label: 'All activity',
+      value: `${analyticsActivityCount} events`,
+      status: analyticsActivityCount ? 'Live' : 'Pending',
+    },
     {
       label: 'Users assessed',
       value: `${analyticsIntakeCount} total`,
@@ -1466,6 +1504,11 @@ function Admin() {
       status: resumeStatus,
     },
     {
+      label: 'Site actions',
+      value: `${analyticsTotals.site_actions || 0} clicks/forms`,
+      status: analyticsTotals.site_actions ? 'Live' : 'Pending',
+    },
+    {
       label: 'Telegram',
       value: telegramState.isLoading ? 'Loading' : `${telegramState.jobs.length} jobs`,
       status: telegramState.error ? 'Review' : 'Live',
@@ -1473,6 +1516,18 @@ function Admin() {
   ]
 
   const overviewGraphRows = [
+    {
+      label: 'All activity',
+      value: analyticsActivityCount,
+      score: Math.min(100, Math.round(((analyticsActivityPeriods.daily || 0) / Math.max(analyticsActivityCount, 1)) * 100)),
+      detail: `${analyticsActivityPeriods.weekly || 0} events this week`,
+    },
+    {
+      label: 'Page views',
+      value: analyticsTotals.page_views || 0,
+      score: Math.min(100, Math.round(((analyticsTotals.page_views || 0) / Math.max(analyticsActivityCount, 1)) * 100)),
+      detail: `${analyticsTotals.site_actions || 0} tracked actions`,
+    },
     {
       label: 'Daily intakes',
       value: analyticsPeriods.daily || 0,
@@ -1492,10 +1547,10 @@ function Admin() {
       detail: `${analyticsIntakeCount} total intakes`,
     },
     {
-      label: 'Profile signals',
-      value: profileSkills.length,
-      score: Math.min(100, Math.round((profileSkills.length / 12) * 100)),
-      detail: `${workTypeNames.length || 0} work types`,
+      label: 'API workflow',
+      value: analyticsTotals.api_requests || 0,
+      score: Math.min(100, Math.round(((analyticsTotals.api_requests || 0) / Math.max(analyticsActivityCount, 1)) * 100)),
+      detail: `${analyticsTotals.resume_events || 0} resume events`,
     },
     {
       label: 'Match quality',
@@ -1841,6 +1896,18 @@ function Admin() {
                   </article>
                 ))}
               </div>
+
+              <div className="admin-panel-divider"></div>
+
+              <div className="admin-stat-grid">
+                {activityPeriodRows.map((row) => (
+                  <article className="admin-dashboard-card" key={`activity-${row.label}`}>
+                    <span className="metric-label">{row.label}</span>
+                    <strong>{row.count}</strong>
+                    <small className="admin-small-note">all tracked actions</small>
+                  </article>
+                ))}
+              </div>
             </section>
 
             <section className="admin-panel">
@@ -1927,6 +1994,56 @@ function Admin() {
               </div>
               {!analyticsGapRows.length && !analyticsWatchedJobRows.length && (
                 <div className="admin-empty">Gap and job-view records will appear after users open matched jobs.</div>
+              )}
+            </section>
+          </div>
+
+          <div className="admin-grid">
+            <section className="admin-panel">
+              <div className="admin-panel-heading">
+                <span>Recent site activity</span>
+                <strong>{analyticsRecentEvents.length ? `${analyticsRecentEvents.length} latest` : 'No activity yet'}</strong>
+              </div>
+
+              {analyticsRecentEvents.length ? (
+                <div className="activity-feed">
+                  {analyticsRecentEvents.slice(0, 10).map((event) => (
+                    <article key={event.id || `${event.event_type}-${event.created_at}`}>
+                      <time>{formatActivityTime(event.created_at)}</time>
+                      <div>
+                        <h2>{formatLabel(event.event_type, 'Website activity')}</h2>
+                        <p>{getActivityDetail(event)}</p>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="admin-empty">Open the main website in any browser and activity will appear here.</div>
+              )}
+            </section>
+
+            <section className="admin-panel">
+              <div className="admin-panel-heading">
+                <span>Recorded action types</span>
+                <strong>{analyticsEventTypeRows.length ? `${analyticsActivityCount} events` : 'Awaiting data'}</strong>
+              </div>
+
+              <div className="admin-bar-list" aria-label="Recorded action types">
+                {analyticsEventTypeRows.slice(0, 10).map((row) => (
+                  <article className="admin-graph-row" key={row.label}>
+                    <div className="admin-graph-copy">
+                      <strong>{formatLabel(row.label)}</strong>
+                      <span>{row.count} records</span>
+                    </div>
+                    <div className="admin-graph-track" aria-label={`${row.label} ${row.count}`}>
+                      <span style={{ width: `${Math.min(100, Math.round((row.count / Math.max(analyticsActivityCount, 1)) * 100))}%` }}></span>
+                    </div>
+                    <strong className="admin-graph-score">{row.count}</strong>
+                  </article>
+                ))}
+              </div>
+              {!analyticsEventTypeRows.length && (
+                <div className="admin-empty">Activity types will appear after page views, clicks, forms, and API workflow actions are recorded.</div>
               )}
             </section>
           </div>

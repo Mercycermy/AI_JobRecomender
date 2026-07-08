@@ -60,10 +60,21 @@ class AnalyticsService:
         except (TypeError, ValueError):
             match_score = None
 
-        stored_payload = {
-            "profile_id": self._safe_text(payload.get("profile_id"), 120),
-            "summary": self._safe_text(payload.get("summary"), 280),
-        }
+        stored_payload = {}
+        for key, limit in (
+            ("profile_id", 120),
+            ("summary", 280),
+            ("path", 160),
+            ("method", 12),
+            ("status", 12),
+            ("label", 180),
+            ("href", 220),
+            ("route", 160),
+            ("surface", 80),
+        ):
+            value = self._safe_text(payload.get(key), limit)
+            if value:
+                stored_payload[key] = value
 
         conn = self._conn()
         try:
@@ -155,6 +166,44 @@ class AnalyticsService:
                 count += 1
         return count
 
+    @staticmethod
+    def _event_label(event: Dict[str, Any]) -> str:
+        event_type = str(event.get("event_type") or "activity")
+        payload = event.get("payload") or {}
+        summary = payload.get("summary") or payload.get("label") or payload.get("route")
+        if summary:
+            return str(summary)
+        if event.get("job_title"):
+            return str(event["job_title"])
+        if event.get("role"):
+            return str(event["role"])
+        return event_type.replace("_", " ").title()
+
+    @staticmethod
+    def _recent_events(events: List[Dict[str, Any]], limit: int = 24) -> List[Dict[str, Any]]:
+        recent = []
+        for event in events[:limit]:
+            payload = event.get("payload") or {}
+            recent.append(
+                {
+                    "id": event.get("id"),
+                    "event_type": event.get("event_type"),
+                    "source": event.get("source") or "website",
+                    "session_id": event.get("session_id"),
+                    "role": event.get("role"),
+                    "job_id": event.get("job_id"),
+                    "job_title": event.get("job_title"),
+                    "match_score": event.get("match_score"),
+                    "created_at": event.get("created_at"),
+                    "summary": AnalyticsService._event_label(event),
+                    "path": payload.get("path") or payload.get("route"),
+                    "method": payload.get("method"),
+                    "status": payload.get("status"),
+                    "href": payload.get("href"),
+                }
+            )
+        return recent
+
     def summary(self, limit: int = 1000) -> Dict[str, Any]:
         events = self._events(limit=limit)
         intake_events = [
@@ -168,6 +217,25 @@ class AnalyticsService:
             for event in events
             if str(event.get("event_type") or "").startswith("resume_")
         ]
+        page_view_events = [
+            event for event in events if event.get("event_type") == "page_viewed"
+        ]
+        site_action_events = [
+            event for event in events if event.get("event_type") == "site_action"
+        ]
+        api_request_events = [
+            event
+            for event in events
+            if str(event.get("event_type") or "").endswith("_generated")
+            or str(event.get("event_type") or "").endswith("_loaded")
+            or event.get("event_type")
+            in {
+                "quiz_started",
+                "quiz_answered",
+                "profile_normalized",
+                "skills_normalized",
+            }
+        ]
 
         role_counts = Counter(
             event.get("role") or "General"
@@ -178,6 +246,11 @@ class AnalyticsService:
             event.get("source") or "unknown"
             for event in intake_events
         )
+        all_source_counts = Counter(
+            event.get("source") or "unknown"
+            for event in events
+        )
+        event_type_counts = Counter(event.get("event_type") for event in events)
         matched_skill_counts = Counter(
             skill
             for event in intake_events
@@ -201,6 +274,12 @@ class AnalyticsService:
             "monthly": self._count_since(intake_events, now - timedelta(days=30)),
             "yearly": self._count_since(intake_events, now - timedelta(days=365)),
         }
+        activity_periods = {
+            "daily": self._count_since(events, now - timedelta(days=1)),
+            "weekly": self._count_since(events, now - timedelta(days=7)),
+            "monthly": self._count_since(events, now - timedelta(days=30)),
+            "yearly": self._count_since(events, now - timedelta(days=365)),
+        }
 
         return {
             "totals": {
@@ -210,12 +289,19 @@ class AnalyticsService:
                 "manual_intakes": source_counts.get("manual", 0),
                 "job_views": len(job_view_events),
                 "resume_events": len(resume_events),
+                "page_views": len(page_view_events),
+                "site_actions": len(site_action_events),
+                "api_requests": len(api_request_events),
             },
             "periods": periods,
+            "activity_periods": activity_periods,
             "intake_by_source": self._top_counts(source_counts),
+            "activity_by_source": self._top_counts(all_source_counts),
+            "event_types": self._top_counts(event_type_counts, limit=12),
             "roles": self._top_counts(role_counts, limit=12),
             "matched_skills": self._top_counts(matched_skill_counts, limit=12),
             "gaps": self._top_counts(gap_counts, limit=12),
             "watched_jobs": self._top_counts(watched_jobs, limit=12),
             "recent_intakes": intake_events[:12],
+            "recent_events": self._recent_events(events),
         }

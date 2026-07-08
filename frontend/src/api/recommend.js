@@ -8,6 +8,7 @@ export const QUIZ_SESSION_STORAGE_KEY = 'quizSessionId'
 export const QUIZ_PROGRESS_STORAGE_KEY = 'quizProgress'
 export const QUIZ_HISTORY_STORAGE_KEY = 'quizAttemptHistory'
 export const ADMIN_ACCESS_STORAGE_KEY = 'adminAccessKey'
+export const ANALYTICS_SESSION_STORAGE_KEY = 'analyticsSessionId'
 
 const EXPERIENCE_MAP = {
   Internship: 'intern',
@@ -30,6 +31,46 @@ function readStoredValue(storage, key) {
   } catch {
     return ''
   }
+}
+
+function createAnalyticsSessionId() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID()
+  }
+
+  return `visitor-${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
+export function getAnalyticsSessionId() {
+  if (typeof window === 'undefined') {
+    return ''
+  }
+
+  const stored =
+    readStoredValue(localStorage, ANALYTICS_SESSION_STORAGE_KEY) ||
+    readStoredValue(sessionStorage, ANALYTICS_SESSION_STORAGE_KEY)
+
+  if (stored) {
+    return stored
+  }
+
+  const sessionId = createAnalyticsSessionId()
+  try {
+    localStorage.setItem(ANALYTICS_SESSION_STORAGE_KEY, sessionId)
+    sessionStorage.setItem(ANALYTICS_SESSION_STORAGE_KEY, sessionId)
+  } catch {
+    // Activity still records without a persistent browser id.
+  }
+  return sessionId
+}
+
+function withSessionHeader(headers = {}) {
+  const sessionId = getAnalyticsSessionId()
+  return sessionId ? { ...headers, 'X-Session-Id': sessionId } : headers
+}
+
+function jsonHeaders(headers = {}) {
+  return withSessionHeader({ 'Content-Type': 'application/json', ...headers })
 }
 
 export function getStoredAdminAccessKey() {
@@ -74,7 +115,7 @@ function getAdminHeaders() {
 export async function verifyAdminAccess(accessKey) {
   const response = await fetch(`${API_BASE}/admin/login`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: jsonHeaders(),
     body: JSON.stringify({ access_key: accessKey }),
   })
 
@@ -116,7 +157,9 @@ export async function fetchSkillSuggestions(query, limit = 8) {
     return []
   }
   const params = new URLSearchParams({ q: query.trim(), limit: String(limit) })
-  const response = await fetch(`${API_BASE}/skills/suggest?${params}`)
+  const response = await fetch(`${API_BASE}/skills/suggest?${params}`, {
+    headers: withSessionHeader(),
+  })
   if (!response.ok) {
     return []
   }
@@ -127,7 +170,7 @@ export async function fetchSkillSuggestions(query, limit = 8) {
 export async function normalizeSkillValues(skills) {
   const response = await fetch(`${API_BASE}/skills/normalize`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: jsonHeaders(),
     body: JSON.stringify({ skills }),
   })
   if (!response.ok) {
@@ -174,7 +217,7 @@ export function mapJobToCard(job) {
 export async function fetchRecommendations(profile, topN = 10) {
   const response = await fetch(`${API_BASE}/recommend`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: jsonHeaders(),
     body: JSON.stringify({ ...profile, top_n: topN }),
   })
 
@@ -336,7 +379,7 @@ export async function fetchAnalysis(sessionId, profile = null, recommendations =
 
   const response = await fetch(`${API_BASE}/analysis`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: jsonHeaders(),
     body: JSON.stringify(body),
   })
 
@@ -371,7 +414,7 @@ export async function fetchResumeTips(sessionId, profile = null, recommendations
 
   const response = await fetch(`${API_BASE}/resume-tips`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: jsonHeaders(),
     body: JSON.stringify(body),
   })
 
@@ -411,6 +454,7 @@ export async function uploadResumeForTips(file, profile = null, recommendations 
 
   const response = await fetch(`${API_BASE}/resume/upload`, {
     method: 'POST',
+    headers: withSessionHeader(),
     body: formData,
   })
 
@@ -425,7 +469,7 @@ export async function uploadResumeForTips(file, profile = null, recommendations 
 export async function generateResumeDocument(payload) {
   const response = await fetch(`${API_BASE}/resume/generate`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: jsonHeaders(),
     body: JSON.stringify(payload),
   })
 
@@ -445,7 +489,9 @@ export async function fetchTelegramJobs({ query = '', role = '', limit = 50 } = 
   if (role.trim()) {
     params.set('role', role.trim())
   }
-  const response = await fetch(`${API_BASE}/telegram/jobs?${params}`)
+  const response = await fetch(`${API_BASE}/telegram/jobs?${params}`, {
+    headers: withSessionHeader(),
+  })
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}))
@@ -458,7 +504,7 @@ export async function fetchTelegramJobs({ query = '', role = '', limit = 50 } = 
 export async function fetchTelegramJobMatches(profile, { query = '', role = '', limit = 60 } = {}) {
   const response = await fetch(`${API_BASE}/telegram/jobs/match`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: jsonHeaders(),
     body: JSON.stringify({
       skill_profile: profile,
       query,
@@ -476,10 +522,11 @@ export async function fetchTelegramJobMatches(profile, { query = '', role = '', 
 }
 
 export async function recordFlowEvent(payload) {
+  const sessionId = payload?.session_id || getAnalyticsSessionId()
   const response = await fetch(`${API_BASE}/analytics/event`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    headers: jsonHeaders(),
+    body: JSON.stringify({ ...payload, session_id: sessionId }),
   })
 
   if (!response.ok) {
@@ -490,10 +537,29 @@ export async function recordFlowEvent(payload) {
   return response.json()
 }
 
+export function recordSiteActivity(eventType, details = {}) {
+  if (typeof window === 'undefined' || window.location.pathname.startsWith('/admin')) {
+    return Promise.resolve({ skipped: true })
+  }
+
+  const path = details.path || window.location.pathname
+  return recordFlowEvent({
+    event_type: eventType,
+    source: 'website',
+    path,
+    route: path,
+    summary: details.summary || details.label || path,
+    label: details.label,
+    href: details.href,
+    method: details.method,
+    status: details.status,
+  })
+}
+
 export async function fetchAdminAnalytics({ limit = 1000 } = {}) {
   const params = new URLSearchParams({ limit: String(limit) })
   const response = await fetch(`${API_BASE}/admin/analytics?${params}`, {
-    headers: getAdminHeaders(),
+    headers: withSessionHeader(getAdminHeaders()),
   })
 
   if (!response.ok) {
@@ -507,7 +573,7 @@ export async function fetchAdminAnalytics({ limit = 1000 } = {}) {
 export async function fetchAdminQuizAttempts({ limit = 100 } = {}) {
   const params = new URLSearchParams({ limit: String(limit) })
   const response = await fetch(`${API_BASE}/admin/quiz/attempts?${params}`, {
-    headers: getAdminHeaders(),
+    headers: withSessionHeader(getAdminHeaders()),
   })
 
   if (!response.ok) {
@@ -532,7 +598,7 @@ export async function fetchAdminQuizQuestions({
     params.set('q', query.trim())
   }
   const response = await fetch(`${API_BASE}/admin/quiz/questions?${params}`, {
-    headers: getAdminHeaders(),
+    headers: withSessionHeader(getAdminHeaders()),
   })
 
   if (!response.ok) {
@@ -549,7 +615,7 @@ export async function saveAdminQuizQuestion(question) {
     id ? `${API_BASE}/admin/quiz/questions/${encodeURIComponent(id)}` : `${API_BASE}/admin/quiz/questions`,
     {
       method: id ? 'PUT' : 'POST',
-      headers: { 'Content-Type': 'application/json', ...getAdminHeaders() },
+      headers: jsonHeaders(getAdminHeaders()),
       body: JSON.stringify(question),
     },
   )
@@ -565,7 +631,7 @@ export async function saveAdminQuizQuestion(question) {
 export async function deleteAdminQuizQuestion(questionId) {
   const response = await fetch(`${API_BASE}/admin/quiz/questions/${encodeURIComponent(questionId)}`, {
     method: 'DELETE',
-    headers: getAdminHeaders(),
+    headers: withSessionHeader(getAdminHeaders()),
   })
 
   if (!response.ok) {
@@ -579,7 +645,7 @@ export async function deleteAdminQuizQuestion(questionId) {
 export async function ingestTelegramJobs(posts) {
   const response = await fetch(`${API_BASE}/telegram/jobs/ingest`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: jsonHeaders(),
     body: JSON.stringify({ posts }),
   })
 
@@ -594,7 +660,7 @@ export async function ingestTelegramJobs(posts) {
 export async function refreshTelegramJobs(channels = null, perChannelLimit = 12) {
   const response = await fetch(`${API_BASE}/telegram/jobs/refresh`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: jsonHeaders(),
     body: JSON.stringify({
       channels,
       per_channel_limit: perChannelLimit,
