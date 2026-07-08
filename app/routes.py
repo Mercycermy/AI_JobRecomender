@@ -957,4 +957,9 @@ def recommendations():
 
 
 if __name__ == "__main__":
-    app.run(host=settings.host, port=settings.port, debug=settings.debug)
+    import os
+
+    host = os.environ.get("HOST", "0.0.0.0")
+    port = int(os.environ.get("PORT", "10000"))
+    print(f"Starting Flask server on {host}:{port}")
+    app.run(host=host, port=port, debug=False)
