@@ -3,7 +3,7 @@ const ROLE_FILTER_LABELS = {
   'frontend-dev': 'Frontend Developer',
   'fullstack-dev': 'Full Stack Developer',
   'mobile-dev': 'Mobile Developer',
-  devops: 'DevOps Engineer',
+  'devops-engineer': 'DevOps Engineer',
   'data-analyst': 'Data Analyst',
   'data-scientist': 'Data Scientist',
   'ml-engineer': 'Machine Learning Engineer',
@@ -22,6 +22,10 @@ const ROLE_FILTER_LABELS = {
   design: 'Design',
   operations: 'Operations',
 }
+
+const ROLE_LABEL_TO_KEY = Object.fromEntries(
+  Object.entries(ROLE_FILTER_LABELS).map(([key, label]) => [label.toLowerCase(), key]),
+)
 
 export function formatRoleFilterLabel(value) {
   if (!value) {
@@ -42,5 +46,11 @@ export function getProfileRoleFilter(profile) {
     profile?.detected_domain ||
     ''
   const role = String(rawRole || '').trim()
-  return ROLE_FILTER_LABELS[role] || role.replace(/[_-]/g, ' ')
+  if (!role) {
+    return ''
+  }
+  if (ROLE_FILTER_LABELS[role]) {
+    return role
+  }
+  return ROLE_LABEL_TO_KEY[role.toLowerCase()] || role
 }
