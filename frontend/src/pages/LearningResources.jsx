@@ -1,8 +1,15 @@
+import { useEffect, useState } from 'react'
+
 import FlowProgress from '../components/FlowProgress.jsx'
-import { loadStoredAnalysis } from '../api/recommend.js'
+import { loadOrFetchStoredAnalysis, loadStoredAnalysis } from '../api/recommend.js'
 
 function LearningResources({ standalone = false, resources: providedResources, isLoading = false, error = null }) {
-  const stored = loadStoredAnalysis()
+  const [storedAnalysis, setStoredAnalysis] = useState(() => loadStoredAnalysis())
+  const [analysisState, setAnalysisState] = useState({
+    error: null,
+    isLoading: false,
+  })
+  const stored = storedAnalysis
   const hasProvidedResourceContext = Array.isArray(providedResources)
   const hasStoredResourceContext = Boolean(stored)
   const standaloneHeader = standalone ? (
@@ -16,7 +23,46 @@ function LearningResources({ standalone = false, resources: providedResources, i
     </>
   ) : null
 
-  if (isLoading) {
+  useEffect(() => {
+    if (!standalone || hasProvidedResourceContext || stored?.resources?.length) {
+      return undefined
+    }
+
+    let cancelled = false
+
+    Promise.resolve()
+      .then(() => {
+        if (!cancelled) {
+          setAnalysisState({ error: null, isLoading: true })
+        }
+        return loadOrFetchStoredAnalysis()
+      })
+      .then((analysis) => {
+        if (cancelled) {
+          return
+        }
+        setStoredAnalysis(analysis)
+        setAnalysisState({ error: null, isLoading: false })
+      })
+      .catch((err) => {
+        if (cancelled) {
+          return
+        }
+        setAnalysisState({
+          error: err.message || 'Could not load learning resources.',
+          isLoading: false,
+        })
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [hasProvidedResourceContext, standalone, stored?.resources?.length])
+
+  const resolvedLoading = isLoading || analysisState.isLoading
+  const resolvedError = error || analysisState.error
+
+  if (resolvedLoading) {
     return (
       <section className={standalone ? 'detail-page' : 'panel-section'}>
         {standaloneHeader}
@@ -29,12 +75,12 @@ function LearningResources({ standalone = false, resources: providedResources, i
     )
   }
 
-  if (error && !providedResources?.length && !stored?.resources?.length) {
+  if (resolvedError && !providedResources?.length && !stored?.resources?.length) {
     return (
       <section className={standalone ? 'detail-page' : 'panel-section'}>
         {standaloneHeader}
         <div className="error-container" style={{ textAlign: 'center', padding: '30px 20px', background: 'rgba(232, 93, 117, 0.08)', borderRadius: '8px', border: '1px solid var(--coral)' }}>
-          <p style={{ color: 'var(--coral)', fontWeight: 'bold' }}>{error}</p>
+          <p style={{ color: 'var(--coral)', fontWeight: 'bold' }}>{resolvedError}</p>
         </div>
       </section>
     )
@@ -54,8 +100,8 @@ function LearningResources({ standalone = false, resources: providedResources, i
         {standaloneHeader}
         <div className="empty-state" style={{ textAlign: 'center', padding: '32px 20px' }}>
           <p>
-            {error
-              ? error
+            {resolvedError
+              ? resolvedError
               : hasProvidedResourceContext || hasStoredResourceContext
                 ? 'No curated learning resources were found for the current gaps yet. Review the gap list and keep the matched role skills visible in your profile.'
                 : 'Complete the assessment to load curated resources from the learning catalog.'}

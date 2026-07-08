@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react'
+
 import FlowProgress from '../components/FlowProgress.jsx'
-import { loadStoredAnalysis } from '../api/recommend.js'
+import { loadOrFetchStoredAnalysis, loadStoredAnalysis } from '../api/recommend.js'
 
 function uniqueSkillNames(values = []) {
   return [...new Set(values.filter(Boolean).map((value) => String(value)))]
@@ -25,7 +27,12 @@ function getJobGapRows(job) {
 }
 
 function SkillGap({ gaps: providedGaps, job, standalone = false, isLoading = false, error = null }) {
-  const stored = loadStoredAnalysis()
+  const [storedAnalysis, setStoredAnalysis] = useState(() => loadStoredAnalysis())
+  const [analysisState, setAnalysisState] = useState({
+    error: null,
+    isLoading: false,
+  })
+  const stored = storedAnalysis
   const hasStandaloneJobContext = Boolean(standalone && job)
   const jobGaps = hasStandaloneJobContext ? getJobGapRows(job) : []
   const standaloneHeader = standalone ? (
@@ -41,8 +48,47 @@ function SkillGap({ gaps: providedGaps, job, standalone = false, isLoading = fal
       <FlowProgress currentPath="/results/gap" />
     </>
   ) : null
+
+  useEffect(() => {
+    if (!standalone || providedGaps?.length || jobGaps.length || stored?.gaps?.length) {
+      return undefined
+    }
+
+    let cancelled = false
+
+    Promise.resolve()
+      .then(() => {
+        if (!cancelled) {
+          setAnalysisState({ error: null, isLoading: true })
+        }
+        return loadOrFetchStoredAnalysis()
+      })
+      .then((analysis) => {
+        if (cancelled) {
+          return
+        }
+        setStoredAnalysis(analysis)
+        setAnalysisState({ error: null, isLoading: false })
+      })
+      .catch((err) => {
+        if (cancelled) {
+          return
+        }
+        setAnalysisState({
+          error: err.message || 'Could not load skill gap analysis.',
+          isLoading: false,
+        })
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [jobGaps.length, providedGaps?.length, standalone, stored?.gaps?.length])
+
+  const resolvedLoading = isLoading || analysisState.isLoading
+  const resolvedError = error || analysisState.error
   
-  if (isLoading) {
+  if (resolvedLoading) {
     return (
       <section className={standalone ? 'detail-page' : 'panel-section'}>
         {standaloneHeader}
@@ -55,12 +101,12 @@ function SkillGap({ gaps: providedGaps, job, standalone = false, isLoading = fal
     )
   }
 
-  if (error && !providedGaps?.length && !stored?.gaps?.length && !jobGaps.length) {
+  if (resolvedError && !providedGaps?.length && !stored?.gaps?.length && !jobGaps.length) {
     return (
       <section className={standalone ? 'detail-page' : 'panel-section'}>
         {standaloneHeader}
         <div className="error-container" style={{ textAlign: 'center', padding: '30px 20px', background: 'rgba(232, 93, 117, 0.08)', borderRadius: '8px', border: '1px solid var(--coral)' }}>
-          <p style={{ color: 'var(--coral)', fontWeight: 'bold' }}>{error}</p>
+          <p style={{ color: 'var(--coral)', fontWeight: 'bold' }}>{resolvedError}</p>
         </div>
       </section>
     )
@@ -68,7 +114,7 @@ function SkillGap({ gaps: providedGaps, job, standalone = false, isLoading = fal
 
   const sourceGaps = providedGaps?.length
     ? providedGaps
-    : hasStandaloneJobContext
+    : hasStandaloneJobContext && jobGaps.length
       ? jobGaps
       : stored?.gaps?.length
         ? stored.gaps
@@ -80,8 +126,8 @@ function SkillGap({ gaps: providedGaps, job, standalone = false, isLoading = fal
         {standaloneHeader}
         <div className="empty-state" style={{ textAlign: 'center', padding: '32px 20px' }}>
           <p>
-            {error
-              ? error
+            {resolvedError
+              ? resolvedError
               : hasStandaloneJobContext
                 ? `${job.title} does not show critical missing skills against your current profile. Keep strengthening the matched skills and review the score breakdown for smaller fit factors.`
                 : 'Complete the skills assessment to see your real skill gaps from quiz results.'}

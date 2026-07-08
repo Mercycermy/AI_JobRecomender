@@ -391,6 +391,23 @@ export async function fetchAnalysis(sessionId, profile = null, recommendations =
   return response.json()
 }
 
+export async function loadOrFetchStoredAnalysis() {
+  const stored = loadStoredAnalysis()
+  if (stored) {
+    return stored
+  }
+
+  const profile = loadStoredProfile()
+  const recommendations = loadStoredRawRecommendations() || loadStoredRecommendations()
+  if (!profile || !recommendations?.length) {
+    throw new Error('Complete an assessment first so gaps and learning resources can be generated.')
+  }
+
+  const analysis = await fetchAnalysis(loadStoredSessionId(), profile, recommendations)
+  persistAnalysis(analysis)
+  return analysis
+}
+
 function mapFlatTipsToSections(flatTips) {
   if (!Array.isArray(flatTips) || !flatTips.length) {
     return []

@@ -110,3 +110,45 @@ def test_learning_path_keeps_plain_skill_id_compatibility(tmp_path):
 	assert groups[0]["skill_id"] == "lang-sql"
 	assert groups[0]["resources"][0]["title"] == "SQL Basics"
 	assert groups[0]["resources"][0]["cost"] == "free"
+
+
+def test_learning_path_falls_back_to_related_resources(tmp_path):
+	resources_path = tmp_path / "learning_resources.json"
+	resources_path.write_text(
+		json.dumps(
+			{
+				"resources": [
+					{
+						"resource_id": "sql-1",
+						"skill_id": "lang-sql",
+						"title": "SQL Basics",
+						"platform": "Docs",
+						"url": "https://example.com/sql",
+						"difficulty": "beginner",
+						"is_free": 1,
+						"estimated_hours": 4,
+						"covers": ["SQL", "Databases"],
+						"job_gap_alignment": {"gap_priority": "high"},
+					}
+				]
+			}
+		),
+		encoding="utf-8",
+	)
+
+	path = LearningPath(resources_path=str(resources_path))
+	groups = path.recommend_resources(
+		[
+			{
+				"skill_id": "db-postgres",
+				"skill": "PostgreSQL",
+				"priority": 88,
+				"priority_label": "High",
+				"current": 15,
+				"required": 80,
+			}
+		]
+	)
+
+	assert groups[0]["skill_id"] == "db-postgres"
+	assert groups[0]["resources"][0]["resource_id"] == "sql-1"

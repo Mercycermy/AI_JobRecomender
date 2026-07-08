@@ -4,10 +4,10 @@ import json
 import os
 from typing import Any, Dict, Iterable, List, Optional
 
-from app.skill_normalizer import SkillNormalizer
+from app.config import settings
+from app.skill_normalizer import SkillNormalizer, normalize_skill_text
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-RESOURCES_PATH = os.path.join(BASE_DIR, "data", "learning_resources.json")
+RESOURCES_PATH = str(settings.resources_path)
 
 
 _PRIORITY_ORDER = {"high": 0, "medium": 1, "low": 2, "": 3, None: 3}
@@ -116,6 +116,66 @@ class LearningPath:
 			+ free_score * 0.10
 		)
 
+	def _relatedness_score(self, resource: Dict[str, Any], gap: Dict[str, Any]) -> float:
+		gap_skill_id = gap.get("skill_id")
+		resource_skill_id = resource.get("skill_id")
+		if not gap_skill_id or not resource_skill_id:
+			return 0.0
+		if resource_skill_id == gap_skill_id:
+			return 1.0
+
+		gap_meta = self.normalizer.metadata_for(gap_skill_id)
+		resource_meta = self.normalizer.metadata_for(resource_skill_id)
+		if not gap_meta or not resource_meta:
+			return 0.0
+
+		score = 0.0
+		if gap_meta.get("domain") and gap_meta.get("domain") == resource_meta.get("domain"):
+			score += 0.20
+		if gap_meta.get("category") and gap_meta.get("category") == resource_meta.get("category"):
+			score += 0.35
+
+		gap_tags = set(self.normalizer.tags_for(gap_skill_id))
+		resource_tags = set(self.normalizer.tags_for(resource_skill_id))
+		shared_tags = gap_tags & resource_tags
+		if shared_tags:
+			score += min(0.45, len(shared_tags) * 0.18)
+
+		gap_name = self.normalizer.name_for(gap_skill_id).lower()
+		resource_name = self.normalizer.name_for(resource_skill_id).lower()
+		if gap_name and resource_name and (gap_name in resource_name or resource_name in gap_name):
+			score += 0.20
+
+		resource_text = normalize_skill_text(
+			" ".join(
+				str(item or "")
+				for item in [
+					resource.get("title"),
+					resource.get("platform"),
+					resource_name,
+					*(resource.get("covers") or []),
+				]
+			)
+		)
+		gap_text = normalize_skill_text(
+			" ".join(
+				str(item or "")
+				for item in [
+					gap_name,
+					gap_meta.get("category"),
+				]
+			)
+		)
+		gap_terms = {
+			term
+			for term in gap_text.split()
+			if len(term) >= 4 and term not in {"management", "general"}
+		}
+		if gap_terms and any(term in resource_text for term in gap_terms):
+			score += 0.20
+
+		return min(1.0, score)
+
 	def _explanation(self, resource: Dict[str, Any], gap: Dict[str, Any]) -> str:
 		alignment = resource.get("job_gap_alignment", {})
 		reason = alignment.get("why_this_resource")
@@ -184,11 +244,21 @@ class LearningPath:
 			sid = gap["skill_id"]
 			items = grouped.get(sid, [])
 			if not items:
+				items = [
+					item
+					for item in self._resources
+					if self._relatedness_score(item, gap) >= 0.65
+				]
+			if not items:
 				continue
 
 			scored = sorted(
 				(
-					(self._score_resource(item, gap), item)
+					(
+						self._score_resource(item, gap)
+						* (0.7 + 0.3 * self._relatedness_score(item, gap)),
+						item,
+					)
 					for item in items
 				),
 				key=lambda pair: (
