@@ -4,6 +4,7 @@ import FlowProgress from '../components/FlowProgress.jsx'
 import {
   fetchTelegramJobMatches,
   fetchTelegramJobs,
+  refreshTelegramJobs,
   loadStoredProfile,
   loadStoredSessionId,
   recordFlowEvent,
@@ -80,8 +81,26 @@ function TelegramJobs() {
 
   useEffect(() => {
     const initialRole = getProfileRoleFilter(loadStoredProfile())
-    const timer = window.setTimeout(() => loadJobs('', initialRole), 0)
-    return () => window.clearTimeout(timer)
+    let cancelled = false
+
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        try {
+          await refreshTelegramJobs(null, 12)
+        } catch {
+          // The committed feed snapshot keeps the page usable on Render.
+        }
+
+        if (!cancelled) {
+          await loadJobs('', initialRole)
+        }
+      })()
+    }, 0)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
   }, [loadJobs])
 
   const handleSearch = (event) => {
