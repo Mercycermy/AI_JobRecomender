@@ -336,16 +336,16 @@ class RecommendationEngine:
         else:
             _LOGGER.info("Skipping semantic model load; vector artifacts are missing.")
 
-        try:
-            import faiss
+        if os.path.exists(self.index_path):
+            try:
+                import faiss
 
-            if os.path.exists(self.index_path):
                 self.index = faiss.read_index(self.index_path)
                 _LOGGER.info("Loaded FAISS index from %s.", self.index_path)
-            else:
-                _LOGGER.warning("FAISS index file not found at %s.", self.index_path)
-        except Exception as exc:
-            _LOGGER.warning("Failed to load FAISS index: %s", exc)
+            except Exception as exc:
+                _LOGGER.warning("Failed to load FAISS index: %s", exc)
+        else:
+            _LOGGER.info("Skipping FAISS load; index file not found at %s.", self.index_path)
 
         if os.path.exists(self.mapper_path):
             with open(self.mapper_path, "r", encoding="utf-8") as handle:

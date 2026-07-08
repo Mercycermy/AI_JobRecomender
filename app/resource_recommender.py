@@ -10,13 +10,6 @@ from app.gap_analyzer import get_session_gaps
 from app.learning_path import LearningPath
 from app.skill_normalizer import SkillNormalizer
 
-try:
-	import faiss
-	from sentence_transformers import SentenceTransformer
-except Exception:  # pragma: no cover - handled at runtime
-	faiss = None
-	SentenceTransformer = None
-
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 INDEX_PATH = os.path.join(BASE_DIR, "data", "index.faiss")
 ID_MAP_PATH = os.path.join(BASE_DIR, "data", "id_map.json")
@@ -61,13 +54,13 @@ class ResourceRecommender:
 	def _ensure_loaded(self) -> None:
 		if self._index is not None or self._load_error:
 			return
-		if faiss is None or SentenceTransformer is None:
-			self._load_error = "FAISS or sentence-transformers not available"
-			return
 		if not (os.path.exists(self.index_path) and os.path.exists(self.id_map_path) and os.path.exists(self.meta_path)):
 			self._load_error = "Resource index not found"
 			return
 		try:
+			import faiss
+			from sentence_transformers import SentenceTransformer
+
 			self._model = SentenceTransformer(self.model_name)
 			self._index = faiss.read_index(self.index_path)
 			with open(self.id_map_path, "r", encoding="utf-8") as handle:

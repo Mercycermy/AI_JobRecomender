@@ -2,6 +2,8 @@
 
 AI Job Recommender is a full-stack career guidance system. It collects a user profile through an adaptive quiz or manual technical-skill input, matches that profile to jobs, explains the highest-fit roles, identifies technical skill gaps, recommends learning resources, reviews uploaded resumes, and builds a ready-to-use resume for matched jobs.
 
+For the full defense document, module-by-module function reference, database details, dataset inventory, and deployment checklist, see [project_report.md](project_report.md).
+
 
 ## Current Product Flow
 
@@ -48,6 +50,7 @@ scripts/                     Data seeding, validation, and artifact builders
 tests/                       Backend automated tests
 README.md                    Quick setup and hosting guide
 requirements.txt             Python dependencies
+requirements-render.txt      Lightweight backend dependencies for Render Free
 jobtittle.csv                Job-title frequency/source support file
 ```
 
@@ -238,4 +241,157 @@ Latest verified result in this workspace:
 - Targeted backend matching/feed tests: `26 passed, 2 skipped`
 - Frontend lint: passed
 - Frontend build: passed
+
+## Render Free Backend Fix
+
+If Render logs show this pattern:
+
+```text
+No open ports detected
+Out of memory (used over 512Mi)
+Running 'python -m app.routes'
+```
+
+the free instance is running out of memory before Flask can bind to the port. The usual cause is installing/importing the full local ML stack (`sentence-transformers`, `torch`, CUDA wheels, and FAISS). The project now avoids importing those packages during startup, and Render should use `requirements-render.txt` instead of the full local development `requirements.txt`.
+
+Use this Render backend build command:
+
+```bash
+pip install -r requirements-render.txt && python scripts/seed_db.py
+```
+
+Use this Render backend start command:
+
+```bash
+python -m app.routes
+```
+
+Set these Render environment variables:
+
+```text
+APP_ENV=production
+HOST=0.0.0.0
+PORT=10000
+FLASK_SECRET_KEY=<strong-random-secret>
+ADMIN_ACCESS_KEY=<private-admin-key>
+CORS_ORIGINS=https://<frontend-domain>
+RUN_MIGRATIONS_ON_STARTUP=1
+RATE_LIMIT_ENABLED=1
+```
+
+Optional:
+
+```text
+GROQ_API_KEY=<optional-groq-key>
+```
+
+Do not run `scripts/build_vectors.py` on Render Free. The deployed backend will use database/lexical fallback matching. That is the correct free-tier mode.
+
+## Free Online Hosting Guide
+
+Recommended free deployment:
+
+- Backend: Render Free Web Service.
+- Frontend: Vercel Hobby or Render Static Site.
+
+### Backend on Render
+
+1. Push the project to GitHub.
+2. Create a Render Web Service.
+3. Select the repository.
+4. Set build command:
+
+```bash
+pip install -r requirements-render.txt && python scripts/seed_db.py
+```
+
+5. Set start command:
+
+```bash
+python -m app.routes
+```
+
+6. Add the environment variables listed above.
+7. Deploy.
+8. Test:
+
+```text
+https://<backend-name>.onrender.com/health
+```
+
+Expected result:
+
+```json
+{"status": "ok"}
+```
+
+Render Free limitations:
+
+- Cold start after idle spin-down.
+- 512 MiB memory limit.
+- Ephemeral filesystem, so SQLite writes may not persist after redeploy/restart.
+- Use a managed persistent database for a production system.
+
+### Frontend on Vercel
+
+1. Import the GitHub repository into Vercel.
+2. Set root directory:
+
+```text
+frontend
+```
+
+3. Set framework preset:
+
+```text
+Vite
+```
+
+4. Set build command:
+
+```bash
+npm run build
+```
+
+5. Set output directory:
+
+```text
+dist
+```
+
+6. Add frontend environment variable:
+
+```text
+VITE_API_URL=https://<backend-name>.onrender.com
+```
+
+7. Deploy frontend.
+8. Copy the Vercel frontend URL.
+9. Update Render backend `CORS_ORIGINS` to that exact frontend URL.
+10. Redeploy backend.
+
+### Deployment Smoke Test
+
+Backend:
+
+```bash
+curl https://<backend-domain>/health
+```
+
+Recommendation:
+
+```bash
+curl -X POST https://<backend-domain>/recommend \
+  -H "Content-Type: application/json" \
+  -d "{\"skills\":[\"Python\",\"SQL\",\"Docker\"],\"experience\":\"mid\",\"category\":\"backend-dev\",\"location\":\"remote\",\"top_n\":3}"
+```
+
+Frontend:
+
+1. Open hosted frontend.
+2. Complete manual input or quiz.
+3. Confirm matched jobs appear.
+4. Open gaps/resources.
+5. Build resume.
+6. Open `/admin` and sign in with `ADMIN_ACCESS_KEY`.
 
