@@ -212,12 +212,15 @@ def handle_unhandled_error(error):
 
 @app.route("/health", methods=["GET"])
 def health():
-    engine = _get_recommender()
+    vector_index_present = settings.jobs_index_path.exists()
+    job_id_map_present = settings.jobs_id_map_path.exists()
+    database_present = settings.recommender_db_path.exists()
     return jsonify({
         "status": "ok",
-        "vector_index_loaded": engine.index is not None,
-        "embedding_model_loaded": engine.model is not None,
-        "job_count": len(engine.job_ids),
+        "database_present": database_present,
+        "vector_index_present": vector_index_present,
+        "job_id_map_present": job_id_map_present,
+        "semantic_resources_ready": vector_index_present and job_id_map_present,
     })
 
 

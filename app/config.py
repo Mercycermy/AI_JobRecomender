@@ -112,7 +112,7 @@ class AppConfig:
         )
     )
     host: str = field(
-        default_factory=lambda: os.environ.get("HOST", "127.0.0.1")
+        default_factory=lambda: os.environ.get("HOST", "0.0.0.0")
     )
     port: int = field(
         default_factory=lambda: int(os.environ.get("PORT", "5000"))
