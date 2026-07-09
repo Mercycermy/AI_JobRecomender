@@ -9,6 +9,7 @@ from typing import Any, Optional
 from flask import Flask, jsonify, request
 from werkzeug.exceptions import HTTPException
 
+from app.admin_content import AdminContentService
 from app.ai_tips import GroqResumeCoach
 from app.answer_evaluator import evaluate, evaluate_mcq
 from app.analytics import AnalyticsService
@@ -71,6 +72,7 @@ _resource_recommender: Optional[ResourceRecommender] = None
 _ai_resume_coach: Optional[GroqResumeCoach] = None
 _telegram_job_service: Optional[TelegramJobIngestionService] = None
 _analytics_service: Optional[AnalyticsService] = None
+_admin_content_service: Optional[AdminContentService] = None
 
 
 def _get_recommender() -> RecommendationEngine:
@@ -168,6 +170,13 @@ def _get_analytics_service() -> AnalyticsService:
     if _analytics_service is None:
         _analytics_service = AnalyticsService()
     return _analytics_service
+
+
+def _get_admin_content_service() -> AdminContentService:
+    global _admin_content_service
+    if _admin_content_service is None:
+        _admin_content_service = AdminContentService()
+    return _admin_content_service
 
 
 def _add_cors_headers(response):
@@ -533,6 +542,117 @@ def _admin_unauthorized_response():
     return jsonify({"error": "Admin access key is required."}), 401
 
 
+def _target_role_from_profile(profile: dict) -> str:
+    if not isinstance(profile, dict):
+        return ""
+    return (
+        profile.get("target_role")
+        or profile.get("top_category")
+        or profile.get("detected_role")
+        or profile.get("detected_domain")
+        or profile.get("category")
+        or ""
+    )
+
+
+def _merge_admin_learning_resources(resources: list, profile: dict) -> list:
+    role = _target_role_from_profile(profile)
+    admin_items = _get_admin_content_service().list_items(
+        "learning-resources",
+        role=role,
+    ).get("items", [])
+    if not admin_items and role:
+        admin_items = _get_admin_content_service().list_items(
+            "learning-resources"
+        ).get("items", [])
+    admin_groups = AdminContentService.learning_groups(admin_items)
+    if not admin_groups:
+        return resources
+
+    merged = {
+        str(group.get("skill_id") or group.get("skill") or index): dict(group)
+        for index, group in enumerate(resources or [])
+    }
+    for group in admin_groups:
+        key = str(group.get("skill_id") or group.get("skill"))
+        if key in merged:
+            existing_resources = merged[key].setdefault("resources", [])
+            existing_ids = {
+                item.get("resource_id") or item.get("title")
+                for item in existing_resources
+            }
+            for resource in group.get("resources", []):
+                resource_id = resource.get("resource_id") or resource.get("title")
+                if resource_id not in existing_ids:
+                    existing_resources.insert(0, resource)
+                    existing_ids.add(resource_id)
+            merged[key]["source"] = "ai+admin"
+        else:
+            merged[key] = group
+    return list(merged.values())
+
+
+def _merge_admin_resume_tips(payload: dict, profile: dict) -> dict:
+    role = _target_role_from_profile(profile)
+    admin_sections = _get_admin_content_service().list_items(
+        "resume-tips",
+        role=role,
+    ).get("items", [])
+    if not admin_sections and role:
+        admin_sections = _get_admin_content_service().list_items(
+            "resume-tips"
+        ).get("items", [])
+    if not admin_sections:
+        return payload
+
+    merged = dict(payload or {})
+    tips = list(merged.get("tips") or [])
+    seen = {
+        str(section.get("section") or section.get("title") or "").lower()
+        for section in tips
+    }
+    admin_payloads = []
+    for section in admin_sections:
+        name = str(section.get("section") or section.get("title") or "").lower()
+        admin_payload = {
+            "section": section.get("section") or section.get("title"),
+            "title": section.get("section") or section.get("title"),
+            "icon": section.get("icon") or "AD",
+            "tips": section.get("tips") or [],
+            "role": section.get("role") or "",
+            "source": "admin",
+        }
+        if name in seen:
+            continue
+        admin_payloads.append(admin_payload)
+        seen.add(name)
+    merged["tips"] = [*admin_payloads, *tips]
+    merged["admin_tips"] = admin_payloads
+    merged["is_ai"] = bool(merged.get("is_ai"))
+    return merged
+
+
+def _attach_attempt_recommendations(payload: dict, top_n: int = 5) -> dict:
+    attempts = payload.get("attempts") or []
+    for attempt in attempts[:50]:
+        profile_payload = attempt.get("profile") or {}
+        if not profile_payload or attempt.get("jobs"):
+            continue
+        try:
+            profile = _get_profile_service().from_payload(
+                profile_payload,
+                source_hint="quiz",
+            )
+            recommender_input = _get_profile_service().to_recommender_input(profile)
+            attempt["jobs"] = _get_recommender().rank_jobs(
+                recommender_input,
+                top_n=top_n,
+            )
+        except Exception:
+            attempt["jobs"] = []
+    return payload
+
+
 def _require_admin_access():
     if request.method == "OPTIONS" or request.path == "/admin/login":
         return None
@@ -737,6 +857,7 @@ def analysis():
             profile_data = _get_profile_service().serialize(profile)
             gaps = _get_gap_analyzer().analyze(profile_data, recommendations)
             resources = _get_learning_path().recommend_resources(gaps)
+            resources = _merge_admin_learning_resources(resources, profile_data)
             ai_payload = _get_ai_resume_coach().generate_analysis(
                 profile_data, gaps, resources
             )
@@ -744,6 +865,7 @@ def analysis():
             session = _get_quiz_engine().load_session(session_id)
             gaps = format_gaps_for_ui(session, _get_skill_normalizer())
             resources = _get_resource_recommender().recommend_grouped(session)
+            resources = _merge_admin_learning_resources(resources, session)
             ai_payload = _get_ai_resume_coach().generate_analysis(
                 session, gaps, resources
             )
@@ -756,6 +878,7 @@ def analysis():
             resources = _get_learning_path().recommend_resources(
                 gaps
             )
+            resources = _merge_admin_learning_resources(resources, profile_data)
             ai_payload = _get_ai_resume_coach().generate_analysis(
                 profile_data, gaps, resources
             )
@@ -782,12 +905,14 @@ def resume_tips():
     has_recommendation_context = bool(recommendations) and isinstance(profile_payload, dict)
 
     try:
+        resume_context = {}
         if has_recommendation_context:
             profile = _get_profile_service().from_payload(
                 profile_payload,
                 source_hint="quiz" if session_id else None,
             )
             profile_data = _get_profile_service().serialize(profile)
+            resume_context = profile_data
             gaps = _get_gap_analyzer().analyze(profile_data, recommendations)
             coaching = _get_resume_coach().get_coaching(profile_data, gaps)
             ai_payload = _get_ai_resume_coach().generate_coaching(
@@ -806,6 +931,7 @@ def resume_tips():
                 }
         elif session_id:
             session = _get_quiz_engine().load_session(session_id)
+            resume_context = session
             gaps = format_gaps_for_ui(session, _get_skill_normalizer())
             resource_groups = _get_resource_recommender().recommend_grouped(session)
             recs = _get_resource_recommender().recommend(session)
@@ -820,6 +946,7 @@ def resume_tips():
                 profile_payload or {}
             )
             profile_data = _get_profile_service().serialize(profile)
+            resume_context = profile_data
             gaps = _get_gap_analyzer().analyze(profile_data, recommendations)
             coaching = _get_resume_coach().get_coaching(profile_data, gaps)
             ai_payload = _get_ai_resume_coach().generate_coaching(
@@ -836,6 +963,7 @@ def resume_tips():
                 "resource_explanations": {},
                 "is_ai": coaching.get("is_ai", False),
                 }
+        ai_payload = _merge_admin_resume_tips(ai_payload, resume_context)
         return jsonify({
             "summary": ai_payload.get("summary"),
             "tips": ai_payload.get("tips", []),
@@ -1003,7 +1131,8 @@ def admin_quiz_attempts():
     except (TypeError, ValueError):
         limit = 100
     try:
-        return jsonify(_get_quiz_engine().list_admin_attempts(limit=limit))
+        payload = _get_quiz_engine().list_admin_attempts(limit=limit)
+        return jsonify(_attach_attempt_recommendations(payload))
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
@@ -1070,6 +1199,72 @@ def admin_quiz_question_detail(question_id):
 
         payload = request.get_json(silent=True) or {}
         return jsonify({"question": engine.upsert_admin_question(payload, question_id=question_id)})
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/content/<content_type>", methods=["GET", "OPTIONS"])
+def public_content(content_type):
+    """Return active admin-managed content for the public website."""
+    if request.method == "OPTIONS":
+        return "", 204
+
+    try:
+        role = request.args.get("role", "")
+        payload = _get_admin_content_service().list_items(
+            content_type,
+            role=role,
+        )
+        return jsonify(payload)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/admin/content/<content_type>", methods=["GET", "POST", "OPTIONS"])
+def admin_content_collection(content_type):
+    """List or create backend-managed admin content."""
+    if request.method == "OPTIONS":
+        return "", 204
+
+    try:
+        service = _get_admin_content_service()
+        if request.method == "GET":
+            return jsonify(
+                service.list_items(
+                    content_type,
+                    role=request.args.get("role", ""),
+                    include_inactive=request.args.get("status") in {"all", "inactive"},
+                )
+            )
+
+        payload = request.get_json(silent=True) or {}
+        return jsonify({"item": service.upsert_item(content_type, payload)}), 201
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/admin/content/<content_type>/<item_id>", methods=["PUT", "DELETE", "OPTIONS"])
+def admin_content_item(content_type, item_id):
+    """Update or archive backend-managed admin content."""
+    if request.method == "OPTIONS":
+        return "", 204
+
+    try:
+        service = _get_admin_content_service()
+        if request.method == "DELETE":
+            deleted = service.delete_item(content_type, item_id)
+            if not deleted:
+                return jsonify({"error": f"Content item not found: {item_id}"}), 404
+            return jsonify({"deleted": True, "id": item_id})
+
+        payload = request.get_json(silent=True) or {}
+        return jsonify({"item": service.upsert_item(content_type, payload, item_id=item_id)})
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
     except Exception as exc:

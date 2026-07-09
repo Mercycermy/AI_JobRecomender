@@ -626,6 +626,144 @@ export async function fetchAdminQuizQuestions({
   return response.json()
 }
 
+export async function fetchPublicLearningResources(role = '') {
+  const params = new URLSearchParams()
+  if (role) {
+    params.set('role', role)
+  }
+  const query = params.toString()
+  const response = await fetch(`${API_BASE}/content/learning-resources${query ? `?${query}` : ''}`, {
+    headers: withSessionHeader(),
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || `Learning content failed (${response.status})`)
+  }
+
+  return response.json()
+}
+
+export async function fetchPublicResumeSections(role = '') {
+  const params = new URLSearchParams()
+  if (role) {
+    params.set('role', role)
+  }
+  const query = params.toString()
+  const response = await fetch(`${API_BASE}/content/resume-tips${query ? `?${query}` : ''}`, {
+    headers: withSessionHeader(),
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || `Resume content failed (${response.status})`)
+  }
+
+  return response.json()
+}
+
+export async function fetchAdminLearningResources({ role = '' } = {}) {
+  const params = new URLSearchParams()
+  if (role) {
+    params.set('role', role)
+  }
+  const query = params.toString()
+  const response = await fetch(`${API_BASE}/admin/content/learning-resources${query ? `?${query}` : ''}`, {
+    headers: withSessionHeader(getAdminHeaders()),
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || `Admin learning content failed (${response.status})`)
+  }
+
+  return response.json()
+}
+
+export async function saveAdminLearningResource(resource) {
+  const id = resource?.id
+  const response = await fetch(
+    id ? `${API_BASE}/admin/content/learning-resources/${encodeURIComponent(id)}` : `${API_BASE}/admin/content/learning-resources`,
+    {
+      method: id ? 'PUT' : 'POST',
+      headers: jsonHeaders(getAdminHeaders()),
+      body: JSON.stringify(resource),
+    },
+  )
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || `Save learning resource failed (${response.status})`)
+  }
+
+  return response.json()
+}
+
+export async function deleteAdminLearningResource(resourceId) {
+  const response = await fetch(`${API_BASE}/admin/content/learning-resources/${encodeURIComponent(resourceId)}`, {
+    method: 'DELETE',
+    headers: withSessionHeader(getAdminHeaders()),
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || `Delete learning resource failed (${response.status})`)
+  }
+
+  return response.json()
+}
+
+export async function fetchAdminResumeSections({ role = '' } = {}) {
+  const params = new URLSearchParams()
+  if (role) {
+    params.set('role', role)
+  }
+  const query = params.toString()
+  const response = await fetch(`${API_BASE}/admin/content/resume-tips${query ? `?${query}` : ''}`, {
+    headers: withSessionHeader(getAdminHeaders()),
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || `Admin resume content failed (${response.status})`)
+  }
+
+  return response.json()
+}
+
+export async function saveAdminResumeSection(section) {
+  const id = section?.id
+  const response = await fetch(
+    id ? `${API_BASE}/admin/content/resume-tips/${encodeURIComponent(id)}` : `${API_BASE}/admin/content/resume-tips`,
+    {
+      method: id ? 'PUT' : 'POST',
+      headers: jsonHeaders(getAdminHeaders()),
+      body: JSON.stringify(section),
+    },
+  )
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || `Save resume section failed (${response.status})`)
+  }
+
+  return response.json()
+}
+
+export async function deleteAdminResumeSection(sectionId) {
+  const response = await fetch(`${API_BASE}/admin/content/resume-tips/${encodeURIComponent(sectionId)}`, {
+    method: 'DELETE',
+    headers: withSessionHeader(getAdminHeaders()),
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.error || `Delete resume section failed (${response.status})`)
+  }
+
+  return response.json()
+}
+
 export async function saveAdminQuizQuestion(question) {
   const id = question?.id
   const response = await fetch(

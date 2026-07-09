@@ -94,10 +94,33 @@ def _user_flow_events(conn: sqlite3.Connection) -> None:
     )
 
 
+def _admin_content(conn: sqlite3.Connection) -> None:
+    _executescript(
+        conn,
+        """
+        CREATE TABLE IF NOT EXISTS admin_content (
+            id TEXT PRIMARY KEY,
+            content_type TEXT NOT NULL,
+            role TEXT,
+            title TEXT NOT NULL,
+            payload TEXT DEFAULT '{}',
+            is_active INTEGER DEFAULT 1,
+            created_at TEXT DEFAULT (datetime('now')),
+            updated_at TEXT DEFAULT (datetime('now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_admin_content_type_role
+            ON admin_content(content_type, role, is_active);
+        CREATE INDEX IF NOT EXISTS idx_admin_content_updated
+            ON admin_content(updated_at DESC);
+        """
+    )
+
+
 MIGRATIONS: Iterable[Migration] = (
     ("001_jobs_lookup_indexes", _jobs_indexes),
     ("002_telegram_post_audit_table", _telegram_posts),
     ("003_user_flow_event_analytics", _user_flow_events),
+    ("004_admin_content_catalog", _admin_content),
 )
 
 

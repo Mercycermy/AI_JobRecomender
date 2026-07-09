@@ -4,7 +4,9 @@ import {
   clearStoredAdminAccessKey,
   fetchAdminQuizAttempts,
   fetchAdminAnalytics,
+  fetchAdminLearningResources,
   fetchAdminQuizQuestions,
+  fetchAdminResumeSections,
   fetchAnalysis,
   fetchRecommendations,
   fetchResumeTips,
@@ -17,7 +19,11 @@ import {
   loadStoredRecommendations,
   persistAnalysis,
   persistRecommendationSession,
+  deleteAdminLearningResource,
   saveAdminQuizQuestion,
+  saveAdminLearningResource,
+  deleteAdminResumeSection,
+  saveAdminResumeSection,
   setStoredAdminAccessKey,
   verifyAdminAccess,
 } from '../api/recommend.js'
@@ -104,6 +110,21 @@ const WORK_TYPE_OPTIONS = [
     aliases: ['general', 'other'],
   },
 ]
+const WORK_TYPE_LABELS = WORK_TYPE_OPTIONS.map((item) => item.label)
+const WORK_TYPE_TO_QUIZ_ROLE = {
+  SOFTWARE: 'tech',
+  DATA_AI: 'data-analyst',
+  CREATIVE: 'creative',
+  BUSINESS: 'project-manager',
+  SALES_MKT: 'sales_marketing',
+  ACCOUNTING: 'finance',
+  ADMIN: 'admin',
+  ENGINEERING: 'architect',
+  EDUCATION: 'education',
+  LOGISTICS: 'transport',
+  MEDICAL: 'medical',
+  GENERAL: 'general',
+}
 const DEFAULT_QUIZ_ROLE = 'General or other'
 const ALL_QUIZ_ROLES = 'All work types'
 const EMPTY_PROMPT_DRAFT = {
@@ -570,6 +591,18 @@ function normalizeQuizRole(value, fallback = DEFAULT_QUIZ_ROLE) {
   const raw = String(value || '').trim()
   if (!raw) {
     return fallback
+  }
+
+  if (normalizeText(raw) === normalizeText(DEFAULT_QUIZ_ROLE)) {
+    return 'general'
+  }
+
+  const workType = WORK_TYPE_OPTIONS.find((item) =>
+    normalizeText(item.id) === normalizeText(raw) ||
+    normalizeText(item.label) === normalizeText(raw),
+  )
+  if (workType) {
+    return WORK_TYPE_TO_QUIZ_ROLE[workType.id] || fallback
   }
 
   if (/[-_]/.test(raw) || raw === raw.toUpperCase()) {
@@ -1040,11 +1073,13 @@ function Admin() {
   )
   const resumeSections = mergeCatalogEntries(aiResumeSections, managedResumeSections)
   const learningRoleOptions = uniqueItems([
+    ...WORK_TYPE_LABELS,
     ...workTypeNames,
     ...resources.map(getResourceRole),
     ...gaps.map((gap) => getWorkTypeLabel(getGapName(gap), '')),
   ]).filter(Boolean)
   const resumeRoleOptions = uniqueItems([
+    ...WORK_TYPE_LABELS,
     ...workTypeNames,
     ...resumeSections.map((section) => getResumeRole(section, workTypeNames[0] || '')),
   ]).filter(Boolean)
@@ -1166,6 +1201,60 @@ function Admin() {
           total: 0,
           completed: 0,
         })
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [adminAuthState.isAuthorized])
+
+  useEffect(() => {
+    if (!adminAuthState.isAuthorized) {
+      return
+    }
+
+    let cancelled = false
+
+    fetchAdminLearningResources()
+      .then((payload) => {
+        if (cancelled) {
+          return
+        }
+
+        const items = (payload.items || []).map(normalizeResource)
+        setManagedResources(items)
+        saveAdminResources(items)
+        setHasManagedResourceStore(items.length > 0)
+      })
+      .catch(() => {
+        // Local admin resources remain available if hosted content cannot load.
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [adminAuthState.isAuthorized])
+
+  useEffect(() => {
+    if (!adminAuthState.isAuthorized) {
+      return
+    }
+
+    let cancelled = false
+
+    fetchAdminResumeSections()
+      .then((payload) => {
+        if (cancelled) {
+          return
+        }
+
+        const items = (payload.items || []).map(normalizeResumeSection)
+        setManagedResumeSections(items)
+        saveAdminResumeSections(items)
+        setHasManagedResumeStore(items.length > 0)
+      })
+      .catch(() => {
+        // Local resume playbook sections remain available if hosted content cannot load.
       })
 
     return () => {
@@ -1703,7 +1792,7 @@ function Admin() {
     setEditingResourceId('')
     setResourceDraft({ ...EMPTY_RESOURCE_DRAFT })
   }
-  const saveResource = (event) => {
+  const saveResource = async (event) => {
     event.preventDefault()
 
     const title = resourceDraft.title.trim()
@@ -1711,13 +1800,20 @@ function Admin() {
       return
     }
 
-    const resource = normalizeResource({
+    const draftResource = {
       id: editingResourceId || createResourceId(title),
       ...resourceDraft,
       role: resourceDraft.role,
       title,
       updated: editingResourceId ? 'Updated locally' : 'Added locally',
-    }, resources.length)
+    }
+    let resource = normalizeResource(draftResource, resources.length)
+    try {
+      const payload = await saveAdminLearningResource(draftResource)
+      resource = normalizeResource(payload.item || draftResource, resources.length)
+    } catch {
+      // Keep local fallback editable if hosted content cannot be saved.
+    }
 
     const nextResources = editingResourceId
       ? resources.map((item) => (item.id === editingResourceId ? resource : item))
@@ -1728,7 +1824,13 @@ function Admin() {
     setHasManagedResourceStore(true)
     cancelResourceEdit()
   }
-  const deleteResource = (resourceId) => {
+  const deleteResource = async (resourceId) => {
+    try {
+      await deleteAdminLearningResource(resourceId)
+    } catch {
+      // Local fallback still removes the item from this admin session.
+    }
+
     const nextResources = resources.filter((resource) => resource.id !== resourceId)
 
     setManagedResources(nextResources)
@@ -1750,7 +1852,7 @@ function Admin() {
     setEditingResumeId('')
     setResumeDraft({ ...EMPTY_RESUME_DRAFT })
   }
-  const saveResumeSection = (event) => {
+  const saveResumeSection = async (event) => {
     event.preventDefault()
 
     const sectionTitle = resumeDraft.section.trim()
@@ -1759,13 +1861,21 @@ function Admin() {
       return
     }
 
-    const nextSection = normalizeResumeSection({
+    const draftSection = {
       id: editingResumeId || createResumeSectionId(sectionTitle),
       role: resumeDraft.role,
       section: sectionTitle,
       tips,
       updated: editingResumeId ? 'Updated locally' : 'Added locally',
-    }, resumeSections.length)
+    }
+    let nextSection = normalizeResumeSection(draftSection, resumeSections.length)
+    try {
+      const payload = await saveAdminResumeSection(draftSection)
+      nextSection = normalizeResumeSection(payload.item || draftSection, resumeSections.length)
+    } catch {
+      // Keep local fallback editable if hosted content cannot be saved.
+    }
+
     const nextSections = editingResumeId
       ? resumeSections.map((section) => (section.id === editingResumeId ? nextSection : section))
       : [nextSection, ...resumeSections]
@@ -1775,7 +1885,13 @@ function Admin() {
     setHasManagedResumeStore(true)
     cancelResumeEdit()
   }
-  const deleteResumeSection = (sectionId) => {
+  const deleteResumeSection = async (sectionId) => {
+    try {
+      await deleteAdminResumeSection(sectionId)
+    } catch {
+      // Local fallback still removes the item from this admin session.
+    }
+
     const nextSections = resumeSections.filter((section) => section.id !== sectionId)
 
     setManagedResumeSections(nextSections)

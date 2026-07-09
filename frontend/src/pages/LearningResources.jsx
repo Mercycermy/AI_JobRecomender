@@ -1,10 +1,68 @@
 import { useEffect, useState } from 'react'
 
 import FlowProgress from '../components/FlowProgress.jsx'
-import { loadOrFetchStoredAnalysis, loadStoredAnalysis } from '../api/recommend.js'
+import {
+  fetchPublicLearningResources,
+  loadOrFetchStoredAnalysis,
+  loadStoredAnalysis,
+} from '../api/recommend.js'
+
+function groupPublicResources(items = []) {
+  const groups = new Map()
+  items.forEach((item, index) => {
+    const label = item.skill || item.role || 'Admin recommended'
+    const key = item.skill_id || label.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+    const group = groups.get(key) || {
+      skill_id: key,
+      skill: label,
+      priority_label: 'Admin',
+      resources: [],
+    }
+    group.resources.push({
+      resource_id: item.id || `admin-resource-${index}`,
+      title: item.title,
+      platform: item.platform || 'Admin catalog',
+      level: item.level || 'Recommended',
+      hours: item.hours || '',
+      url: item.url || '#',
+      cost: 'free',
+      gap_priority: 'Admin',
+      recommendation_score: 100,
+      explanation: item.role ? `Added by admin for ${item.role}.` : 'Added by admin.',
+    })
+    groups.set(key, group)
+  })
+  return [...groups.values()]
+}
+
+function mergeResourceGroups(primary = [], secondary = []) {
+  const merged = new Map()
+  primary.forEach((group, index) => {
+    const key = group.skill_id || group.skill || `group-${index}`
+    merged.set(key, { ...group, resources: [...(group.resources || [])] })
+  })
+  secondary.forEach((group, index) => {
+    const key = group.skill_id || group.skill || `admin-group-${index}`
+    if (!merged.has(key)) {
+      merged.set(key, { ...group, resources: [...(group.resources || [])] })
+      return
+    }
+    const existing = merged.get(key)
+    const ids = new Set(existing.resources.map((item) => item.resource_id || item.title))
+    group.resources?.forEach((resource) => {
+      const resourceId = resource.resource_id || resource.title
+      if (!ids.has(resourceId)) {
+        existing.resources.push(resource)
+        ids.add(resourceId)
+      }
+    })
+  })
+  return [...merged.values()]
+}
 
 function LearningResources({ standalone = false, resources: providedResources, isLoading = false, error = null }) {
   const [storedAnalysis, setStoredAnalysis] = useState(() => loadStoredAnalysis())
+  const [publicResourceGroups, setPublicResourceGroups] = useState([])
   const [analysisState, setAnalysisState] = useState({
     error: null,
     isLoading: false,
@@ -59,6 +117,26 @@ function LearningResources({ standalone = false, resources: providedResources, i
     }
   }, [hasProvidedResourceContext, standalone, stored?.resources?.length])
 
+  useEffect(() => {
+    let cancelled = false
+
+    fetchPublicLearningResources()
+      .then((payload) => {
+        if (!cancelled) {
+          setPublicResourceGroups(groupPublicResources(payload.items || []))
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPublicResourceGroups([])
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const resolvedLoading = isLoading || analysisState.isLoading
   const resolvedError = error || analysisState.error
 
@@ -86,13 +164,14 @@ function LearningResources({ standalone = false, resources: providedResources, i
     )
   }
 
-  const resolvedResources = providedResources?.length
+  const baseResources = providedResources?.length
     ? providedResources
     : hasProvidedResourceContext
       ? []
       : stored?.resources?.length
         ? stored.resources
         : []
+  const resolvedResources = mergeResourceGroups(baseResources, publicResourceGroups)
 
   if (!resolvedResources.length) {
     return (
