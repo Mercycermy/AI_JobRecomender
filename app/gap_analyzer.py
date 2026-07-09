@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any, Dict, Iterable, List, Optional
 
-from app.skill_normalizer import SkillNormalizer
+from app.skill_normalizer import SkillNormalizer, normalize_skill_text
 
 
 SKILL_THRESHOLD = 0.60
@@ -35,6 +35,82 @@ SKILL_QUERY_MAP = {
 	"fac-management": "facility management building operations",
 	"sec-physical": "physical security threat assessment safety",
 }
+
+ROLE_BASELINE_SKILLS = {
+	"backend-dev": ("ops-docker", "lang-sql", "lang-py"),
+	"frontend-dev": ("fe-react", "lang-js", "design-uiux"),
+	"fullstack-dev": ("fe-react", "ops-docker", "lang-sql"),
+	"mobile-dev": ("lang-js", "ops-docker", "lang-sql"),
+	"devops-engineer": ("ops-docker", "lang-sql", "it-support"),
+	"data-analyst": ("lang-sql", "da-pandas", "fin-excel"),
+	"data-scientist": ("lang-py", "lang-sql", "da-pandas"),
+	"ml-engineer": ("lang-py", "da-pandas", "ops-docker"),
+	"ui-ux-designer": ("design-uiux", "fe-react", "lang-js"),
+	"graphic-designer": ("design-uiux", "dm-cad"),
+	"project-manager": ("supply-chain-mgmt", "prod-six-sigma", "fin-excel"),
+	"sales": ("sm-sales", "sm-market", "fin-excel"),
+	"digital-marketer": ("sm-market", "sm-sales", "design-uiux"),
+	"accounting": ("fin-excel", "lang-sql"),
+	"admin": ("hr-mgmt", "admin-data-entry", "fin-excel"),
+	"architect": ("dm-cad", "eng-construction-mgmt", "design-uiux"),
+	"teacher": ("edu-instructional-design", "med-health-science"),
+	"transport": ("supply-chain-mgmt", "logistics-safety", "fin-excel"),
+}
+
+ROLE_ALIASES = {
+	"devops": "devops-engineer",
+	"dev ops": "devops-engineer",
+	"software engineering": "backend-dev",
+	"software engineer": "backend-dev",
+	"engineering": "backend-dev",
+	"design": "ui-ux-designer",
+	"data ai": "data-scientist",
+	"operations": "project-manager",
+	"administration hr": "admin",
+	"administration": "admin",
+	"accountant": "accounting",
+	"transport logistics": "transport",
+	"logistics": "transport",
+}
+
+ROLE_KEYWORDS = (
+	(("full stack", "fullstack"), "fullstack-dev"),
+	(("front end", "frontend", "react", "javascript"), "frontend-dev"),
+	(("back end", "backend", "api", "django", "flask"), "backend-dev"),
+	(("mobile", "android", "ios", "flutter"), "mobile-dev"),
+	(("devops", "cloud", "deployment"), "devops-engineer"),
+	(("data analyst", "analytics", "business intelligence"), "data-analyst"),
+	(("data scientist", "machine learning", "ml engineer"), "data-scientist"),
+	(("ui ux", "ux", "product designer"), "ui-ux-designer"),
+	(("graphic", "visual designer"), "graphic-designer"),
+	(("project manager", "project management"), "project-manager"),
+	(("sales", "business development"), "sales"),
+	(("marketing", "seo", "social media"), "digital-marketer"),
+	(("accounting", "accountant", "finance"), "accounting"),
+	(("admin", "human resources", "hr"), "admin"),
+	(("architect", "autocad", "construction"), "architect"),
+	(("teacher", "teaching", "education"), "teacher"),
+	(("transport", "logistics", "supply chain"), "transport"),
+)
+
+GROWTH_SKILLS_BY_USER_SKILL = {
+	"lang-py": ("lang-sql", "ops-docker", "da-pandas"),
+	"lang-js": ("fe-react", "design-uiux", "ops-docker"),
+	"fe-html": ("fe-css", "fe-react", "lang-js"),
+	"fe-css": ("fe-react", "lang-js", "design-uiux"),
+	"fe-react": ("lang-js", "design-uiux", "ops-docker"),
+	"lang-sql": ("da-pandas", "fin-excel", "ops-docker"),
+	"da-pandas": ("lang-sql", "fin-excel", "ops-docker"),
+	"fin-excel": ("lang-sql", "da-pandas", "supply-chain-mgmt"),
+	"design-uiux": ("fe-react", "lang-js", "sm-market"),
+	"dm-cad": ("eng-construction-mgmt", "design-uiux", "fin-excel"),
+	"sm-market": ("sm-sales", "design-uiux", "fin-excel"),
+	"sm-sales": ("sm-market", "fin-excel", "design-uiux"),
+	"hr-mgmt": ("admin-data-entry", "fin-excel", "sm-sales"),
+	"it-support": ("ops-docker", "lang-sql", "fin-excel"),
+}
+
+DEFAULT_GROWTH_SKILLS = ("lang-sql", "ops-docker", "fin-excel")
 
 
 def _clamp_percent(value: float, minimum: int = 0, maximum: int = 100) -> int:
@@ -258,6 +334,92 @@ class GapAnalyzer:
 				filtered.append(text)
 		return filtered
 
+	def _canonical_skill_ids(self, skill_ids: Iterable[Any]) -> List[str]:
+		canonical: List[str] = []
+		for raw_skill_id in skill_ids:
+			text = str(raw_skill_id or "").strip()
+			if not text:
+				continue
+			resolved = self.normalizer.to_skill_id(text) or text
+			if not self.normalizer.is_match_skill(resolved):
+				continue
+			if resolved not in canonical:
+				canonical.append(resolved)
+		return canonical
+
+	def _role_candidates(
+		self,
+		profile: Optional[Dict[str, Any]],
+		recs: Iterable[Dict[str, Any]],
+	) -> List[str]:
+		values: List[str] = []
+		if profile:
+			for key in (
+				"target_role",
+				"top_category",
+				"category",
+				"detected_role",
+				"detected_domain",
+				"role",
+			):
+				value = profile.get(key)
+				if value:
+					values.append(str(value))
+		for rec in recs:
+			for key in ("category", "role_category", "job_title", "title"):
+				value = rec.get(key)
+				if value:
+					values.append(str(value))
+		return values
+
+	def _role_key_for_text(self, value: Any) -> str:
+		normalized = normalize_skill_text(value)
+		if not normalized:
+			return ""
+		hyphenated = normalized.replace(" ", "-")
+		if hyphenated in ROLE_BASELINE_SKILLS:
+			return hyphenated
+		if normalized in ROLE_ALIASES:
+			return ROLE_ALIASES[normalized]
+		if hyphenated in ROLE_ALIASES:
+			return ROLE_ALIASES[hyphenated]
+		for terms, role_key in ROLE_KEYWORDS:
+			if any(term in normalized for term in terms):
+				return role_key
+		return ""
+
+	def _baseline_skill_ids(
+		self,
+		profile: Optional[Dict[str, Any]],
+		recs: Iterable[Dict[str, Any]],
+	) -> List[str]:
+		for candidate in self._role_candidates(profile, recs):
+			role_key = self._role_key_for_text(candidate)
+			if role_key:
+				return self._canonical_skill_ids(ROLE_BASELINE_SKILLS.get(role_key, ()))
+		return []
+
+	def _fallback_gap_skill_ids(
+		self,
+		profile: Optional[Dict[str, Any]],
+		recs: Iterable[Dict[str, Any]],
+		user_skills: set[str],
+		limit: int,
+	) -> List[str]:
+		candidates = self._baseline_skill_ids(profile, recs)
+		for skill_id in sorted(user_skills):
+			candidates.extend(GROWTH_SKILLS_BY_USER_SKILL.get(skill_id, ()))
+		candidates.extend(DEFAULT_GROWTH_SKILLS)
+
+		result: List[str] = []
+		for skill_id in self._canonical_skill_ids(candidates):
+			if skill_id in user_skills or skill_id in result:
+				continue
+			result.append(skill_id)
+			if len(result) >= limit:
+				break
+		return result
+
 	def _job_summary(self, rec: Dict[str, Any], rank: int) -> Dict[str, Any]:
 		return {
 			"job_id": str(rec.get("job_id") or rec.get("id") or ""),
@@ -271,6 +433,67 @@ class GapAnalyzer:
 			"required_skill_count": rec.get("required_skill_count"),
 		}
 
+	def _gap_payload(
+		self,
+		skill_id: str,
+		count: int,
+		total: int,
+		profile: Optional[Dict[str, Any]],
+		user_skills: set[str],
+		affected_jobs: List[Dict[str, Any]],
+		fallback: bool = False,
+	) -> Dict[str, Any]:
+		priority = 62 if fallback else round((count / total) * 100)
+		meta = _priority_metadata(priority)
+		score = self._skill_score(profile, skill_id, user_skills)
+		current = _clamp_percent(score * 100, minimum=5, maximum=95)
+		if score == 0.0 and skill_id not in user_skills:
+			current = 25 if fallback else 15
+		required = min(
+			95,
+			max(current + 20, 80 if fallback else 70 + round(priority * 0.2)),
+		)
+		skill_name = self.normalizer.name_for(skill_id)
+		payload = {
+			"skill_id": skill_id,
+			"skill": skill_name,
+			"priority": priority,
+			"priority_label": meta["priority_label"],
+			"priority_group": meta["priority_group"],
+			"level": meta["level"],
+			"current": current,
+			"required": required,
+			"current_level": _level_from_percent(current),
+			"required_level": _level_from_percent(required),
+			"frequency": 0 if fallback else round(count / total, 3),
+			"job_count": total,
+			"job_ids": [
+				job["job_id"]
+				for job in affected_jobs
+				if job.get("job_id")
+			],
+			"affected_jobs": affected_jobs,
+			"learning_path": _learning_path(
+				skill_name,
+				current,
+				required,
+				meta["priority_label"],
+			),
+		}
+		if fallback:
+			payload["source"] = "role_growth"
+			payload["first_action"] = (
+				f"Build {skill_name} next to widen your readiness for the "
+				"matched role path."
+			)
+		else:
+			payload["occurrences"] = count
+			payload["first_action"] = (
+				f"Start with {skill_name}; it is missing from "
+				f"{count} of the top {total} matched jobs."
+			)
+		return payload
+
 	def analyze(
 		self,
 		profile: Optional[Dict[str, Any]],
@@ -279,7 +502,7 @@ class GapAnalyzer:
 		limit: int = 8,
 	) -> List[Dict[str, Any]]:
 		recs = list(recommendations)[:max(1, top_n)] if recommendations else []
-		if not recs:
+		if not recs and not profile:
 			return []
 
 		missing_counts: Counter[str] = Counter()
@@ -294,57 +517,41 @@ class GapAnalyzer:
 						self._job_summary(rec, index)
 					)
 
-		if not missing_counts:
-			return []
-
 		total = max(len(recs), 1)
+		if not missing_counts:
+			fallback_jobs = [
+				self._job_summary(rec, index)
+				for index, rec in enumerate(recs[:3], start=1)
+			]
+			return [
+				self._gap_payload(
+					skill_id,
+					0,
+					total,
+					profile,
+					user_skills,
+					fallback_jobs,
+					fallback=True,
+				)
+				for skill_id in self._fallback_gap_skill_ids(
+					profile,
+					recs,
+					user_skills,
+					limit,
+				)
+			]
+
 		gaps: List[Dict[str, Any]] = []
-
 		for skill_id, count in missing_counts.most_common(limit):
-			priority = round((count / total) * 100)
-			meta = _priority_metadata(priority)
-			score = self._skill_score(profile, skill_id, user_skills)
-			current = _clamp_percent(score * 100, minimum=5, maximum=95)
-			if score == 0.0 and skill_id not in user_skills:
-				current = 15
-			required = min(
-				95,
-				max(current + 20, 70 + round(priority * 0.2)),
-			)
-			skill_name = self.normalizer.name_for(skill_id)
-
 			gaps.append(
-				{
-					"skill_id": skill_id,
-					"skill": skill_name,
-					"priority": priority,
-					"priority_label": meta["priority_label"],
-					"priority_group": meta["priority_group"],
-					"level": meta["level"],
-					"current": current,
-					"required": required,
-					"current_level": _level_from_percent(current),
-					"required_level": _level_from_percent(required),
-					"occurrences": count,
-					"frequency": round(count / total, 3),
-					"job_count": total,
-					"job_ids": [
-						job["job_id"]
-						for job in affected_jobs.get(skill_id, [])
-						if job.get("job_id")
-					],
-					"affected_jobs": affected_jobs.get(skill_id, []),
-					"learning_path": _learning_path(
-						skill_name,
-						current,
-						required,
-						meta["priority_label"],
-					),
-					"first_action": (
-						f"Start with {skill_name}; it is missing from "
-						f"{count} of the top {total} matched jobs."
-					),
-				}
+				self._gap_payload(
+					skill_id,
+					count,
+					total,
+					profile,
+					user_skills,
+					affected_jobs.get(skill_id, []),
+				)
 			)
 
 		return gaps

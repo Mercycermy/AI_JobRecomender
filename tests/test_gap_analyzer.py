@@ -81,6 +81,32 @@ def test_gap_analyzer_computes_missing_skills_from_required_skills():
 	assert all(gap["first_action"] for gap in gaps)
 
 
+def test_gap_analyzer_adds_role_growth_gaps_when_matches_have_no_missing_skills():
+	analyzer = GapAnalyzer()
+	profile = {
+		"skill_ids": ["lang-py"],
+		"skill_scores": {"lang-py": 0.85},
+		"top_category": "backend-dev",
+	}
+	recommendations = [
+		{
+			"job_id": "job-1",
+			"job_title": "Backend Developer",
+			"match_percent": 94,
+			"required_skills": ["lang-py"],
+		}
+	]
+
+	gaps = analyzer.analyze(profile, recommendations, limit=3)
+	gap_ids = {gap["skill_id"] for gap in gaps}
+
+	assert {"ops-docker", "lang-sql"}.issubset(gap_ids)
+	assert "lang-py" not in gap_ids
+	assert all(gap["source"] == "role_growth" for gap in gaps)
+	assert all("occurrences" not in gap for gap in gaps)
+	assert all(gap["first_action"] for gap in gaps)
+
+
 def test_get_session_gaps_threshold_and_order():
 	session = {
 		"skill_scores": {

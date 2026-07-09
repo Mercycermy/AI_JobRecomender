@@ -370,6 +370,35 @@ VITE_API_URL=https://<backend-name>.onrender.com
 9. Update Render backend `CORS_ORIGINS` to that exact frontend URL.
 10. Redeploy backend.
 
+### Frontend on Render Static Site
+
+The repository includes `render.yaml` for a two-service Render Blueprint:
+
+- `ai-job-recommender-api`: Flask backend.
+- `ai-job-recommender-frontend`: Vite static frontend.
+
+For the frontend service, set:
+
+```text
+VITE_API_URL=https://<backend-name>.onrender.com
+```
+
+For the backend service, set:
+
+```text
+CORS_ORIGINS=https://<frontend-name>.onrender.com
+```
+
+If you create the Render Static Site manually instead of using `render.yaml`, add this Redirect/Rewrites rule:
+
+```text
+Action: Rewrite
+Source: /*
+Destination: /index.html
+```
+
+Without this rewrite, direct hosted visits to `/results/gap`, `/results/resources`, and other frontend routes can return a Render 404 instead of loading the React app.
+
 ### Deployment Smoke Test
 
 Backend:
